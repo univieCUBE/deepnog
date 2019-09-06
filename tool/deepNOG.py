@@ -9,6 +9,8 @@ import time
 import argparse
 from torch.utils.data import DataLoader
 from dataset import ProteinDataset
+from dataset import collate_sequences
+
 
 def get_parser():
     """
@@ -31,15 +33,16 @@ def get_parser():
 
 
 def main(args = None):
-    dataset = ProteinDataset(args.file, f_format = args.format)
+    dataset = ProteinDataset(args.file, f_format=args.format)
 
-    batch_size = 16
-    for i, el in enumerate(DataLoader(dataset, batch_size = batch_size
-                                      collate_fn = )):
-        pass
+    #batch_size = 16
+    for i, el in enumerate(DataLoader(dataset, batch_size=5, num_workers=4,
+                                    collate_fn=collate_sequences)):
+        print(el.)
+        if (i+1)%5 == 0:
+            break
 
     return
-
 
 
 if __name__ == '__main__':
