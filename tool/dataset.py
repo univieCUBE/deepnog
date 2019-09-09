@@ -15,7 +15,9 @@ from torch.utils.data.dataloader import default_collate
 from Bio import SeqIO
 from Bio.Alphabet.IUPAC import ExtendedIUPACProtein
 
+
 collated_sequences = namedtuple('collated_sequences', ['sequences', 'ids'])
+
 
 def collate_sequences(batch, zero_padding=True):
     """ Collate and zero_pad encoded sequence. """
@@ -23,7 +25,7 @@ def collate_sequences(batch, zero_padding=True):
     # Check if an individual sample or a batch was given
     if not isinstance(batch, list):
         batch = [batch]
-        
+
     # Find the longest sequence, in order to zero pad the others
     max_len, n_features = 0, 1  # batch.query_encoded.shape
     n_data = 0
@@ -92,6 +94,7 @@ class AminoAcidWordEmbedding(nn.Module):
     def forward(self, sequence):
         x = self.embedding(sequence)
         return x
+
 
 def consume(iterator, n=None):
     """ Advance the iterator n-steps ahead. If n is None, consume entirely.
@@ -167,6 +170,7 @@ class ProteinIterator():
                                  string = str(next_seq.seq),
                                  encoded = [vocab[c] for c in next_seq.seq])
         return sequence
+
 
 class ProteinDataset(IterableDataset):
     """ Protein dataset holding the proteins to classify. 
