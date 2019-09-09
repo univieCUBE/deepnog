@@ -1,1 +1,0 @@
-DeepNOG prediction tool

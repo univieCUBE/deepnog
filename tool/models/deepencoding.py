@@ -54,7 +54,7 @@ class DeepEncoding(nn.Module):
 
         # Convolutional layer
         self.conv1 = nn.Conv1d(in_channels=encoding_dim,
-                               out_channels=n_filters,\
+                               out_channels=n_filters,
                                kernel_size=kernel_size, )
         # Non-linearity
         self.activation1 = nn.SELU()

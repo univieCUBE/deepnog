@@ -36,9 +36,9 @@ def main(args = None):
     dataset = ProteinDataset(args.file, f_format=args.format)
 
     #batch_size = 16
-    for i, el in enumerate(DataLoader(dataset, batch_size=5, num_workers=4,
+    for i, batch in enumerate(DataLoader(dataset, batch_size=5, num_workers=4,
                                     collate_fn=collate_sequences)):
-        print(el.)
+        print(batch)
         if (i+1)%5 == 0:
             break
 

@@ -22,8 +22,8 @@ def collate_sequences(batch, zero_padding=True):
 
     # Check if an individual sample or a batch was given
     if not isinstance(batch, list):
-        raise NotImplementedError('Batching must be enabled! For online usage'
-                                  + ' set batch_size=1.')
+        batch = [batch]
+        
     # Find the longest sequence, in order to zero pad the others
     max_len, n_features = 0, 1  # batch.query_encoded.shape
     n_data = 0
