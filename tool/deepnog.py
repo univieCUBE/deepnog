@@ -3,15 +3,15 @@ Author: Lukas Gosch
 Date: 11.9.2019
 Usage: python deepnog.py --help
 Description:
-    DeepNOG is a deep learning based command line tool which predicts the 
-    protein families of given protein sequences based on pretrained neural 
-    networks. 
+    DeepNOG is a deep learning based command line tool which predicts the
+    protein families of given protein sequences based on pretrained neural
+    networks.
 
-    File formats supported: 
+    File formats supported:
     Prefered: FASTA
-    DeepNOG supports protein sequences stored in all file formats listed in 
-    https://biopython.org/wiki/SeqIO but is tested for the FASTA-file format 
-    only. 
+    DeepNOG supports protein sequences stored in all file formats listed in
+    https://biopython.org/wiki/SeqIO but is tested for the FASTA-file format
+    only.
 
     Architectures supported:
 
@@ -19,7 +19,6 @@ Description:
         - eggNOG 5.0, taxonomic level 2
 """
 
-import time
 import argparse
 import os.path
 from importlib import import_module
@@ -43,11 +42,11 @@ def get_parser():
                             + ' neural networks.')
     parser.add_argument("file", help="File containing protein sequences for "
                         + "classification.")
-    parser.add_argument("-o", "--out", default='out.csv', help = "Path where"
+    parser.add_argument("-o", "--out", default='out.csv', help="Path where"
                         + " to store the output-file containing the protein"
                         + " family predictions.")
     parser.add_argument("-ff", "--fformat", default='fasta',
-                        help = "File format of protein sequences. Must be "
+                        help="File format of protein sequences. Must be "
                         + "supported by Biopythons Bio.SeqIO class.")
     parser.add_argument("-db", "--database", default='eggNOG5',
                         help="Database to classify against.")
@@ -65,8 +64,8 @@ def get_parser():
 
 
 def load_nn(architecture, model_dict, device='cpu'):
-    """ Import NN architecture and set loaded parameters. 
-        
+    """ Import NN architecture and set loaded parameters.
+
         Parameters
         ----------
         architecture : str
@@ -89,9 +88,9 @@ def load_nn(architecture, model_dict, device='cpu'):
     return model
 
 
-def predict(model, dataset, device='cpu', batch_size = 16):
-    """ Use model to predict zero-indexed labels of dataset. 
-        
+def predict(model, dataset, device='cpu', batch_size=16):
+    """ Use model to predict zero-indexed labels of dataset.
+
         Parameters
         ----------
         model : nn.Module
@@ -107,10 +106,10 @@ def predict(model, dataset, device='cpu', batch_size = 16):
         -------
         Returns four lists in the following order:
             - pred_l : Stores the index of the output-node with
-                       the highest activation 
+                       the highest activation
             - conf_l : Stores the confidence in the prediciton
-            - label_l: Stores the (possible empty) protein labels extracted   
-                       from data file.  
+            - label_l: Stores the (possible empty) protein labels extracted
+                       from data file.
             - indices_l: Stores the unique indices of sequences mapping
                          to their position in the file
     """
@@ -118,7 +117,7 @@ def predict(model, dataset, device='cpu', batch_size = 16):
     conf_l = []
     ids = []
     indices = []
-    data_loader = DataLoader(dataset, batch_size=batch_size, 
+    data_loader = DataLoader(dataset, batch_size=batch_size,
                              num_workers=4, collate_fn=collate_sequences)
     # Give user performance feedback
     print(f'Process {batch_size} sequences per iteration: ')
@@ -141,32 +140,30 @@ def predict(model, dataset, device='cpu', batch_size = 16):
     return preds, confs, ids, indices
 
 
-def create_df(class_labels, preds, confs, ids, indices, device = 'cpu'):
-    """ Creates one dataframe storing all relevent prediction information. 
+def create_df(class_labels, preds, confs, ids, indices, device='cpu'):
+    """ Creates one dataframe storing all relevent prediction information.
 
-        The rows in the returned dataframe have the same order as the 
+        The rows in the returned dataframe have the same order as the
         original sequences in the data file. First column of the dataframe
-        represents 
+        represents.
     """
     labels = [class_labels[pred] for pred in preds]
     confs = confs.cpu().numpy()
-    df = pd.DataFrame(data = {'index' : indices,
-                              'sequence_id' : ids,
-                              'prediction' : labels,
-                              'confidence' : confs})
-    print(df)
+    df = pd.DataFrame(data={'index': indices,
+                            'sequence_id': ids,
+                            'prediction': labels,
+                            'confidence': confs})
     df.sort_values(by='index', axis=0, inplace=True)
-    print(df)
     return df
-    
 
-def main(args = None):
+
+def main(args=None):
     # Construct path to saved parametes of NN
     if args.weights is not None:
         weights_path = args.weights
     else:
-        weights_path = os.path.join('parameters', 
-                                    args.database, 
+        weights_path = os.path.join('parameters',
+                                    args.database,
                                     str(args.tax),
                                     args.architecture + '.pth')
     # Set up device
@@ -176,7 +173,7 @@ def main(args = None):
 
     # Load neural network parameters
     print(f'Loading NN-parameters from {weights_path} ...')
-    model_dict = torch.load(weights_path, map_location = device)
+    model_dict = torch.load(weights_path, map_location=device)
     # Load neural network model
     model = load_nn(args.architecture, model_dict, device)
     # Load class names
@@ -189,7 +186,7 @@ def main(args = None):
     # Predict labels of given data
     print(f'Predicting protein families ...')
     preds, confs, ids, indices = predict(model, dataset, device)
-    
+
     # Construct pandas dataframe
     df = create_df(class_labels, preds, confs, ids, indices, device)
 

@@ -71,6 +71,7 @@ class AminoAcidWordEmbedding(nn.Module):
     embedding_dim: int
         Embedding dimensionality.
     """
+
     def __init__(self, embedding_dim=10):
         super(AminoAcidWordEmbedding, self).__init__()
         # Get protein sequence vocabulary
@@ -142,6 +143,7 @@ class ProteinIterator():
         worker_id : int
             ID of worker this iterator belongs to
     """
+
     def __init__(self, iterator, num_workers=1, worker_id=0):
         self.iterator = iterator
         # Start position

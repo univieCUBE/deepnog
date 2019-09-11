@@ -7,18 +7,20 @@ Description:
 
 #######
 # TODO: Package project and replace encapsulated code with relative imports!
-import os,sys,inspect
-currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-parentdir = os.path.dirname(currentdir)
-sys.path.insert(0,parentdir) 
-
-from dataset import ProteinDataset
-from deepnog import load_nn, predict, create_df
-#######
-
-import pytest
-import torch
 import torch.nn as nn
+import torch
+import pytest
+import os
+import sys
+import inspect
+currentdir = os.path.dirname(os.path.abspath(inspect.getfile(
+                                                    inspect.currentframe())))
+parentdir = os.path.dirname(currentdir)
+sys.path.insert(0, parentdir)
+
+from deepnog import load_nn, predict, create_df
+from dataset import ProteinDataset
+#######
 
 
 class TestDeepnog:
@@ -32,7 +34,7 @@ class TestDeepnog:
         cuda = torch.cuda.is_available()
         device = torch.device('cuda' if cuda else 'cpu')
         # Start test
-        model_dict = torch.load(weights, map_location = device)
+        model_dict = torch.load(weights, map_location=device)
         model = load_nn(architecture, model_dict, device)
         assert(issubclass(type(model), nn.Module))
         assert(isinstance(model, nn.Module))
@@ -44,10 +46,10 @@ class TestDeepnog:
     @pytest.mark.parametrize("tolerance", [2])
     def test_predict(self, architecture, weights, data, fformat, tolerance):
         """ Test correct prediction output shapes as well as satisfying
-            prediction performance. 
+            prediction performance.
 
             Prediction performance is checked through sequences from SIMAP with
-            known class labels. Class labels are stored as the id in the given 
+            known class labels. Class labels are stored as the id in the given
             fasta file. Tolerance defines how many sequences the algorithm
             is allowed to misclassfy before the test fails.
         """
@@ -55,7 +57,7 @@ class TestDeepnog:
         cuda = torch.cuda.is_available()
         device = torch.device('cuda' if cuda else 'cpu')
         # Start test
-        model_dict = torch.load(weights, map_location = device)
+        model_dict = torch.load(weights, map_location=device)
         model = load_nn(architecture, model_dict, device)
         dataset = ProteinDataset(data, f_format=fformat)
         preds, confs, ids, indices = predict(model, dataset)

@@ -7,18 +7,20 @@ Description:
 
 #######
 # TODO: Package project and replace encapsulated code with relative imports!
-import os,sys,inspect
-currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
-parentdir = os.path.dirname(currentdir)
-sys.path.insert(0,parentdir) 
-
-from dataset import ProteinDataset
-from dataset import collate_sequences
-from dataset import AminoAcidWordEmbedding
-#######
-
-import pytest
 from torch.utils.data import DataLoader
+import pytest
+import os
+import sys
+import inspect
+currentdir = os.path.dirname(os.path.abspath(inspect.getfile(
+                                                    inspect.currentframe())))
+parentdir = os.path.dirname(currentdir)
+sys.path.insert(0, parentdir)
+
+from dataset import AminoAcidWordEmbedding
+from dataset import collate_sequences
+from dataset import ProteinDataset
+#######
 
 
 class TestDataset:
@@ -32,13 +34,13 @@ class TestDataset:
         test_file = "./tests/data/GCF_000007025.1.faa"
         dataset = ProteinDataset(test_file, f_format=f_format)
         s = set()
-        for i, batch in enumerate(DataLoader(dataset, num_workers=0, 
-                                          batch_size = 1, 
-                                          collate_fn=collate_sequences)):
-                # Check uniqueness of IDs for loaded data
-                for identifier in batch.ids:
-                    assert(identifier not in s)
-                    s.add(identifier)
+        for i, batch in enumerate(DataLoader(dataset, num_workers=0,
+                                             batch_size=1,
+                                             collate_fn=collate_sequences)):
+            # Check uniqueness of IDs for loaded data
+            for identifier in batch.ids:
+                assert(identifier not in s)
+                s.add(identifier)
         # Check if all data was loaded
         assert(i == 1288)
 
@@ -47,10 +49,10 @@ class TestDataset:
         """ Test if a batch of correct size is produced. """
         test_file = "./tests/data/GCF_000007025.1.faa"
         dataset = ProteinDataset(test_file, f_format=f_format)
-        for i, batch in enumerate(DataLoader(dataset, 
-                                        batch_size=batch_size, 
-                                        num_workers=4, 
-                                        collate_fn=collate_sequences)):
+        for i, batch in enumerate(DataLoader(dataset,
+                                             batch_size=batch_size,
+                                             num_workers=4,
+                                             collate_fn=collate_sequences)):
             if batch_size is None:
                 assert(batch.sequences.shape[0] == 1)
                 assert(len(batch.ids) == 1)
@@ -65,14 +67,14 @@ class TestDataset:
         """ Test correct zeroPadding. """
         test_file = "./tests/data/test_zeroPadding.faa"
         dataset = ProteinDataset(test_file, f_format=f_format)
-        for i, batch in enumerate(DataLoader(dataset, 
-                                        batch_size=2, 
-                                        num_workers=0, 
-                                        collate_fn=collate_sequences)):
+        for i, batch in enumerate(DataLoader(dataset,
+                                             batch_size=2,
+                                             num_workers=0,
+                                             collate_fn=collate_sequences)):
             # Test correct shape
             assert(batch.sequences.shape[1] == 112)
             # Test correctly zeros inserted
-            assert(sum(batch.sequences[0,56:]) == 0)
+            assert(sum(batch.sequences[0, 56:]) == 0)
 
     def test_correctEncoding(self, f_format='fasta'):
         """ Test correct amino acid to integer encoding. """
