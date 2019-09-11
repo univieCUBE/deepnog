@@ -88,6 +88,9 @@ class deepencoding(nn.Module):
         self.conv1.weight.data.normal_(0.0, 
                                 np.sqrt(1. / np.prod(self.conv1.kernel_size)))
 
+        # Softmax-Layer
+        self.softmax = nn.Softmax(dim=1)
+
     def forward(self, x):
         x = self.encoding(x).permute(0, 2, 1).contiguous() 
         x = self.conv1(x)
@@ -95,5 +98,6 @@ class deepencoding(nn.Module):
         x = self.pool1(x)
         x = self.dropout1(x)
         x = x.view(-1, self.conv1.out_channels)
-        out = self.classification1(x)
+        x = self.classification1(x)
+        out = self.softmax(x)
         return out

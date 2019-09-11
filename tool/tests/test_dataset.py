@@ -1,6 +1,6 @@
 """
 Author: Lukas Gosch
-Date: 5.9.2019
+Date: 11.9.2019
 Description:
     Test dataset module.
 """
@@ -19,6 +19,7 @@ from dataset import AminoAcidWordEmbedding
 
 import pytest
 from torch.utils.data import DataLoader
+
 
 class TestDataset:
     """ Class grouping tests for dataset module. """
@@ -53,9 +54,11 @@ class TestDataset:
             if batch_size is None:
                 assert(batch.sequences.shape[0] == 1)
                 assert(len(batch.ids) == 1)
+                assert(len(batch.indices) == 1)
             else:
                 assert(batch.sequences.shape[0] == batch_size)
                 assert(len(batch.ids) == batch_size)
+                assert(len(batch.indices) == batch_size)
             break
 
     def test_zeroPadding(self, f_format='fasta'):
