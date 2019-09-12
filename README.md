@@ -11,3 +11,5 @@ Stores notebooks and python script used to preprocess data for training purposes
 Stores notebooks used for training NN-architectures used in deepNOG-prediction-tool.
 
 ### tool
+
+DeepNOG command line tool for orthologous group predictions. See README.md in tool/ for detailed usage description.
