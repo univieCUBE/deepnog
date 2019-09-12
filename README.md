@@ -12,4 +12,4 @@ Stores notebooks used for training NN-architectures used in deepNOG-prediction-t
 
 ### tool
 
-DeepNOG command line tool for orthologous group predictions. See README.md in tool/ for detailed usage description.
+DeepNOG command line tool for orthologous group predictions. See README.md in [tool](tool) for detailed usage description.
