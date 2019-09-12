@@ -16,7 +16,7 @@ networks.
 
 ## Usage
 
-To use DeepNOG, call deepnog.py with a protein data file. 
+To use DeepNOG, clone project or download tool-folder and call deepnog.py with a protein data file. 
 
 Example usages: 
 
