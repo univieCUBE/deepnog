@@ -1,15 +1,49 @@
-This repository is devided into two parts:
-* Deep learning based project to develop and train neural networks for orthologous group predictions in eggNOG 5.0 (and possibly other databases). 
-* Deep learning based tool, built upon the previous project, to predict for a given protein sequence its corresponding most likely orthologous group in eggNOG 5.0. 
+# DeepNOG - predicting orthologous groups (OGs) of proteins
 
-# Folder structure
-### data
+Deep learning based command line tool written in Python 3 (3.7.4). 
 
-Stores notebooks and python script used to preprocess data for training purposes.
+Predicts the OGs of given protein sequences based on pretrained neural
+networks.
 
-### train
-Stores notebooks used for training NN-architectures used in deepNOG-prediction-tool.
+## Required packages
 
-### tool
+*  PyTorch 1.1+
+*  NumPy
+*  pandas
+*  Biopython
+*  tqdm
+*  pytest (for tests only)
 
-DeepNOG command line tool for orthologous group predictions. See README.md in [tool](tool) for detailed usage description.
+## Usage
+
+To use DeepNOG, clone project or download tool-folder and call deepnog.py with a protein data file. 
+
+Example usages: 
+
+*  python deepnog.py proteins.faa 
+    * OGs prediction of proteins in proteins.faa will be written into out.csv
+*  python deepnog.py proteins.faa --out prediction.csv
+    * Write into prediction.csv instead
+*  python deepnog.py proteins.faa --tab
+    * Instead of semicolon (;) separated, generated tab separated output-file
+
+For help and advanced options, call python deepnog.py --help
+
+## File formats supported
+
+Prefered: FASTA
+
+DeepNOG supports protein sequences stored in all file formats listed in
+https://biopython.org/wiki/SeqIO but is tested for the FASTA-file format
+only.
+
+## Databases supported
+
+eggNOG 5.0, taxonomic level 2
+
+## Neural network architectures supported
+
+*  DeepEncoding
+    * Details to follow
+
+    
