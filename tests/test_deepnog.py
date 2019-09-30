@@ -60,7 +60,7 @@ class TestDeepnog:
         model_dict = torch.load(weights, map_location=device)
         model = load_nn(architecture, model_dict, device)
         dataset = ProteinDataset(data, f_format=fformat)
-        preds, confs, ids, indices = predict(model, dataset)
+        preds, confs, ids, indices = predict(model, dataset, device)
         # Test correct output shape
         assert(preds.shape[0] == confs.shape[0])
         assert(confs.shape[0] == len(ids))
@@ -68,7 +68,7 @@ class TestDeepnog:
         # Test satisfying prediction accuracy
         N = len(ids)
         ids = torch.tensor(list(map(int, ids)))
-        assert(sum((ids == preds).long()) >= N - tolerance)
+        assert(sum((ids == preds.cpu()).long()) >= N - tolerance)
 
     def test_create_df(self):
         """ Test correct creation of dataframe. """
