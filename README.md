@@ -5,6 +5,8 @@ Deep learning based command line tool written in Python 3 (3.7.4).
 Predicts the OGs of given protein sequences based on pretrained neural
 networks.
 
+Version: 0.1.0
+
 ## Required packages
 
 *  PyTorch 1.1+
@@ -13,6 +15,13 @@ networks.
 *  Biopython
 *  tqdm
 *  pytest (for tests only)
+
+## Installation guide
+
+Dowload the source code of the project and navigate to root of the project
+directory, then run:
+
+```pip install -e .```
 
 ## Usage
 
@@ -45,5 +54,6 @@ eggNOG 5.0, taxonomic level 2
 
 *  DeepEncoding
     * Details to follow
+
 
     
