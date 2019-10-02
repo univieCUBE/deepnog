@@ -5,22 +5,15 @@ Description:
     Test dataset module.
 """
 
-#######
-# TODO: Package project and replace encapsulated code with relative imports!
 from torch.utils.data import DataLoader
 import pytest
 import os
 import sys
 import inspect
-currentdir = os.path.dirname(os.path.abspath(inspect.getfile(
-                                                    inspect.currentframe())))
-parentdir = os.path.dirname(currentdir)
-sys.path.insert(0, parentdir)
 
-from dataset import AminoAcidWordEmbedding
-from dataset import collate_sequences
-from dataset import ProteinDataset
-#######
+from ..dataset import AminoAcidWordEmbedding
+from ..dataset import collate_sequences
+from ..dataset import ProteinDataset
 
 
 class TestDataset:

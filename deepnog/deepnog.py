@@ -28,8 +28,8 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 import pandas as pd
 
-from dataset import ProteinDataset
-from dataset import collate_sequences
+from .dataset import ProteinDataset
+from .dataset import collate_sequences
 
 
 def get_parser():
@@ -76,7 +76,7 @@ def load_nn(architecture, model_dict, device='cpu'):
             Device to load the model into
     """
     # Import and instantiate neural network class
-    model_module = import_module(f'models.{architecture}')
+    model_module = import_module(f'.models.{architecture}', 'deepnog')
     model_class = getattr(model_module, architecture)
     model = model_class(model_dict)
     # Set trained parameters of model

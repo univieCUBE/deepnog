@@ -138,14 +138,17 @@ class ProteinIterator():
         iterator
             Iterator over sequence file returned by Biopythons
             Bio.SeqIO.parse() function.
+        aa_vocab : dict
+            Amino-acid vocabulary mapping letters to integers
         num_workers : int
             Number of workers set in DataLoader
         worker_id : int
             ID of worker this iterator belongs to
     """
 
-    def __init__(self, iterator, num_workers=1, worker_id=0):
+    def __init__(self, iterator, aa_vocab, num_workers=1, worker_id=0):
         self.iterator = iterator
+        self.vocab = aa_vocab
         # Start position
         self.start = worker_id
         self.pos = None
@@ -173,13 +176,11 @@ class ProteinIterator():
             consume(self.iterator, n=self.start)
             self.pos = self.start + 1
         next_seq = next(self.iterator)
-        alphabet = next_seq.seq.alphabet
-        vocab = AminoAcidWordEmbedding.gen_amino_acid_vocab(alphabet)
         # Generate sequence object from SeqRecord
         sequence = self.sequence(index=self.pos,
                                  id=f'{next_seq.id}',
                                  string=str(next_seq.seq),
-                                 encoded=[vocab[c] for c in next_seq.seq])
+                                 encoded=[self.vocab[c] for c in next_seq.seq])
         return sequence
 
 
@@ -206,9 +207,13 @@ class ProteinDataset(IterableDataset):
     def __init__(self, file, f_format='fasta', max_length=None,
                  zero_padding=True):
         """ Initialize iterator over sequences in file."""
+        # Generate amino-acid vocabulary
+        self.alphabet = ExtendedIUPACProtein()
+        self.vocab = AminoAcidWordEmbedding.gen_amino_acid_vocab(self.alphabet)
+        # Generate file-iterator
         if os.path.isfile(file):
             self.iter = SeqIO.parse(file, format=f_format,
-                                    alphabet=ExtendedIUPACProtein())
+                                    alphabet=self.alphabet)
         else:
             raise ValueError('Given file does not exist or is not a file.')
 
@@ -216,7 +221,8 @@ class ProteinDataset(IterableDataset):
         """ Return iterator over sequences in file. """
         worker_info = torch.utils.data.get_worker_info()
         if worker_info is None:
-            return ProteinIterator(self.iter)
+            return ProteinIterator(self.iter, self.vocab)
         else:
-            return ProteinIterator(self.iter, worker_info.num_workers,
+            return ProteinIterator(self.iter, self.vocab,
+                                   worker_info.num_workers,
                                    worker_info.id)
