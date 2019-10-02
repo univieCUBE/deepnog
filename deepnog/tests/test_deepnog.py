@@ -1,27 +1,19 @@
 """
 Author: Lukas Gosch
-Date: 11.9.2019
+Date: 2.10.2019
 Description:
     Test deepnog module and pretrained neural network architectures.
 """
 
-#######
-# TODO: Package project and replace encapsulated code with relative imports!
 import torch.nn as nn
 import torch
 import pytest
 import os
 import sys
 import inspect
-currentdir = os.path.dirname(os.path.abspath(inspect.getfile(
-                                                    inspect.currentframe())))
-parentdir = os.path.dirname(currentdir)
-sys.path.insert(0, parentdir)
 
-from deepnog import load_nn, predict, create_df
-from dataset import ProteinDataset
-#######
-
+from .. import deepnog as dn
+from ..dataset import ProteinDataset
 
 class TestDeepnog:
     """ Class grouping tests for deepnog module. """
@@ -35,7 +27,7 @@ class TestDeepnog:
         device = torch.device('cuda' if cuda else 'cpu')
         # Start test
         model_dict = torch.load(weights, map_location=device)
-        model = load_nn(architecture, model_dict, device)
+        model = dn.load_nn(architecture, model_dict, device)
         assert(issubclass(type(model), nn.Module))
         assert(isinstance(model, nn.Module))
 
@@ -58,9 +50,9 @@ class TestDeepnog:
         device = torch.device('cuda' if cuda else 'cpu')
         # Start test
         model_dict = torch.load(weights, map_location=device)
-        model = load_nn(architecture, model_dict, device)
+        model = dn.load_nn(architecture, model_dict, device)
         dataset = ProteinDataset(data, f_format=fformat)
-        preds, confs, ids, indices = predict(model, dataset, device)
+        preds, confs, ids, indices = dn.predict(model, dataset, device)
         # Test correct output shape
         assert(preds.shape[0] == confs.shape[0])
         assert(confs.shape[0] == len(ids))
@@ -77,7 +69,7 @@ class TestDeepnog:
         confs = torch.tensor([0.8, 0.3])
         ids = ['sequence2', 'sequence1']
         indices = [2, 1]
-        df = create_df(class_labels, preds, confs, ids, indices)
+        df = dn.create_df(class_labels, preds, confs, ids, indices)
         assert(df.shape == (2, 4))
         assert(sum(df['index'] == [1, 2]) == 2)
         assert(sum(df['sequence_id'] == ['sequence1', 'sequence2']) == 2)
