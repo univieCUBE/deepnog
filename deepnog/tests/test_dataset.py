@@ -1,6 +1,6 @@
 """
 Author: Lukas Gosch
-Date: 11.9.2019
+Date: 3.10.2019
 Description:
     Test dataset module.
 """
@@ -11,9 +11,7 @@ import os
 import sys
 import inspect
 
-from ..dataset import AminoAcidWordEmbedding
-from ..dataset import collate_sequences
-from ..dataset import ProteinDataset
+from .. import dataset as ds
 
 
 class TestDataset:
@@ -25,11 +23,11 @@ class TestDataset:
             whole sequence file.
         """
         test_file = "./tests/data/GCF_000007025.1.faa"
-        dataset = ProteinDataset(test_file, f_format=f_format)
+        dataset = ds.ProteinDataset(test_file, f_format=f_format)
         s = set()
         for i, batch in enumerate(DataLoader(dataset, num_workers=0,
                                              batch_size=1,
-                                             collate_fn=collate_sequences)):
+                                             collate_fn=ds.collate_sequences)):
             # Check uniqueness of IDs for loaded data
             for identifier in batch.ids:
                 assert(identifier not in s)
@@ -41,11 +39,11 @@ class TestDataset:
     def test_correctCollatingSequences(self, batch_size, f_format='fasta'):
         """ Test if a batch of correct size is produced. """
         test_file = "./tests/data/GCF_000007025.1.faa"
-        dataset = ProteinDataset(test_file, f_format=f_format)
+        dataset = ds.ProteinDataset(test_file, f_format=f_format)
         for i, batch in enumerate(DataLoader(dataset,
                                              batch_size=batch_size,
                                              num_workers=4,
-                                             collate_fn=collate_sequences)):
+                                             collate_fn=ds.collate_sequences)):
             if batch_size is None:
                 assert(batch.sequences.shape[0] == 1)
                 assert(len(batch.ids) == 1)
@@ -59,11 +57,11 @@ class TestDataset:
     def test_zeroPadding(self, f_format='fasta'):
         """ Test correct zeroPadding. """
         test_file = "./tests/data/test_zeroPadding.faa"
-        dataset = ProteinDataset(test_file, f_format=f_format)
+        dataset = ds.ProteinDataset(test_file, f_format=f_format)
         for i, batch in enumerate(DataLoader(dataset,
                                              batch_size=2,
                                              num_workers=0,
-                                             collate_fn=collate_sequences)):
+                                             collate_fn=ds.collate_sequences)):
             # Test correct shape
             assert(batch.sequences.shape[1] == 112)
             # Test correctly zeros inserted
@@ -72,7 +70,7 @@ class TestDataset:
     def test_correctEncoding(self, f_format='fasta'):
         """ Test correct amino acid to integer encoding. """
         # Default alphabet is ExtendedIUPACProtein mapped to [1,26]
-        vocab = AminoAcidWordEmbedding.gen_amino_acid_vocab()
+        vocab = ds.gen_amino_acid_vocab()
         test_string = 'ACDEFGHIKLMNPQRSTVWYBXZJUO'
         test_encoded = [vocab[c] for c in test_string]
         for i, batch in enumerate(test_encoded):

@@ -80,55 +80,37 @@ def collate_sequences(batch, zero_padding=True):
                               sequences=sequences)
 
 
-class AminoAcidWordEmbedding(nn.Module):
-    """ PyTorch nn.Embedding where each amino acid is considered one word.
+def gen_amino_acid_vocab(alphabet=None):
+    """ Create vocabulary for protein sequences. 
 
+    A vocabulary is defined as a mapping from the amino-acid letters in the
+    alphabet to numbers. As this mapping is aware of zero-padding, it maps
+    the first letter in the alphabet to 1 instead of 0.
+        
     Parameters
     ----------
-    embedding_dim: int
-        Embedding dimensionality.
+    alphabet : Bio.Alphabet.ProteinAlphabet
+        Alphabet to use for vocabulary. If None, uses 
+        ExtendedIUPACProtein.
+
+    Returns
+    -------
+    vocab : dict
+        Mapping of amino acid characters to numbers.
     """
+    if alphabet is None:
+        # Use all 26 letters
+        alphabet = ExtendedIUPACProtein()
 
-    def __init__(self, embedding_dim=10):
-        super(AminoAcidWordEmbedding, self).__init__()
-        # Get protein sequence vocabulary
-        self.vocab = self.gen_amino_acid_vocab()
-        # Create embedding (initialized randomly)
-        embeds = nn.Embedding(len(self.vocab) // 2 + 1, embedding_dim)
-        self.embedding = embeds
-
-    @staticmethod
-    def gen_amino_acid_vocab(alphabet=None):
-        """ Create vocabulary for protein sequences. 
-            
-            Parameters
-            ----------
-            alphabet : Bio.Alphabet.ProteinAlphabet
-                Alphabet to use for vocabulary. If None, uses 
-                ExtendedIUPACProtein.
-
-            Returns
-            -------
-            vocab : dict
-                Mapping of amino acid characters to numbers.
-        """
-        if alphabet is None:
-            # Use all 26 letters
-            alphabet = ExtendedIUPACProtein()
-
-        # In case of ExtendendIUPACProtein: Map 'ACDEFGHIKLMNPQRSTVWYBXZJUO'
-        # to [1, 26] so that zero padding does not interfere.
-        aminoacid_to_ix = {}
-        for i, aa in enumerate(alphabet.letters):
-            # Map both upper case and lower case to the same embedding
-            for key in [aa.upper(), aa.lower()]:
-                aminoacid_to_ix[key] = i + 1
-        vocab = aminoacid_to_ix
-        return vocab
-
-    def forward(self, sequence):
-        x = self.embedding(sequence)
-        return x
+    # In case of ExtendendIUPACProtein: Map 'ACDEFGHIKLMNPQRSTVWYBXZJUO'
+    # to [1, 26] so that zero padding does not interfere.
+    aminoacid_to_ix = {}
+    for i, aa in enumerate(alphabet.letters):
+        # Map both upper case and lower case to the same embedding
+        for key in [aa.upper(), aa.lower()]:
+            aminoacid_to_ix[key] = i + 1
+    vocab = aminoacid_to_ix
+    return vocab
 
 
 def consume(iterator, n=None):
@@ -251,7 +233,7 @@ class ProteinDataset(IterableDataset):
         """ Initialize iterator over sequences in file."""
         # Generate amino-acid vocabulary
         self.alphabet = ExtendedIUPACProtein()
-        self.vocab = AminoAcidWordEmbedding.gen_amino_acid_vocab(self.alphabet)
+        self.vocab = gen_amino_acid_vocab(self.alphabet)
         # Generate file-iterator
         if os.path.isfile(file):
             self.iter = SeqIO.parse(file, format=f_format,
