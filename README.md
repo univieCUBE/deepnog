@@ -5,7 +5,7 @@ Deep learning based command line tool written in Python 3 (3.7.4).
 Predicts the OGs of given protein sequences based on pretrained neural
 networks.
 
-Version: 0.1.0
+Version: 0.1.1
 
 ## Required packages
 
@@ -18,25 +18,30 @@ Version: 0.1.0
 
 ## Installation guide
 
-Dowload the source code of the project and navigate to root of the project
-directory, then run:
+Clone or dowload the source code of the project and run
 
-```pip install -e .```
+```pip install /path/to/DeepNOG```
+
+If you plan to extend DeepNOG as a developer, run
+
+```pip install -e /path/to/DeepNOG```
+
+instead.
 
 ## Usage
 
-To use DeepNOG, clone project or download tool-folder and call deepnog.py with a protein data file. 
+DeepNOG can be used through calling the above installed deepnog command with a protein data file. 
 
 Example usages: 
 
-*  python deepnog.py proteins.faa 
+*  deepnog proteins.faa 
     * OGs prediction of proteins in proteins.faa will be written into out.csv
-*  python deepnog.py proteins.faa --out prediction.csv
+*  deepnog proteins.faa --out prediction.csv
     * Write into prediction.csv instead
-*  python deepnog.py proteins.faa --tab
+*  deepnog proteins.faa --tab
     * Instead of semicolon (;) separated, generated tab separated output-file
 
-For help and advanced options, call python deepnog.py --help
+For help and advanced options, call deepnog --help
 
 ## File formats supported
 
