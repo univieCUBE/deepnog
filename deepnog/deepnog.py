@@ -1,6 +1,6 @@
 """
 Author: Lukas Gosch
-Date: 11.9.2019
+Date: 3.10.2019
 Usage: python deepnog.py --help
 Description:
     DeepNOG is a deep learning based command line tool which predicts the
@@ -19,6 +19,7 @@ Description:
         - eggNOG 5.0, taxonomic level 2
 """
 
+import sys
 import argparse
 import os.path
 from importlib import import_module
@@ -46,6 +47,10 @@ def get_parser():
     parser.add_argument("-o", "--out", default='out.csv', help="Path where"
                         + " to store the output-file containing the protein"
                         + " family predictions.")
+    parser.add_argument("-d", "--device", default='auto', choices=['auto',
+                        'cpu', 'gpu'], help="Define device for calculating "
+                        + " protein sequence classification. Auto chooses gpu "
+                        + " if available, otherwise cpu.")
     parser.add_argument("-ff", "--fformat", default='fasta',
                         help="File format of protein sequences. Must be "
                         + "supported by Biopythons Bio.SeqIO class.")
@@ -157,6 +162,21 @@ def create_df(class_labels, preds, confs, ids, indices, device='cpu'):
     df.sort_values(by='index', axis=0, inplace=True)
     return df
 
+def set_device(user_choice):
+    """ Sets calc. device depending on users choices and availability. """
+    if user_choice == 'auto':
+        cuda = torch.cuda.is_available()
+        device = torch.device('cuda' if cuda else 'cpu')
+    elif user_choice == 'gpu':
+        cuda = torch.cuda.is_available()
+        if cuda:
+            device = torch.device('cuda')
+        else:
+            raise RuntimeError('Device set to gpu but no cuda-enabled gpu '
+                               + 'available on machine!')
+    else:
+        device = torch.device('cpu')
+    return device
 
 def main(args=None):
     # Parse command line arguments
@@ -173,8 +193,11 @@ def main(args=None):
                                     str(args.tax),
                                     args.architecture + '.pth')
     # Set up device
-    cuda = torch.cuda.is_available()
-    device = torch.device('cuda' if cuda else 'cpu')
+    try:
+        device = set_device(args.device)
+    except RuntimeError as err:
+        sys.exit(f'RuntimeError: {err} \nLeaving the ship and aborting '
+                 +'calculations.')
     print(f'Device set to "{device}"')
 
     # Load neural network parameters
