@@ -1,8 +1,9 @@
 """
 Author: Lukas Gosch
-Date: 11.9.2019
+Date: 3.10.2019
 Description:
-    Functions to preprocess proteins for classification.
+    Dataset classes and helper functions for usage with neural network models 
+    written in PyTorch.
 """
 import os
 from itertools import islice
@@ -21,8 +22,24 @@ collated_sequences = namedtuple('collated_sequences',
 
 
 def collate_sequences(batch, zero_padding=True):
-    """ Collate and zero_pad encoded sequence. """
+    """ Collate and zero-pad encoded sequence. 
 
+    Parameters
+    ----------
+    batch : list[namedtuple] or namedtuple
+        Batch of protein sequences to classify stored as a namedtuple-class
+        sequence (see ProteinDataset).
+    zero_padding : bool
+        If True, zero-pads protein sequences through appending zeros until
+        every sequence is as long as the longest sequences in batch. If False
+        raise NotImplementedError.
+
+    Returns
+    -------
+    batch : namedtuple
+        Input batch zero-padded and stored in namedtuple-class 
+        collated_sequences.
+    """
     # Check if an individual sample or a batch was given
     if not isinstance(batch, list):
         batch = [batch]
@@ -82,7 +99,19 @@ class AminoAcidWordEmbedding(nn.Module):
 
     @staticmethod
     def gen_amino_acid_vocab(alphabet=None):
-        """ Create vocabulary for protein sequences. """
+        """ Create vocabulary for protein sequences. 
+            
+            Parameters
+            ----------
+            alphabet : Bio.Alphabet.ProteinAlphabet
+                Alphabet to use for vocabulary. If None, uses 
+                ExtendedIUPACProtein.
+
+            Returns
+            -------
+            vocab : dict
+                Mapping of amino acid characters to numbers.
+        """
         if alphabet is None:
             # Use all 26 letters
             alphabet = ExtendedIUPACProtein()
@@ -119,7 +148,7 @@ def consume(iterator, n=None):
 class ProteinIterator():
     """ Iterator allowing for multiprocess dataloading of a sequence file.
 
-        MPProteinIterator is a wrapper for the iterator returned by
+        ProteinIterator is a wrapper for the iterator returned by
         Biopythons Bio.SeqIO class when parsing a sequence file. It
         specifies custom __next__() method to support multiprocess data
         loading. It does so by each worker skipping num_worker - 1 data
@@ -135,7 +164,7 @@ class ProteinIterator():
 
         Parameters
         ----------
-        iterator
+        iterator : iterator
             Iterator over sequence file returned by Biopythons
             Bio.SeqIO.parse() function.
         aa_vocab : dict
@@ -144,6 +173,13 @@ class ProteinIterator():
             Number of workers set in DataLoader
         worker_id : int
             ID of worker this iterator belongs to
+
+        Variables
+        ---------
+        sequence : namedtuple
+            Tuple subclass named sequence holding all relevant information
+            DeepNOG needs to correctly perform and store protein predictions
+            for one protein sequence.
     """
 
     def __init__(self, iterator, aa_vocab, num_workers=1, worker_id=0):
@@ -162,7 +198,7 @@ class ProteinIterator():
         return self
 
     def __next__(self):
-        """ Return correctly prefixed sequence object.
+        """ Return next protein sequence in datafile as sequence object.
 
             Returns element at current + step + 1 position or start
             position. Fruthermore prefixes element with unique sequential
@@ -186,6 +222,12 @@ class ProteinIterator():
 
 class ProteinDataset(IterableDataset):
     """ Protein dataset holding the proteins to classify.
+
+    Does not load and store all proteins from a given sequence file but only
+    holds an iterator to the next sequence to load. 
+
+    Thread safe class allowing for multi-worker loading of sequences 
+    from a given datafile.
 
     Parameters
     ----------

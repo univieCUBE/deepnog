@@ -35,8 +35,12 @@ from .dataset import collate_sequences
 
 
 def get_parser():
-    """
-    Creates a new argument parser.
+    """ Creates a new argument parser.
+
+    Returns
+    -------
+    parser : ArgumentParser
+        ArgumentParser object to parse programm arguments.
     """
     parser = argparse.ArgumentParser('DeepNOG is a deep learning based command'
                             + ' line tool which predicts the protein families'
@@ -72,14 +76,20 @@ def get_parser():
 def load_nn(architecture, model_dict, device='cpu'):
     """ Import NN architecture and set loaded parameters.
 
-        Parameters
-        ----------
-        architecture : str
-            Name of neural network module and class to import.
-        model_dict : dict
-            Dictionary holding all parameters and hyperparameters of the model
-        device : dict
-            Device to load the model into
+    Parameters
+    ----------
+    architecture : str
+        Name of neural network module and class to import.
+    model_dict : dict
+        Dictionary holding all parameters and hyperparameters of the model.
+    device : dict
+        Device to load the model into.
+
+    Returns
+    -------
+    model : torch.nn.Module
+        Neural network object of type architecture with parameters
+        loaded from model_dict and moved to device.
     """
     # Import and instantiate neural network class
     model_module = import_module(f'.models.{architecture}', 'deepnog')
@@ -97,27 +107,29 @@ def load_nn(architecture, model_dict, device='cpu'):
 def predict(model, dataset, device='cpu', batch_size=16):
     """ Use model to predict zero-indexed labels of dataset.
 
-        Parameters
-        ----------
-        model : nn.Module
-            Trained neural network model.
-        dataset : ProteinDataset
-            Data to predict protein families for.
-        device : str
-            Device of model.
-        batch_size : int
-            Forward batch_size proteins through neural network at once.
+    Parameters
+    ----------
+    model : nn.Module
+        Trained neural network model.
+    dataset : ProteinDataset
+        Data to predict protein families for.
+    device : str
+        Device of model.
+    batch_size : int
+        Forward batch_size proteins through neural network at once.
 
-        Returns
-        -------
-        Returns four lists in the following order:
-            - pred_l : Stores the index of the output-node with
-                       the highest activation
-            - conf_l : Stores the confidence in the prediciton
-            - label_l: Stores the (possible empty) protein labels extracted
-                       from data file.
-            - indices_l: Stores the unique indices of sequences mapping
-                         to their position in the file
+    Returns
+    -------
+    preds : torch.Tensor, shape (n_samples,)
+        Stores the index of the output-node with the highest activation
+    confs : torch.Tensor, shape (n_samples,)
+        Stores the confidence in the prediciton
+    ids : list[str]
+        Stores the (possible empty) protein labels extracted from data 
+        file.
+    indices : list[int]
+        Stores the unique indices of sequences mapping to their position 
+        in the file
     """
     pred_l = []
     conf_l = []
@@ -147,11 +159,16 @@ def predict(model, dataset, device='cpu', batch_size=16):
 
 
 def create_df(class_labels, preds, confs, ids, indices, device='cpu'):
-    """ Creates one dataframe storing all relevent prediction information.
+    """ Creates one dataframe storing all relevant prediction information.
 
-        The rows in the returned dataframe have the same order as the
-        original sequences in the data file. First column of the dataframe
-        represents.
+    The rows in the returned dataframe have the same order as the
+    original sequences in the data file. First column of the dataframe
+    represents.
+
+    Returns
+    -------
+    df : pandas.DataFrame
+        Stores prediction information about the input protein sequences.
     """
     labels = [class_labels[pred] for pred in preds]
     confs = confs.cpu().numpy()
@@ -163,7 +180,14 @@ def create_df(class_labels, preds, confs, ids, indices, device='cpu'):
     return df
 
 def set_device(user_choice):
-    """ Sets calc. device depending on users choices and availability. """
+    """ Sets calc. device depending on users choices and availability. 
+        
+    Returns
+    -------
+    device : torch.device
+        Object containing the device type to be used for prediction 
+        calculations.
+    """
     if user_choice == 'auto':
         cuda = torch.cuda.is_available()
         device = torch.device('cuda' if cuda else 'cpu')
@@ -179,6 +203,7 @@ def set_device(user_choice):
     return device
 
 def main(args=None):
+    """ DeepNOG command line tool. """
     # Parse command line arguments
     parser = get_parser()
     args = parser.parse_args()

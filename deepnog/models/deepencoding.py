@@ -1,6 +1,6 @@
 """
 Author: Lukas Gosch
-Date: 11.9.2019
+Date: 3.10.2019
 Description:
     Convolutional network (similar to DeepFam) for protein family prediction.
     Architecture conceived by Roman for multiclass-classification on different
@@ -20,20 +20,13 @@ Description:
     classify.
 """
 
-#######
-# TODO: Package project and replace encapsulated code with relative imports!
 import torch.nn as nn
 import numpy as np
 import os
 import sys
 import inspect
-currentdir = os.path.dirname(os.path.abspath(inspect.getfile(
-                                                    inspect.currentframe())))
-parentdir = os.path.dirname(currentdir)
-sys.path.insert(0, parentdir)
 
-from dataset import AminoAcidWordEmbedding
-#######
+from ..dataset import AminoAcidWordEmbedding
 
 
 class deepencoding(nn.Module):
@@ -48,7 +41,7 @@ class deepencoding(nn.Module):
 
     Parameters
     ----------
-    model_dict : dictionary
+    model_dict : dict
         Dictionary storing the hyperparameters and learned parameters of
         the model.
     """
@@ -95,6 +88,7 @@ class deepencoding(nn.Module):
         self.softmax = nn.Softmax(dim=1)
 
     def forward(self, x):
+        """ Forward a batch of sequences through network. """
         x = self.encoding(x).permute(0, 2, 1).contiguous()
         x = self.conv1(x)
         x = self.activation1(x)
