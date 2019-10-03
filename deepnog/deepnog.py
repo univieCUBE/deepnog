@@ -51,6 +51,15 @@ def get_parser():
     parser.add_argument("-o", "--out", default='out.csv', help="Path where"
                         + " to store the output-file containing the protein"
                         + " family predictions.")
+    parser.add_argument("-v", "--verbose", type=int, default=3,
+                        help="Define verbosity of DeepNOGs output written to "
+                        + "stdout or stderr. 0 only writes errors to stderr "
+                        + "which cause DeepNOG to abort and exit. 1 also "
+                        + "writes warnings to stderr if e.g. a protein without"
+                        + " an ID was found and skipped. 2 additionally writes"
+                        + " general progress messages to stdout. 3 includes a "
+                        + "dynamic progress bar of the prediction stage using "
+                        + "tqdm.")
     parser.add_argument("-d", "--device", default='auto', choices=['auto',
                         'cpu', 'gpu'], help="Define device for calculating "
                         + " protein sequence classification. Auto chooses gpu "
@@ -70,6 +79,18 @@ def get_parser():
     parser.add_argument("--tab", action='store_true',
                         help='If set, output will be tab-separated instead of'
                         + ' ;-separated.')
+    parser.add_argument("-bs", "--batch-size", type=int, default=16,
+                        help='Batch size used for prediction. Defines how many'
+                        +' sequences should be forwarded in the network at '
+                        +' once. With a batch size of one, the protein '
+                        +' sequences are sequentially classified by the neural'
+                        +' network without the possibility of leveraging '
+                        +' parallelism. Higher batch-sizes than the default '
+                        +' one can speed up the prediction significantly if '
+                        +' on a gpu. But If on a cpu, they can be slower as '
+                        +' smaller ones due to the increased average sequence '
+                        +' length in the convolution step due to zero-padding '
+                        +' every sequence in each batch.')
     return parser
 
 
@@ -104,7 +125,7 @@ def load_nn(architecture, model_dict, device='cpu'):
     return model
 
 
-def predict(model, dataset, device='cpu', batch_size=16):
+def predict(model, dataset, device='cpu', batch_size=16, verbose=3):
     """ Use model to predict zero-indexed labels of dataset.
 
     Parameters
@@ -137,21 +158,32 @@ def predict(model, dataset, device='cpu', batch_size=16):
     indices = []
     data_loader = DataLoader(dataset, batch_size=batch_size,
                              num_workers=4, collate_fn=collate_sequences)
-    # Give user performance feedback
-    print(f'Process {batch_size} sequences per iteration: ')
     # Disable tracking of gradients to increase performance
     with torch.no_grad():
-        for i, batch in enumerate(tqdm(data_loader)):
-            # Push sequences on correct device
-            sequences = batch.sequences.to(device)
-            # Predict protein families
-            output = model(sequences)
-            conf, pred = torch.max(output, 1)
-            # Store predictions
-            pred_l.append(pred)
-            conf_l.append(conf)
-            ids.extend(batch.ids)
-            indices.extend(batch.indices)
+        if verbose >= 3:
+            for i, batch in enumerate(tqdm(data_loader)):
+                # Push sequences on correct device
+                sequences = batch.sequences.to(device)
+                # Predict protein families
+                output = model(sequences)
+                conf, pred = torch.max(output, 1)
+                # Store predictions
+                pred_l.append(pred)
+                conf_l.append(conf)
+                ids.extend(batch.ids)
+                indices.extend(batch.indices)
+        else:
+            for i, batch in enumerate(data_loader):
+                # Push sequences on correct device
+                sequences = batch.sequences.to(device)
+                # Predict protein families
+                output = model(sequences)
+                conf, pred = torch.max(output, 1)
+                # Store predictions
+                pred_l.append(pred)
+                conf_l.append(conf)
+                ids.extend(batch.ids)
+                indices.extend(batch.indices)
     # Merge individual output tensors
     preds = torch.cat(pred_l)
     confs = torch.cat(conf_l)
@@ -207,7 +239,10 @@ def main(args=None):
     # Parse command line arguments
     parser = get_parser()
     args = parser.parse_args()
-
+    
+    # Sanity check command line arguments
+    if args.batch_size < 0:
+        sys.exit(f'ArgumentError: Batch size must be at least one.')
     # Construct path to saved parametes of NN
     if args.weights is not None:
         weights_path = args.weights
@@ -223,10 +258,12 @@ def main(args=None):
     except RuntimeError as err:
         sys.exit(f'RuntimeError: {err} \nLeaving the ship and aborting '
                  +'calculations.')
-    print(f'Device set to "{device}"')
+    if args.verbose >= 2:
+        print(f'Device set to "{device}"')
 
     # Load neural network parameters
-    print(f'Loading NN-parameters from {weights_path} ...')
+    if args.verbose >= 2:
+        print(f'Loading NN-parameters from {weights_path} ...')
     model_dict = torch.load(weights_path, map_location=device)
     # Load neural network model
     model = load_nn(args.architecture, model_dict, device)
@@ -234,12 +271,18 @@ def main(args=None):
     class_labels = model_dict['classes']
 
     # Load dataset
-    print(f'Accessing dataset from {args.file} ...')
+    if args.verbose >= 2:
+        print(f'Accessing dataset from {args.file} ...')
     dataset = ProteinDataset(args.file, f_format=args.fformat)
 
     # Predict labels of given data
-    print(f'Predicting protein families ...')
-    preds, confs, ids, indices = predict(model, dataset, device)
+    if args.verbose >= 2:
+        print(f'Predicting protein families ...')
+        if args.verbose >= 3:
+            print(f'Process {args.batch_size} sequences per iteration: ')
+    preds, confs, ids, indices = predict(model, dataset, device,
+                                         batch_size=args.batch_size,
+                                         verbose=args.verbose)
 
     # Construct pandas dataframe
     df = create_df(class_labels, preds, confs, ids, indices, device)
@@ -249,14 +292,15 @@ def main(args=None):
         save_file = os.path.join(args.out, 'out.csv')
     else:
         save_file = args.out
-    print(f'Writing prediction to {save_file}')
     # Write to file
+    if args.verbose >= 2:
+        print(f'Writing prediction to {save_file}')
     if args.tab:
         df.to_csv(save_file, sep='\t', index=False)
     else:
         df.to_csv(save_file, sep=';', index=False)
-
-    print(f'Finished magic.')
+    if args.verbose >= 2:
+        print(f'Finished magic.')
     return
 
 
