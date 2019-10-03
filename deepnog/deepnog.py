@@ -28,6 +28,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 import pandas as pd
 
+import deepnog
 from .dataset import ProteinDataset
 from .dataset import collate_sequences
 
@@ -158,11 +159,16 @@ def create_df(class_labels, preds, confs, ids, indices, device='cpu'):
 
 
 def main(args=None):
+    # Parse command line arguments
+    parser = get_parser()
+    args = parser.parse_args()
+
     # Construct path to saved parametes of NN
     if args.weights is not None:
         weights_path = args.weights
     else:
-        weights_path = os.path.join('parameters',
+        weights_path = os.path.join(deepnog.__path__[0],
+                                    'parameters',
                                     args.database,
                                     str(args.tax),
                                     args.architecture + '.pth')
@@ -207,6 +213,4 @@ def main(args=None):
 
 
 if __name__ == '__main__':
-    parser = get_parser()
-    args = parser.parse_args()
-    main(args)
+    main()
