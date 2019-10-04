@@ -190,17 +190,39 @@ def predict(model, dataset, device='cpu', batch_size=16, verbose=3):
     return preds, confs, ids, indices
 
 
-def create_df(class_labels, preds, confs, ids, indices, device='cpu'):
+def create_df(class_labels, preds, confs, ids, indices, device='cpu'
+                                                      , verbose=3):
     """ Creates one dataframe storing all relevant prediction information.
 
     The rows in the returned dataframe have the same order as the
     original sequences in the data file. First column of the dataframe
-    represents.
+    represents the position of the sequence in the datafile. 
+
+    Parameters
+    ----------
+    class_labels : list
+        Store class name corresponding to an output node of the network.
+    preds : torch.Tensor, shape (n_samples,)
+        Stores the index of the output-node with the highest activation
+    confs : torch.Tensor, shape (n_samples,)
+        Stores the confidence in the prediciton
+    ids : list[str]
+        Stores the (possible empty) protein labels extracted from data 
+        file.
+    indices : list[int]
+        Stores the unique indices of sequences mapping to their position 
+        in the file
+    device : torch.device
+        Object containing the device type to be used for prediction 
+        calculations.
+    verbose : int
+        If bigger 0, outputs warning if duplicates detected.
 
     Returns
     -------
     df : pandas.DataFrame
         Stores prediction information about the input protein sequences.
+        Duplicates (defined by their sequence_id) have been removed from df.
     """
     labels = [class_labels[pred] for pred in preds]
     confs = confs.cpu().numpy()
@@ -209,11 +231,23 @@ def create_df(class_labels, preds, confs, ids, indices, device='cpu'):
                             'prediction': labels,
                             'confidence': confs})
     df.sort_values(by='index', axis=0, inplace=True)
+    # Remove duplicate sequences
+    duplicate_mask = df.sequence_id.duplicated(keep='first')
+    if verbose > 0:
+        print(f'WARNING: Detected {sum(duplicate_mask)} duplicate sequences '
+              +'based on their extracted sequence id. Ignore duplicate '
+              +'sequences in writing prediction output-file.', file=sys.stderr)
+    df = df[~duplicate_mask]
     return df
 
 def set_device(user_choice):
     """ Sets calc. device depending on users choices and availability. 
-        
+    
+    Parameters
+    ----------
+    user_choice : str
+        Device set by user as an argument to DeepNOG call.
+
     Returns
     -------
     device : torch.device
@@ -234,14 +268,14 @@ def set_device(user_choice):
         device = torch.device('cpu')
     return device
 
-def main(args=None):
+def main():
     """ DeepNOG command line tool. """
     # Parse command line arguments
     parser = get_parser()
     args = parser.parse_args()
     
     # Sanity check command line arguments
-    if args.batch_size < 0:
+    if args.batch_size <= 0:
         sys.exit(f'ArgumentError: Batch size must be at least one.')
     # Construct path to saved parametes of NN
     if args.weights is not None:
@@ -283,9 +317,10 @@ def main(args=None):
     preds, confs, ids, indices = predict(model, dataset, device,
                                          batch_size=args.batch_size,
                                          verbose=args.verbose)
-
+    
     # Construct pandas dataframe
-    df = create_df(class_labels, preds, confs, ids, indices, device)
+    df = create_df(class_labels, preds, confs, ids, indices, device,
+                   verbose=args.verbose)
 
     # Construct path to save prediction
     if os.path.isdir(args.out):
@@ -295,10 +330,11 @@ def main(args=None):
     # Write to file
     if args.verbose >= 2:
         print(f'Writing prediction to {save_file}')
+    columns = ['sequence_id', 'prediction', 'confidence']
     if args.tab:
-        df.to_csv(save_file, sep='\t', index=False)
+        df.to_csv(save_file, sep='\t', index=False, columns=columns)
     else:
-        df.to_csv(save_file, sep=';', index=False)
+        df.to_csv(save_file, sep=';', index=False, columns=columns)
     if args.verbose >= 2:
         print(f'Finished magic.')
     return

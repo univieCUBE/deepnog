@@ -116,7 +116,7 @@ def gen_amino_acid_vocab(alphabet=None):
 def consume(iterator, n=None):
     """ Advance the iterator n-steps ahead. If n is None, consume entirely.
 
-        Function from Itertools Recipes in official Python 3.7.4. docs.
+    Function from Itertools Recipes in official Python 3.7.4. docs.
     """
     # Use functions that consume iterators at C speed.
     if n is None:
@@ -130,38 +130,38 @@ def consume(iterator, n=None):
 class ProteinIterator():
     """ Iterator allowing for multiprocess dataloading of a sequence file.
 
-        ProteinIterator is a wrapper for the iterator returned by
-        Biopythons Bio.SeqIO class when parsing a sequence file. It
-        specifies custom __next__() method to support multiprocess data
-        loading. It does so by each worker skipping num_worker - 1 data
-        samples for each call to __next__(). Furthermore, each worker skips
-        worker_id data samples in the initialization.
+    ProteinIterator is a wrapper for the iterator returned by
+    Biopythons Bio.SeqIO class when parsing a sequence file. It
+    specifies custom __next__() method to support multiprocess data
+    loading. It does so by each worker skipping num_worker - 1 data
+    samples for each call to __next__(). Furthermore, each worker skips
+    worker_id data samples in the initialization.
 
-        It also makes sure that a unique ID is set for each SeqRecord
-        optained from the data-iterator. This allows unambiguous handling
-        of large protein datasets which may have duplicate IDs from merging
-        multiple sources or may have no IDs at all. For easy and efficient
-        sorting of batches of sequences as well as for direct access to the
-        original IDs, the index is stored separately.
+    It also makes sure that a unique ID is set for each SeqRecord
+    optained from the data-iterator. This allows unambiguous handling
+    of large protein datasets which may have duplicate IDs from merging
+    multiple sources or may have no IDs at all. For easy and efficient
+    sorting of batches of sequences as well as for direct access to the
+    original IDs, the index is stored separately.
 
-        Parameters
-        ----------
-        iterator : iterator
-            Iterator over sequence file returned by Biopythons
-            Bio.SeqIO.parse() function.
-        aa_vocab : dict
-            Amino-acid vocabulary mapping letters to integers
-        num_workers : int
-            Number of workers set in DataLoader
-        worker_id : int
-            ID of worker this iterator belongs to
+    Parameters
+    ----------
+    iterator : iterator
+        Iterator over sequence file returned by Biopythons
+        Bio.SeqIO.parse() function.
+    aa_vocab : dict
+        Amino-acid vocabulary mapping letters to integers
+    num_workers : int
+        Number of workers set in DataLoader
+    worker_id : int
+        ID of worker this iterator belongs to
 
-        Variables
-        ---------
-        sequence : namedtuple
-            Tuple subclass named sequence holding all relevant information
-            DeepNOG needs to correctly perform and store protein predictions
-            for one protein sequence.
+    Variables
+    ---------
+    sequence : namedtuple
+        Tuple subclass named sequence holding all relevant information
+        DeepNOG needs to correctly perform and store protein predictions
+        for one protein sequence.
     """
 
     def __init__(self, iterator, aa_vocab, num_workers=1, worker_id=0):
@@ -182,9 +182,9 @@ class ProteinIterator():
     def __next__(self):
         """ Return next protein sequence in datafile as sequence object.
 
-            Returns element at current + step + 1 position or start
-            position. Fruthermore prefixes element with unique sequential
-            ID.
+        Returns element at current + step + 1 position or start
+        position. Fruthermore prefixes element with unique sequential
+        ID.
         """
         # Check if iterator has been positioned correctly.
         if self.pos is not None:
@@ -194,6 +194,11 @@ class ProteinIterator():
             consume(self.iterator, n=self.start)
             self.pos = self.start + 1
         next_seq = next(self.iterator)
+        # If sequences has no identifier, skip it
+        while next_seq.id == '':
+            consume(self.iterator, n=self.start)
+            self.pos = self.start + 1
+            next_seq = next(self.iterator)
         # Generate sequence object from SeqRecord
         sequence = self.sequence(index=self.pos,
                                  id=f'{next_seq.id}',
