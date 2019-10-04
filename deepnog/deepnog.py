@@ -158,6 +158,7 @@ def predict(model, dataset, device='cpu', batch_size=16, verbose=3):
     indices = []
     data_loader = DataLoader(dataset, batch_size=batch_size,
                              num_workers=4, collate_fn=collate_sequences)
+    print(f'Extern dataset: {id(dataset)}')
     # Disable tracking of gradients to increase performance
     with torch.no_grad():
         if verbose >= 3:
@@ -184,6 +185,8 @@ def predict(model, dataset, device='cpu', batch_size=16, verbose=3):
                 conf_l.append(conf)
                 ids.extend(batch.ids)
                 indices.extend(batch.indices)
+    if verbose > 0:
+        print(f'Empty Sequences: {dataset.empty_id_found}')
     # Merge individual output tensors
     preds = torch.cat(pred_l)
     confs = torch.cat(conf_l)
@@ -231,13 +234,23 @@ def create_df(class_labels, preds, confs, ids, indices, device='cpu'
                             'prediction': labels,
                             'confidence': confs})
     df.sort_values(by='index', axis=0, inplace=True)
+    # Check for skipped sequences with empty id
+    seq_read = indices[len(indices) - 1]
+    n_skipped = seq_read - len(indices)
+    print(indices)
+    print(len(indices))
+    if n_skipped > 0:
+        print(f'WARNING: Skipped {n_skipped} sequences as no sequence id could'
+              +' could be detected.', file=sys.stderr)
     # Remove duplicate sequences
     duplicate_mask = df.sequence_id.duplicated(keep='first')
-    if verbose > 0:
-        print(f'WARNING: Detected {sum(duplicate_mask)} duplicate sequences '
-              +'based on their extracted sequence id. Ignore duplicate '
-              +'sequences in writing prediction output-file.', file=sys.stderr)
-    df = df[~duplicate_mask]
+    n_duplicates = sum(duplicate_mask)
+    if n_duplicates > 0:
+        if verbose > 0:
+            print(f'WARNING: Detected {sum(duplicate_mask)} duplicate sequences '
+                  +'based on their extracted sequence id. Ignore duplicate '
+                  +'sequences in writing prediction output-file.', file=sys.stderr)
+        df = df[~duplicate_mask]
     return df
 
 def set_device(user_choice):
@@ -317,7 +330,7 @@ def main():
     preds, confs, ids, indices = predict(model, dataset, device,
                                          batch_size=args.batch_size,
                                          verbose=args.verbose)
-    
+
     # Construct pandas dataframe
     df = create_df(class_labels, preds, confs, ids, indices, device,
                    verbose=args.verbose)

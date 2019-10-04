@@ -8,6 +8,8 @@ Description:
 import os
 from itertools import islice
 from collections import namedtuple, deque
+import threading
+
 import numpy as np
 import torch
 import torch.nn as nn
@@ -164,9 +166,12 @@ class ProteinIterator():
         for one protein sequence.
     """
 
-    def __init__(self, iterator, aa_vocab, num_workers=1, worker_id=0):
+    def __init__(self, iterator, aa_vocab, dataset, 
+                 num_workers=1, worker_id=0):
         self.iterator = iterator
         self.vocab = aa_vocab
+        self.dataset = dataset
+        print(f'Iterator has dataset {id(self.dataset)}')
         # Start position
         self.start = worker_id
         self.pos = None
@@ -175,7 +180,7 @@ class ProteinIterator():
         # Make Dataset return namedtuple
         self.sequence = namedtuple('sequence',
                                    ['index', 'id', 'string', 'encoded'])
-
+        
     def __iter__(self):
         return self
 
@@ -196,8 +201,8 @@ class ProteinIterator():
         next_seq = next(self.iterator)
         # If sequences has no identifier, skip it
         while next_seq.id == '':
-            consume(self.iterator, n=self.start)
-            self.pos = self.start + 1
+            consume(self.iterator, n=self.step)
+            self.pos += self.step + 1
             next_seq = next(self.iterator)
         # Generate sequence object from SeqRecord
         sequence = self.sequence(index=self.pos,
@@ -245,13 +250,16 @@ class ProteinDataset(IterableDataset):
                                     alphabet=self.alphabet)
         else:
             raise ValueError('Given file does not exist or is not a file.')
+        # True if one of the protein iterators came across a sequence with 
+        # no id
+        self.empty_id_found = False
 
     def __iter__(self):
         """ Return iterator over sequences in file. """
         worker_info = torch.utils.data.get_worker_info()
         if worker_info is None:
-            return ProteinIterator(self.iter, self.vocab)
+            return ProteinIterator(self.iter, self.vocab, self)
         else:
-            return ProteinIterator(self.iter, self.vocab,
+            return ProteinIterator(self.iter, self.vocab, self,
                                    worker_info.num_workers,
                                    worker_info.id)
