@@ -5,11 +5,11 @@ Deep learning based command line tool written in Python 3 (3.7.4).
 Predicts the OGs of given protein sequences based on pretrained neural
 networks.
 
-Version: 0.1.1
+Version: 0.2.0
 
 ## Required packages
 
-*  PyTorch 1.1+
+*  PyTorch 1.2+
 *  NumPy
 *  pandas
 *  Biopython
