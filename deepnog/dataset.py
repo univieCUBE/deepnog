@@ -1,12 +1,15 @@
 """
 Author: Lukas Gosch
-Date: 11.9.2019
+Date: 3.10.2019
 Description:
-    Functions to preprocess proteins for classification.
+    Dataset classes and helper functions for usage with neural network models 
+    written in PyTorch.
 """
 import os
 from itertools import islice
 from collections import namedtuple, deque
+import sys
+
 import numpy as np
 import torch
 import torch.nn as nn
@@ -15,14 +18,33 @@ from torch.utils.data.dataloader import default_collate
 from Bio import SeqIO
 from Bio.Alphabet.IUPAC import ExtendedIUPACProtein
 
+import deepnog.deepnog as dn
+
+
 # Class of data-minibatches
 collated_sequences = namedtuple('collated_sequences',
                                 ['indices', 'ids', 'sequences'])
 
 
 def collate_sequences(batch, zero_padding=True):
-    """ Collate and zero_pad encoded sequence. """
+    """ Collate and zero-pad encoded sequence. 
 
+    Parameters
+    ----------
+    batch : list[namedtuple] or namedtuple
+        Batch of protein sequences to classify stored as a namedtuple-class
+        sequence (see ProteinDataset).
+    zero_padding : bool
+        If True, zero-pads protein sequences through appending zeros until
+        every sequence is as long as the longest sequences in batch. If False
+        raise NotImplementedError.
+
+    Returns
+    -------
+    batch : namedtuple
+        Input batch zero-padded and stored in namedtuple-class 
+        collated_sequences.
+    """
     # Check if an individual sample or a batch was given
     if not isinstance(batch, list):
         batch = [batch]
@@ -63,49 +85,43 @@ def collate_sequences(batch, zero_padding=True):
                               sequences=sequences)
 
 
-class AminoAcidWordEmbedding(nn.Module):
-    """ PyTorch nn.Embedding where each amino acid is considered one word.
+def gen_amino_acid_vocab(alphabet=None):
+    """ Create vocabulary for protein sequences. 
 
+    A vocabulary is defined as a mapping from the amino-acid letters in the
+    alphabet to numbers. As this mapping is aware of zero-padding, it maps
+    the first letter in the alphabet to 1 instead of 0.
+        
     Parameters
     ----------
-    embedding_dim: int
-        Embedding dimensionality.
+    alphabet : Bio.Alphabet.ProteinAlphabet
+        Alphabet to use for vocabulary. If None, uses 
+        ExtendedIUPACProtein.
+
+    Returns
+    -------
+    vocab : dict
+        Mapping of amino acid characters to numbers.
     """
+    if alphabet is None:
+        # Use all 26 letters
+        alphabet = ExtendedIUPACProtein()
 
-    def __init__(self, embedding_dim=10):
-        super(AminoAcidWordEmbedding, self).__init__()
-        # Get protein sequence vocabulary
-        self.vocab = self.gen_amino_acid_vocab()
-        # Create embedding (initialized randomly)
-        embeds = nn.Embedding(len(self.vocab) // 2 + 1, embedding_dim)
-        self.embedding = embeds
-
-    @staticmethod
-    def gen_amino_acid_vocab(alphabet=None):
-        """ Create vocabulary for protein sequences. """
-        if alphabet is None:
-            # Use all 26 letters
-            alphabet = ExtendedIUPACProtein()
-
-        # In case of ExtendendIUPACProtein: Map 'ACDEFGHIKLMNPQRSTVWYBXZJUO'
-        # to [1, 26] so that zero padding does not interfere.
-        aminoacid_to_ix = {}
-        for i, aa in enumerate(alphabet.letters):
-            # Map both upper case and lower case to the same embedding
-            for key in [aa.upper(), aa.lower()]:
-                aminoacid_to_ix[key] = i + 1
-        vocab = aminoacid_to_ix
-        return vocab
-
-    def forward(self, sequence):
-        x = self.embedding(sequence)
-        return x
+    # In case of ExtendendIUPACProtein: Map 'ACDEFGHIKLMNPQRSTVWYBXZJUO'
+    # to [1, 26] so that zero padding does not interfere.
+    aminoacid_to_ix = {}
+    for i, aa in enumerate(alphabet.letters):
+        # Map both upper case and lower case to the same embedding
+        for key in [aa.upper(), aa.lower()]:
+            aminoacid_to_ix[key] = i + 1
+    vocab = aminoacid_to_ix
+    return vocab
 
 
 def consume(iterator, n=None):
     """ Advance the iterator n-steps ahead. If n is None, consume entirely.
 
-        Function from Itertools Recipes in official Python 3.7.4. docs.
+    Function from Itertools Recipes in official Python 3.7.4. docs.
     """
     # Use functions that consume iterators at C speed.
     if n is None:
@@ -119,36 +135,58 @@ def consume(iterator, n=None):
 class ProteinIterator():
     """ Iterator allowing for multiprocess dataloading of a sequence file.
 
-        MPProteinIterator is a wrapper for the iterator returned by
-        Biopythons Bio.SeqIO class when parsing a sequence file. It
-        specifies custom __next__() method to support multiprocess data
-        loading. It does so by each worker skipping num_worker - 1 data
-        samples for each call to __next__(). Furthermore, each worker skips
-        worker_id data samples in the initialization.
+    ProteinIterator is a wrapper for the iterator returned by
+    Biopythons Bio.SeqIO class when parsing a sequence file. It
+    specifies custom __next__() method to support single- and multi-process 
+    data loading. 
 
-        It also makes sure that a unique ID is set for each SeqRecord
-        optained from the data-iterator. This allows unambiguous handling
-        of large protein datasets which may have duplicate IDs from merging
-        multiple sources or may have no IDs at all. For easy and efficient
-        sorting of batches of sequences as well as for direct access to the
-        original IDs, the index is stored separately.
+    In the single-process loading case, nothing special happens,
+    the ProteinIterator sequentially iterates over the data file. In the end,
+    it informs the main module about the number of skipped sequences (due to
+    empty ids) through setting a global variable in the main module.
 
-        Parameters
-        ----------
-        iterator
-            Iterator over sequence file returned by Biopythons
-            Bio.SeqIO.parse() function.
-        aa_vocab : dict
-            Amino-acid vocabulary mapping letters to integers
-        num_workers : int
-            Number of workers set in DataLoader
-        worker_id : int
-            ID of worker this iterator belongs to
+    In the multi-process loading case, each ProteinIterator loads a sequence 
+    and then skippes the next few sequences dedicated to the other workers. 
+    This works by each worker skipping num_worker - 1 data samples
+    for each call to __next__(). Furthermore, each worker skips
+    worker_id data samples in the initialization. At the end of the
+    workers lifetime, it sends the number of skipped sequences back to the
+    main process through a pipe the main process created.
+
+    The ProteinIterator class also makes sure that a unique ID is set for each 
+    SeqRecord optained from the data-iterator. This allows unambiguous handling
+    of large protein datasets which may have duplicate IDs from merging
+    multiple sources or may have no IDs at all. For easy and efficient
+    sorting of batches of sequences as well as for direct access to the
+    original IDs, the index is stored separately.
+
+    Parameters
+    ----------
+    iterator : iterator
+        Iterator over sequence file returned by Biopythons
+        Bio.SeqIO.parse() function.
+    aa_vocab : dict
+        Amino-acid vocabulary mapping letters to integers
+    num_workers : int
+        Number of workers set in DataLoader or one if no workers set.
+        If bigger or equal to two, the multi-process loading case happens.
+    worker_id : int
+        ID of worker this iterator belongs to
+
+    Variables
+    ---------
+    sequence : namedtuple
+        Tuple subclass named sequence holding all relevant information
+        DeepNOG needs to correctly perform and store protein predictions
+        for one protein sequence.
     """
 
     def __init__(self, iterator, aa_vocab, num_workers=1, worker_id=0):
         self.iterator = iterator
         self.vocab = aa_vocab
+        self.n_skipped = 0
+        self.communicated = False
+        #print(f'Iterator has dataset {id(self.dataset)}')
         # Start position
         self.start = worker_id
         self.pos = None
@@ -162,11 +200,16 @@ class ProteinIterator():
         return self
 
     def __next__(self):
-        """ Return correctly prefixed sequence object.
+        """ Return next protein sequence in datafile as sequence object.
+        
+        If last protein sequences was read, communicates number of 
+        skipped protein sequences due to empty ids back to main process.
 
-            Returns element at current + step + 1 position or start
-            position. Fruthermore prefixes element with unique sequential
-            ID.
+        Returns
+        -------
+        sequence : namedtuple
+            Element at current + step + 1 position or start position. 
+            Furthermore prefixes element with unique sequential ID.
         """
         # Check if iterator has been positioned correctly.
         if self.pos is not None:
@@ -175,17 +218,49 @@ class ProteinIterator():
         else:
             consume(self.iterator, n=self.start)
             self.pos = self.start + 1
-        next_seq = next(self.iterator)
-        # Generate sequence object from SeqRecord
-        sequence = self.sequence(index=self.pos,
-                                 id=f'{next_seq.id}',
-                                 string=str(next_seq.seq),
-                                 encoded=[self.vocab[c] for c in next_seq.seq])
+        try:
+            next_seq = next(self.iterator)
+            # If sequences has no identifier, skip it
+            while next_seq.id == '':
+                self.n_skipped += 1
+                consume(self.iterator, n=self.step)
+                self.pos += self.step + 1
+                next_seq = next(self.iterator)
+            # Generate sequence object from SeqRecord
+            sequence = self.sequence(index=self.pos,
+                                     id=f'{next_seq.id}',
+                                     string=str(next_seq.seq),
+                                     encoded=[self.vocab[c] for c in next_seq.seq])
+        except StopIteration:
+            # Check if skipped sequences have been communicated back to main 
+            # process
+            if not self.communicated:
+                # Check if subprocesses (workers) were created to read data
+                if self.step == 0:
+                    # If no workers were used to read the data, ProteinIterator
+                    # runs in same process as main module and can access its
+                    # namespace.
+                    dn.n_skipped = self.n_skipped
+                else:
+                    # Close reading pipe dedicated for this worker process
+                    os.close(dn.rpipe_l[self.start])
+                    # Prepare message to send to main process
+                    msg = f'{self.n_skipped}'.encode(encoding='utf-8')
+                    # Send message to main process
+                    os.write(dn.wpipe_l[self.start], msg)
+                self.communicated = True
+            raise StopIteration
         return sequence
 
 
 class ProteinDataset(IterableDataset):
     """ Protein dataset holding the proteins to classify.
+
+    Does not load and store all proteins from a given sequence file but only
+    holds an iterator to the next sequence to load. 
+
+    Thread safe class allowing for multi-worker loading of sequences 
+    from a given datafile.
 
     Parameters
     ----------
@@ -209,7 +284,7 @@ class ProteinDataset(IterableDataset):
         """ Initialize iterator over sequences in file."""
         # Generate amino-acid vocabulary
         self.alphabet = ExtendedIUPACProtein()
-        self.vocab = AminoAcidWordEmbedding.gen_amino_acid_vocab(self.alphabet)
+        self.vocab = gen_amino_acid_vocab(self.alphabet)
         # Generate file-iterator
         if os.path.isfile(file):
             self.iter = SeqIO.parse(file, format=f_format,

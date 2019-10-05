@@ -1,6 +1,6 @@
 """
 Author: Lukas Gosch
-Date: 11.9.2019
+Date: 3.10.2019
 Description:
     Convolutional network (similar to DeepFam) for protein family prediction.
     Architecture conceived by Roman for multiclass-classification on different
@@ -20,21 +20,49 @@ Description:
     classify.
 """
 
-#######
-# TODO: Package project and replace encapsulated code with relative imports!
 import torch.nn as nn
 import numpy as np
 import os
 import sys
 import inspect
-currentdir = os.path.dirname(os.path.abspath(inspect.getfile(
-                                                    inspect.currentframe())))
-parentdir = os.path.dirname(currentdir)
-sys.path.insert(0, parentdir)
 
-from dataset import AminoAcidWordEmbedding
-#######
+from .. import dataset as ds
 
+class AminoAcidWordEmbedding(nn.Module):
+    """ PyTorch nn.Embedding where each amino acid is considered one word.
+
+    Parameters
+    ----------
+    embedding_dim: int
+        Embedding dimensionality.
+    """
+
+    def __init__(self, embedding_dim=10):
+        super(AminoAcidWordEmbedding, self).__init__()
+        # Get protein sequence vocabulary
+        self.vocab = ds.gen_amino_acid_vocab()
+        # Create embedding (initialized randomly)
+        embeds = nn.Embedding(len(self.vocab) // 2 + 1, embedding_dim)
+        self.embedding = embeds
+
+    def forward(self, sequence):
+        """ Embedd a given sequence. 
+        
+        Parameters
+        ----------
+        sequence : Tensor
+            The sequence or a batch of sequences to embed. They are assumed to 
+            be translated to numerical values given a generated vocabulary 
+            (see gen_amino_acid_vocab in dataset.py)
+
+        Returns
+        -------
+        x : Tensor
+            The sequence (densely) embedded in a space of dimension 
+            embedding_dim.
+        """
+        x = self.embedding(sequence)
+        return x
 
 class deepencoding(nn.Module):
     """ Convolutional network for protein family prediction on eggNOG5 classes.
@@ -48,7 +76,7 @@ class deepencoding(nn.Module):
 
     Parameters
     ----------
-    model_dict : dictionary
+    model_dict : dict
         Dictionary storing the hyperparameters and learned parameters of
         the model.
     """
@@ -95,6 +123,20 @@ class deepencoding(nn.Module):
         self.softmax = nn.Softmax(dim=1)
 
     def forward(self, x):
+        """ Forward a batch of sequences through network. 
+
+        Parameters
+        ----------
+        x : Tensor, shape (batch_size, sequence_len)
+            Sequence or batch of sequences to classify. Assumes they are 
+            translated using a vocabulary. (See gen_amino_acid_vocab in 
+            dataset.py)
+
+        Returns
+        -------
+        out : Tensor, shape (batch_size, n_classes)
+            Confidence of sequence(s) beeing in one of the n_classes.
+        """
         x = self.encoding(x).permute(0, 2, 1).contiguous()
         x = self.conv1(x)
         x = self.activation1(x)
