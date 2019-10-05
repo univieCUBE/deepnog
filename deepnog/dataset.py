@@ -8,6 +8,8 @@ Description:
 import os
 from itertools import islice
 from collections import namedtuple, deque
+import sys
+
 import numpy as np
 import torch
 import torch.nn as nn
@@ -15,6 +17,9 @@ from torch.utils.data import IterableDataset
 from torch.utils.data.dataloader import default_collate
 from Bio import SeqIO
 from Bio.Alphabet.IUPAC import ExtendedIUPACProtein
+
+import deepnog.deepnog as dn
+
 
 # Class of data-minibatches
 collated_sequences = namedtuple('collated_sequences',
@@ -116,7 +121,7 @@ def gen_amino_acid_vocab(alphabet=None):
 def consume(iterator, n=None):
     """ Advance the iterator n-steps ahead. If n is None, consume entirely.
 
-        Function from Itertools Recipes in official Python 3.7.4. docs.
+    Function from Itertools Recipes in official Python 3.7.4. docs.
     """
     # Use functions that consume iterators at C speed.
     if n is None:
@@ -130,43 +135,58 @@ def consume(iterator, n=None):
 class ProteinIterator():
     """ Iterator allowing for multiprocess dataloading of a sequence file.
 
-        ProteinIterator is a wrapper for the iterator returned by
-        Biopythons Bio.SeqIO class when parsing a sequence file. It
-        specifies custom __next__() method to support multiprocess data
-        loading. It does so by each worker skipping num_worker - 1 data
-        samples for each call to __next__(). Furthermore, each worker skips
-        worker_id data samples in the initialization.
+    ProteinIterator is a wrapper for the iterator returned by
+    Biopythons Bio.SeqIO class when parsing a sequence file. It
+    specifies custom __next__() method to support single- and multi-process 
+    data loading. 
 
-        It also makes sure that a unique ID is set for each SeqRecord
-        optained from the data-iterator. This allows unambiguous handling
-        of large protein datasets which may have duplicate IDs from merging
-        multiple sources or may have no IDs at all. For easy and efficient
-        sorting of batches of sequences as well as for direct access to the
-        original IDs, the index is stored separately.
+    In the single-process loading case, nothing special happens,
+    the ProteinIterator sequentially iterates over the data file. In the end,
+    it informs the main module about the number of skipped sequences (due to
+    empty ids) through setting a global variable in the main module.
 
-        Parameters
-        ----------
-        iterator : iterator
-            Iterator over sequence file returned by Biopythons
-            Bio.SeqIO.parse() function.
-        aa_vocab : dict
-            Amino-acid vocabulary mapping letters to integers
-        num_workers : int
-            Number of workers set in DataLoader
-        worker_id : int
-            ID of worker this iterator belongs to
+    In the multi-process loading case, each ProteinIterator loads a sequence 
+    and then skippes the next few sequences dedicated to the other workers. 
+    This works by each worker skipping num_worker - 1 data samples
+    for each call to __next__(). Furthermore, each worker skips
+    worker_id data samples in the initialization. At the end of the
+    workers lifetime, it sends the number of skipped sequences back to the
+    main process through a pipe the main process created.
 
-        Variables
-        ---------
-        sequence : namedtuple
-            Tuple subclass named sequence holding all relevant information
-            DeepNOG needs to correctly perform and store protein predictions
-            for one protein sequence.
+    The ProteinIterator class also makes sure that a unique ID is set for each 
+    SeqRecord optained from the data-iterator. This allows unambiguous handling
+    of large protein datasets which may have duplicate IDs from merging
+    multiple sources or may have no IDs at all. For easy and efficient
+    sorting of batches of sequences as well as for direct access to the
+    original IDs, the index is stored separately.
+
+    Parameters
+    ----------
+    iterator : iterator
+        Iterator over sequence file returned by Biopythons
+        Bio.SeqIO.parse() function.
+    aa_vocab : dict
+        Amino-acid vocabulary mapping letters to integers
+    num_workers : int
+        Number of workers set in DataLoader or one if no workers set.
+        If bigger or equal to two, the multi-process loading case happens.
+    worker_id : int
+        ID of worker this iterator belongs to
+
+    Variables
+    ---------
+    sequence : namedtuple
+        Tuple subclass named sequence holding all relevant information
+        DeepNOG needs to correctly perform and store protein predictions
+        for one protein sequence.
     """
 
     def __init__(self, iterator, aa_vocab, num_workers=1, worker_id=0):
         self.iterator = iterator
         self.vocab = aa_vocab
+        self.n_skipped = 0
+        self.communicated = False
+        #print(f'Iterator has dataset {id(self.dataset)}')
         # Start position
         self.start = worker_id
         self.pos = None
@@ -181,10 +201,15 @@ class ProteinIterator():
 
     def __next__(self):
         """ Return next protein sequence in datafile as sequence object.
+        
+        If last protein sequences was read, communicates number of 
+        skipped protein sequences due to empty ids back to main process.
 
-            Returns element at current + step + 1 position or start
-            position. Fruthermore prefixes element with unique sequential
-            ID.
+        Returns
+        -------
+        sequence : namedtuple
+            Element at current + step + 1 position or start position. 
+            Furthermore prefixes element with unique sequential ID.
         """
         # Check if iterator has been positioned correctly.
         if self.pos is not None:
@@ -193,12 +218,38 @@ class ProteinIterator():
         else:
             consume(self.iterator, n=self.start)
             self.pos = self.start + 1
-        next_seq = next(self.iterator)
-        # Generate sequence object from SeqRecord
-        sequence = self.sequence(index=self.pos,
-                                 id=f'{next_seq.id}',
-                                 string=str(next_seq.seq),
-                                 encoded=[self.vocab[c] for c in next_seq.seq])
+        try:
+            next_seq = next(self.iterator)
+            # If sequences has no identifier, skip it
+            while next_seq.id == '':
+                self.n_skipped += 1
+                consume(self.iterator, n=self.step)
+                self.pos += self.step + 1
+                next_seq = next(self.iterator)
+            # Generate sequence object from SeqRecord
+            sequence = self.sequence(index=self.pos,
+                                     id=f'{next_seq.id}',
+                                     string=str(next_seq.seq),
+                                     encoded=[self.vocab[c] for c in next_seq.seq])
+        except StopIteration:
+            # Check if skipped sequences have been communicated back to main 
+            # process
+            if not self.communicated:
+                # Check if subprocesses (workers) were created to read data
+                if self.step == 0:
+                    # If no workers were used to read the data, ProteinIterator
+                    # runs in same process as main module and can access its
+                    # namespace.
+                    dn.n_skipped = self.n_skipped
+                else:
+                    # Close reading pipe dedicated for this worker process
+                    os.close(dn.rpipe_l[self.start])
+                    # Prepare message to send to main process
+                    msg = f'{self.n_skipped}'.encode(encoding='utf-8')
+                    # Send message to main process
+                    os.write(dn.wpipe_l[self.start], msg)
+                self.communicated = True
+            raise StopIteration
         return sequence
 
 

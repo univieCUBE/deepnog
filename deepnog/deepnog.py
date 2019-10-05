@@ -30,9 +30,12 @@ from tqdm import tqdm
 import pandas as pd
 
 import deepnog
-from .dataset import ProteinDataset
-from .dataset import collate_sequences
+import deepnog.dataset as ds
 
+# Globals for communicating number of sequences in the dataset with empty ids.
+rpipe_l = []
+wpipe_l = []
+n_skipped = 0
 
 def get_parser():
     """ Creates a new argument parser.
@@ -51,6 +54,13 @@ def get_parser():
     parser.add_argument("-o", "--out", default='out.csv', help="Path where"
                         + " to store the output-file containing the protein"
                         + " family predictions.")
+    parser.add_argument("-ff", "--fformat", default='fasta',
+                        help="File format of protein sequences. Must be "
+                        + "supported by Biopythons Bio.SeqIO class.")
+    parser.add_argument("-db", "--database", default='eggNOG5',
+                        help="Database to classify against.")
+    parser.add_argument("-t", "--tax", type=int, default=2,
+                        help="Taxonomic level to use in specified database.")
     parser.add_argument("-v", "--verbose", type=int, default=3,
                         help="Define verbosity of DeepNOGs output written to "
                         + "stdout or stderr. 0 only writes errors to stderr "
@@ -64,13 +74,10 @@ def get_parser():
                         'cpu', 'gpu'], help="Define device for calculating "
                         + " protein sequence classification. Auto chooses gpu "
                         + " if available, otherwise cpu.")
-    parser.add_argument("-ff", "--fformat", default='fasta',
-                        help="File format of protein sequences. Must be "
-                        + "supported by Biopythons Bio.SeqIO class.")
-    parser.add_argument("-db", "--database", default='eggNOG5',
-                        help="Database to classify against.")
-    parser.add_argument("-t", "--tax", type=int, default=2,
-                        help="Taxonomic level to use in specified database.")
+    parser.add_argument("-nw", "--num-workers", type=int, default=0,
+                        help='Number of subprocesses (workers) to use for '
+                        +'data loading. Set to a value <= 0 to use single-'
+                        +'process data loading.')
     parser.add_argument("-a", "--architecture", default='deepencoding',
                         help="Neural network architecture to use for "
                         + "classification.")
@@ -125,8 +132,12 @@ def load_nn(architecture, model_dict, device='cpu'):
     return model
 
 
-def predict(model, dataset, device='cpu', batch_size=16, verbose=3):
+def predict(model, dataset, device='cpu', batch_size=16, num_workers=4, 
+            verbose=3):
     """ Use model to predict zero-indexed labels of dataset.
+
+    Also handles communication with ProteinIterators used to load data to 
+    log how many sequences have been skipped due to having empty sequence ids.
 
     Parameters
     ----------
@@ -138,6 +149,10 @@ def predict(model, dataset, device='cpu', batch_size=16, verbose=3):
         Device of model.
     batch_size : int
         Forward batch_size proteins through neural network at once.
+    num_workers : int
+        Number of workers for data loading.
+    verbose : int
+        Define verbosity.
 
     Returns
     -------
@@ -156,10 +171,30 @@ def predict(model, dataset, device='cpu', batch_size=16, verbose=3):
     conf_l = []
     ids = []
     indices = []
+
+    # Prepare communication
+    global n_skipped
+    if num_workers >= 2:
+        # Prepare message passing for multi-process data loading
+        n_pipes = num_workers
+        global rpipe_l
+        global wpipe_l
+        # Dedicate one communication pipe for each worker
+        for pipes in range(n_pipes):
+            r, w = os.pipe() 
+            os.set_inheritable(r, True) # Compatability with windows
+            os.set_inheritable(w, True) # Compatability with windows
+            rpipe_l.append(r)
+            wpipe_l.append(w)
+    else:
+        num_workers = 0
+    # Create data-loader for protein dataset
     data_loader = DataLoader(dataset, batch_size=batch_size,
-                             num_workers=4, collate_fn=collate_sequences)
+                                      num_workers=num_workers,
+                                      collate_fn=ds.collate_sequences)
     # Disable tracking of gradients to increase performance
     with torch.no_grad():
+        # Do prediction calculations
         if verbose >= 3:
             for i, batch in enumerate(tqdm(data_loader)):
                 # Push sequences on correct device
@@ -184,23 +219,56 @@ def predict(model, dataset, device='cpu', batch_size=16, verbose=3):
                 conf_l.append(conf)
                 ids.extend(batch.ids)
                 indices.extend(batch.indices)
+    # Collect skipped-sequences messages from workers in the case of 
+    # multi-process data-loading
+    if num_workers >= 2:
+        for workers in range(n_pipes):
+            os.close(wpipe_l[workers])
+            r = os.fdopen(rpipe_l[workers])
+            n_skipped += int(r.read())
+    # Check if sequences were skipped due to empty id
+    if verbose > 0 and n_skipped > 0:
+        print(f'WARNING: Skipped {n_skipped} sequences as no sequence id could'
+              +' could be detected.', file=sys.stderr)
     # Merge individual output tensors
     preds = torch.cat(pred_l)
     confs = torch.cat(conf_l)
     return preds, confs, ids, indices
 
 
-def create_df(class_labels, preds, confs, ids, indices, device='cpu'):
+def create_df(class_labels, preds, confs, ids, indices, device='cpu'
+                                                      , verbose=3):
     """ Creates one dataframe storing all relevant prediction information.
 
     The rows in the returned dataframe have the same order as the
     original sequences in the data file. First column of the dataframe
-    represents.
+    represents the position of the sequence in the datafile. 
+
+    Parameters
+    ----------
+    class_labels : list
+        Store class name corresponding to an output node of the network.
+    preds : torch.Tensor, shape (n_samples,)
+        Stores the index of the output-node with the highest activation
+    confs : torch.Tensor, shape (n_samples,)
+        Stores the confidence in the prediciton
+    ids : list[str]
+        Stores the (possible empty) protein labels extracted from data 
+        file.
+    indices : list[int]
+        Stores the unique indices of sequences mapping to their position 
+        in the file
+    device : torch.device
+        Object containing the device type to be used for prediction 
+        calculations.
+    verbose : int
+        If bigger 0, outputs warning if duplicates detected.
 
     Returns
     -------
     df : pandas.DataFrame
         Stores prediction information about the input protein sequences.
+        Duplicates (defined by their sequence_id) have been removed from df.
     """
     labels = [class_labels[pred] for pred in preds]
     confs = confs.cpu().numpy()
@@ -209,11 +277,25 @@ def create_df(class_labels, preds, confs, ids, indices, device='cpu'):
                             'prediction': labels,
                             'confidence': confs})
     df.sort_values(by='index', axis=0, inplace=True)
+    # Remove duplicate sequences
+    duplicate_mask = df.sequence_id.duplicated(keep='first')
+    n_duplicates = sum(duplicate_mask)
+    if n_duplicates > 0:
+        if verbose > 0:
+            print(f'WARNING: Detected {sum(duplicate_mask)} duplicate sequences '
+                  +'based on their extracted sequence id. Ignore duplicate '
+                  +'sequences in writing prediction output-file.', file=sys.stderr)
+        df = df[~duplicate_mask]
     return df
 
 def set_device(user_choice):
     """ Sets calc. device depending on users choices and availability. 
-        
+    
+    Parameters
+    ----------
+    user_choice : str
+        Device set by user as an argument to DeepNOG call.
+
     Returns
     -------
     device : torch.device
@@ -234,14 +316,14 @@ def set_device(user_choice):
         device = torch.device('cpu')
     return device
 
-def main(args=None):
+def main():
     """ DeepNOG command line tool. """
     # Parse command line arguments
     parser = get_parser()
     args = parser.parse_args()
     
     # Sanity check command line arguments
-    if args.batch_size < 0:
+    if args.batch_size <= 0:
         sys.exit(f'ArgumentError: Batch size must be at least one.')
     # Construct path to saved parametes of NN
     if args.weights is not None:
@@ -273,7 +355,7 @@ def main(args=None):
     # Load dataset
     if args.verbose >= 2:
         print(f'Accessing dataset from {args.file} ...')
-    dataset = ProteinDataset(args.file, f_format=args.fformat)
+    dataset = ds.ProteinDataset(args.file, f_format=args.fformat)
 
     # Predict labels of given data
     if args.verbose >= 2:
@@ -282,10 +364,12 @@ def main(args=None):
             print(f'Process {args.batch_size} sequences per iteration: ')
     preds, confs, ids, indices = predict(model, dataset, device,
                                          batch_size=args.batch_size,
+                                         num_workers=args.num_workers,
                                          verbose=args.verbose)
 
     # Construct pandas dataframe
-    df = create_df(class_labels, preds, confs, ids, indices, device)
+    df = create_df(class_labels, preds, confs, ids, indices, device,
+                   verbose=args.verbose)
 
     # Construct path to save prediction
     if os.path.isdir(args.out):
@@ -295,10 +379,11 @@ def main(args=None):
     # Write to file
     if args.verbose >= 2:
         print(f'Writing prediction to {save_file}')
+    columns = ['sequence_id', 'prediction', 'confidence']
     if args.tab:
-        df.to_csv(save_file, sep='\t', index=False)
+        df.to_csv(save_file, sep='\t', index=False, columns=columns)
     else:
-        df.to_csv(save_file, sep=';', index=False)
+        df.to_csv(save_file, sep=';', index=False, columns=columns)
     if args.verbose >= 2:
         print(f'Finished magic.')
     return
