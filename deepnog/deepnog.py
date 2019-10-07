@@ -37,6 +37,7 @@ rpipe_l = []
 wpipe_l = []
 n_skipped = 0
 
+
 def get_parser():
     """ Creates a new argument parser.
 
@@ -236,8 +237,8 @@ def predict(model, dataset, device='cpu', batch_size=16, num_workers=4,
     return preds, confs, ids, indices
 
 
-def create_df(class_labels, preds, confs, ids, indices, device='cpu'
-                                                      , verbose=3):
+def create_df(class_labels, preds, confs, ids, indices, threshold=None,
+              device='cpu', verbose=3):
     """ Creates one dataframe storing all relevant prediction information.
 
     The rows in the returned dataframe have the same order as the
@@ -258,6 +259,9 @@ def create_df(class_labels, preds, confs, ids, indices, device='cpu'
     indices : list[int]
         Stores the unique indices of sequences mapping to their position 
         in the file
+    threshold : int
+        If given, prediction labels and confidences are set to '' if 
+        confidence in prediction is not at least threshold.
     device : torch.device
         Object containing the device type to be used for prediction 
         calculations.
@@ -270,8 +274,17 @@ def create_df(class_labels, preds, confs, ids, indices, device='cpu'
         Stores prediction information about the input protein sequences.
         Duplicates (defined by their sequence_id) have been removed from df.
     """
-    labels = [class_labels[pred] for pred in preds]
     confs = confs.cpu().numpy()
+    if threshold is not None:
+        # Set empty label and confidence if prediction confidence below
+        # threshold of model
+        labels = [class_labels[pred] if conf >= threshold \
+                  else '' for pred, conf in zip(preds, confs)]
+        confs = [str(conf) if conf >= threshold \
+                  else '' for conf in confs]
+    else:
+        labels = [class_labels[pred] for pred in preds]
+    # Create prediction results frame
     df = pd.DataFrame(data={'index': indices,
                             'sequence_id': ids,
                             'prediction': labels,
@@ -287,6 +300,7 @@ def create_df(class_labels, preds, confs, ids, indices, device='cpu'
                   +'sequences in writing prediction output-file.', file=sys.stderr)
         df = df[~duplicate_mask]
     return df
+
 
 def set_device(user_choice):
     """ Sets calc. device depending on users choices and availability. 
@@ -315,6 +329,7 @@ def set_device(user_choice):
     else:
         device = torch.device('cpu')
     return device
+
 
 def main():
     """ DeepNOG command line tool. """
@@ -367,9 +382,13 @@ def main():
                                          num_workers=args.num_workers,
                                          verbose=args.verbose)
 
-    # Construct pandas dataframe
-    df = create_df(class_labels, preds, confs, ids, indices, device,
-                   verbose=args.verbose)
+    # If given, set confidence threshold for prediction
+    threshold = None
+    if hasattr(model, 'threshold'):
+        threshold = model.threshold
+    # Construct results dataframe
+    df = create_df(class_labels, preds, confs, ids, indices, 
+                   threshold=threshold, device=device, verbose=args.verbose)
 
     # Construct path to save prediction
     if os.path.isdir(args.out):
