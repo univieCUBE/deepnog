@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="deepnog",
-    version="0.2.0",
+    version="0.3.0",
     author="Lukas Gosch",
     author_email="gosch.lukas@gmail.com",
     description="Deep learning based command line tool for protein family "
