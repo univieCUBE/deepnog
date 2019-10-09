@@ -1,6 +1,6 @@
 """
 Author: Lukas Gosch
-Date: 3.10.2019
+Date: 9.10.2019
 Usage: python deepnog.py --help
 Description:
     DeepNOG is a deep learning based command line tool which predicts the
@@ -78,8 +78,10 @@ def get_parser():
     parser.add_argument("-nw", "--num-workers", type=int, default=0,
                         help='Number of subprocesses (workers) to use for '
                         +'data loading. Set to a value <= 0 to use single-'
-                        +'process data loading.')
-    parser.add_argument("-a", "--architecture", default='deepencoding',
+                        +'process data loading. Note: Only use multi-process'
+                        +' data loading if you are calculating on a gpu'
+                        +' (otherwise inefficient)!')
+    parser.add_argument("-a", "--architecture", default='deepencoding_fast',
                         help="Neural network architecture to use for "
                         + "classification.")
     parser.add_argument("-w", "--weights", help="Optionally specify custom "
@@ -87,7 +89,7 @@ def get_parser():
     parser.add_argument("--tab", action='store_true',
                         help='If set, output will be tab-separated instead of'
                         + ' ;-separated.')
-    parser.add_argument("-bs", "--batch-size", type=int, default=16,
+    parser.add_argument("-bs", "--batch-size", type=int, default=1,
                         help='Batch size used for prediction. Defines how many'
                         +' sequences should be forwarded in the network at '
                         +' once. With a batch size of one, the protein '
@@ -336,7 +338,6 @@ def main():
     # Parse command line arguments
     parser = get_parser()
     args = parser.parse_args()
-    
     # Sanity check command line arguments
     if args.batch_size <= 0:
         sys.exit(f'ArgumentError: Batch size must be at least one.')
@@ -357,6 +358,10 @@ def main():
                  +'calculations.')
     if args.verbose >= 2:
         print(f'Device set to "{device}"')
+
+    # Set number of threads to 1 automatic (internal) paralellization is 
+    # quite inefficient
+    torch.set_num_threads(1)
 
     # Load neural network parameters
     if args.verbose >= 2:
