@@ -290,7 +290,7 @@ class ProteinDataset(IterableDataset):
             self.iter = SeqIO.parse(file, format=f_format,
                                     alphabet=self.alphabet)
         else:
-            raise ValueError('Given file does not exist or is not a file.')
+            raise ValueError(f'Given file {file} does not exist or is not a file.')
 
     def __iter__(self):
         """ Return iterator over sequences in file. """
