@@ -1,6 +1,6 @@
 """
 Author: Lukas Gosch
-Date: 3.10.2019
+Date: 18.10.2019
 Description:
     Test deepnog module and pretrained neural network architectures.
 """
