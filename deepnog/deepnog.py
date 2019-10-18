@@ -1,6 +1,6 @@
 """
 Author: Lukas Gosch
-Date: 9.10.2019
+Date: 18.10.2019
 Usage: python deepnog.py --help
 Description:
     DeepNOG is a deep learning based command line tool which predicts the
@@ -81,7 +81,7 @@ def get_parser():
                         +'process data loading. Note: Only use multi-process'
                         +' data loading if you are calculating on a gpu'
                         +' (otherwise inefficient)!')
-    parser.add_argument("-a", "--architecture", default='deepencoding_fast',
+    parser.add_argument("-a", "--architecture", default='deepencoding',
                         help="Neural network architecture to use for "
                         + "classification.")
     parser.add_argument("-w", "--weights", help="Optionally specify custom "

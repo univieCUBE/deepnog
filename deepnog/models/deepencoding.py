@@ -125,8 +125,8 @@ class deepencoding(nn.Module):
         self.softmax = nn.Softmax(dim=1)
 
         # Threshold for deciding below which confidence NN should be undecided
-        # if 'threshold' in model_dict:
-        #    self.threshold = model_dict['threshold']
+        if 'threshold' in model_dict:
+            self.threshold = model_dict['threshold']
 
     def forward(self, x):
         """ Forward a batch of sequences through network. 

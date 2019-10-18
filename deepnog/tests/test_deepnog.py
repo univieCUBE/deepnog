@@ -1,6 +1,6 @@
 """
 Author: Lukas Gosch
-Date: 3.10.2019
+Date: 18.10.2019
 Description:
     Test deepnog module and pretrained neural network architectures.
 """
@@ -18,7 +18,7 @@ from ..dataset import ProteinDataset
 class TestDeepnog:
     """ Class grouping tests for deepnog module. """
 
-    @pytest.mark.parametrize("architecture", ['deepencoding_fast'])
+    @pytest.mark.parametrize("architecture", ['deepencoding'])
     @pytest.mark.parametrize("weights", ['tests/parameters/test_deepencoding.pth'])
     def test_load_nn(self, architecture, weights):
         """ Test loading of neural network model. """
@@ -31,7 +31,7 @@ class TestDeepnog:
         assert(issubclass(type(model), nn.Module))
         assert(isinstance(model, nn.Module))
 
-    @pytest.mark.parametrize("architecture", ['deepencoding_fast'])
+    @pytest.mark.parametrize("architecture", ['deepencoding'])
     @pytest.mark.parametrize("weights", ['tests/parameters/test_deepencoding.pth'])
     @pytest.mark.parametrize("data", ['tests/data/test_deepencoding.faa'])
     @pytest.mark.parametrize("fformat", ['fasta'])
@@ -62,7 +62,7 @@ class TestDeepnog:
         ids = torch.tensor(list(map(int, ids)))
         assert(sum((ids == preds.cpu()).long()) >= N - tolerance)
 
-    @pytest.mark.parametrize("architecture", ['deepencoding_fast'])
+    @pytest.mark.parametrize("architecture", ['deepencoding'])
     @pytest.mark.parametrize("weights", ['tests/parameters/test_deepencoding.pth'])
     @pytest.mark.parametrize("data", ['tests/data/test_skip_empty_sequences.faa'])
     @pytest.mark.parametrize("fformat", ['fasta'])

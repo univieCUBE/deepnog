@@ -9,6 +9,7 @@ import os
 from itertools import islice
 from collections import namedtuple, deque
 import sys
+import gzip
 
 import numpy as np
 import torch
@@ -287,7 +288,12 @@ class ProteinDataset(IterableDataset):
         self.vocab = gen_amino_acid_vocab(self.alphabet)
         # Generate file-iterator
         if os.path.isfile(file):
-            self.iter = SeqIO.parse(file, format=f_format,
+            if file.endswith('.gz'):
+                f = gzip.open(file, 'rt')
+                self.iter = SeqIO.parse(f, format=f_format,
+                                    alphabet=self.alphabet)
+            else:
+                self.iter = SeqIO.parse(file, format=f_format,
                                     alphabet=self.alphabet)
         else:
             raise ValueError(f'Given file {file} does not exist or is not a file.')
