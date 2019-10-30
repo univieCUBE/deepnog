@@ -15,7 +15,7 @@ Available subpackages
 models
     Supported neural network architectures.
 tests
-    Softwaretests written for pytest.
+    Software tests written for pytest.
 
 """
 # PEP0440 compatible formatted version, see:
@@ -34,4 +34,4 @@ tests
 # Dev branch marker is: 'X.Y.dev' or 'X.Y.devN' where N is an integer.
 # 'X.Y.dev0' is the canonical version of 'X.Y.dev'
 #
-__version__ = '0.1.0'
+__version__ = '1.0.1'
