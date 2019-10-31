@@ -51,7 +51,7 @@ def collate_sequences(batch, zero_padding=True):
         batch = [batch]
 
     # Find the longest sequence, in order to zero pad the others
-    max_len = 0
+    max_len = 36
     n_data = 0
     for seq in batch:
         query = seq.encoded
@@ -231,7 +231,7 @@ class ProteinIterator():
             sequence = self.sequence(index=self.pos,
                                      id=f'{next_seq.id}',
                                      string=str(next_seq.seq),
-                                     encoded=[self.vocab[c] for c in next_seq.seq])
+                                     encoded=[self.vocab.get(c, 0) for c in next_seq.seq])
         except StopIteration:
             # Check if skipped sequences have been communicated back to main 
             # process
