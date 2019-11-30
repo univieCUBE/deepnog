@@ -18,7 +18,7 @@ Version: 1.0.0
 
 ## Installation guide
 
-Clone or dowload the source code of the project and run
+Clone or download the source code of the project and run
 
 ```pip install /path/to/DeepNOG```
 
@@ -39,7 +39,7 @@ Example usages:
 *  deepnog proteins.faa --out prediction.csv
     * Write into prediction.csv instead
 *  deepnog proteins.faa --tab
-    * Instead of semicolon (;) separated, generated tab separated output-file
+    * Instead of semicolon (;) separated, generate tab separated output-file
 
 For help and advanced options, call deepnog --help
 
