@@ -9,12 +9,12 @@ Version: 1.0.0
 
 ## Required packages
 
-*  PyTorch 1.2+
-*  NumPy
-*  pandas
-*  Biopython
-*  tqdm
-*  pytest (for tests only)
+*  PyTorch 1.2.0
+*  NumPy 1.16.4
+*  pandas 0.25.1
+*  Biopython 1.74
+*  tqdm 4.35.0
+*  pytest 5.1.2 (for tests only)
 
 ## Installation guide
 
@@ -41,11 +41,11 @@ Example usages:
 *  deepnog proteins.faa --tab
     * Instead of semicolon (;) separated, generate tab separated output-file
 
-For help and advanced options, call deepnog --help
+For help and advanced options, call deepnog --help or see the [user & developer guide.](../doc/guide.pdf)
 
 ## File formats supported
 
-Prefered: FASTA
+Prefered: FASTA (raw or gzipped)
 
 DeepNOG supports protein sequences stored in all file formats listed in
 https://biopython.org/wiki/SeqIO but is tested for the FASTA-file format
@@ -53,12 +53,11 @@ only.
 
 ## Databases supported
 
-eggNOG 5.0, taxonomic level 2
+eggNOG 5.0, taxonomic level 2 (bacteria level)
 
 ## Neural network architectures supported
 
-*  DeepEncoding
-    * Details to follow
+*  DeepEncoding, for details, see the [report](../doc/report.pdf). (ToDo: change to paper)
 
 
     
