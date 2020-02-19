@@ -1,6 +1,6 @@
 """
 Author: Lukas Gosch
-Date: 18.10.2019
+Date: 2019-10-18
 Description:
     Test deepnog module and pretrained neural network architectures.
 """
@@ -10,9 +10,9 @@ import pytest
 import torch.nn as nn
 import torch
 
-from deepnog import deepnog as dn
 from deepnog.dataset import ProteinDataset
 from deepnog.inference import load_nn, predict
+from deepnog.io import create_df
 from deepnog import sync
 
 
@@ -96,7 +96,7 @@ def test_create_df():
     confs = torch.tensor([0.8, 0.3])
     ids = ['sequence2', 'sequence1']
     indices = [2, 1]
-    df = dn.create_df(class_labels, preds, confs, ids, indices)
+    df = create_df(class_labels, preds, confs, ids, indices)
     assert(df.shape == (2, 4))
     assert(sum(df['index'] == [1, 2]) == 2)
     assert(sum(df['sequence_id'] == ['sequence1', 'sequence2']) == 2)
@@ -113,7 +113,7 @@ def test_create_df_with_duplicates():
     confs = torch.tensor([0.8, 0.3, 0.1, 0.6, 0.8])
     ids = ['sequence2', 'sequence1', 'sequence2', 'sequence3', 'sequence1']
     indices = [1, 2, 3, 4, 5]
-    df = dn.create_df(class_labels, preds, confs, ids, indices)
+    df = create_df(class_labels, preds, confs, ids, indices)
     assert(df.shape == (3, 4))
     assert(sum(df['index'] == [1, 2, 4]) == 3)
     assert(sum(df['sequence_id'] == ['sequence2', 'sequence1', 'sequence3']) == 3)
