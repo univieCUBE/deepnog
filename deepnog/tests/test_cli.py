@@ -4,7 +4,6 @@ Date: 2020-02-19
 Description:
     Test client (cmd line interface)
 """
-import os
 from pathlib import Path
 import pytest
 import subprocess
@@ -29,4 +28,6 @@ def test_cmd_line_invocation(tax):
                     '--out', f'{outfile}',
                     ],
                    )
-    assert os.path.isfile(outfile)
+    outfile = Path(outfile)
+    assert outfile.is_file()
+    outfile.unlink()
