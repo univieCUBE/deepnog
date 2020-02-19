@@ -11,12 +11,12 @@ Description:
     This networks consists of an embedding layer which learns a D-dimensional
     embedding for each amino acid. For a sequence of length L, the embedding
     has dimension DxL. A 1-D convolution with C filters of F different kernel-
-    sizes K_i are performed over the embedding resulting in Cx(L-K_i-1) output 
-    dimension for each kernelsize. SeLU activation is applied on the output 
-    followed by AdaptiveMaxPooling1D Layer reducing the dimension to of the 
-    output layer to Cx1 and resulting in the NN beeing sequence length 
+    sizes K_i are performed over the embedding resulting in Cx(L-K_i-1) output
+    dimension for each kernelsize. SeLU activation is applied on the output
+    followed by AdaptiveMaxPooling1D Layer reducing the dimension to of the
+    output layer to Cx1 and resulting in the NN beeing sequence length
     independent. The max-pooling layer is followed up by a classic Dropout-
-    Layer and then by a dense layer with as many output nodes as orthologous 
+    Layer and then by a dense layer with as many output nodes as orthologous
     groups/protein families to classify.
 """
 # SPDX-License-Identifier: BSD-3-Clause
@@ -46,19 +46,19 @@ class AminoAcidWordEmbedding(nn.Module):
         self.embedding = embeds
 
     def forward(self, sequence):
-        """ Embedd a given sequence. 
-        
+        """ Embedd a given sequence.
+
         Parameters
         ----------
         sequence : Tensor
-            The sequence or a batch of sequences to embed. They are assumed to 
-            be translated to numerical values given a generated vocabulary 
+            The sequence or a batch of sequences to embed. They are assumed to
+            be translated to numerical values given a generated vocabulary
             (see gen_amino_acid_vocab in dataset.py)
 
         Returns
         -------
         x : Tensor
-            The sequence (densely) embedded in a space of dimension 
+            The sequence (densely) embedded in a space of dimension
             embedding_dim.
         """
         x = self.embedding(sequence)
@@ -131,13 +131,13 @@ class deepencoding(nn.Module):
             self.threshold = model_dict['threshold']
 
     def forward(self, x):
-        """ Forward a batch of sequences through network. 
+        """ Forward a batch of sequences through network.
 
         Parameters
         ----------
         x : Tensor, shape (batch_size, sequence_len)
-            Sequence or batch of sequences to classify. Assumes they are 
-            translated using a vocabulary. (See gen_amino_acid_vocab in 
+            Sequence or batch of sequences to classify. Assumes they are
+            translated using a vocabulary. (See gen_amino_acid_vocab in
             dataset.py)
 
         Returns

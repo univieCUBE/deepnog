@@ -2,7 +2,7 @@
 Author: Lukas Gosch
 Date: 2019-10-03
 Description:
-    Dataset classes and helper functions for usage with neural network models 
+    Dataset classes and helper functions for usage with neural network models
     written in PyTorch.
 """
 from collections import namedtuple, deque
@@ -10,20 +10,14 @@ import gzip
 from itertools import islice
 import os
 from pathlib import Path
-import warnings
 
 import numpy as np
 import torch
 from torch.utils.data import IterableDataset
 from torch.utils.data.dataloader import default_collate
 
-# Biopython warns about Alphabet, even if you don't use Alphabet...
-with warnings.catch_warnings():
-    warnings.filterwarnings("ignore", category=PendingDeprecationWarning)
-    from Bio import SeqIO
-
 from . import sync
-from .utils import EXTENDED_IUPAC_PROTEIN_ALPHABET
+from .utils import EXTENDED_IUPAC_PROTEIN_ALPHABET, SeqIO
 
 # Class of data-minibatches
 collated_sequences = namedtuple('collated_sequences',
@@ -31,7 +25,7 @@ collated_sequences = namedtuple('collated_sequences',
 
 
 def collate_sequences(batch, zero_padding=True):
-    """ Collate and zero-pad encoded sequence. 
+    """ Collate and zero-pad encoded sequence.
 
     Parameters
     ----------
@@ -46,7 +40,7 @@ def collate_sequences(batch, zero_padding=True):
     Returns
     -------
     batch : namedtuple
-        Input batch zero-padded and stored in namedtuple-class 
+        Input batch zero-padded and stored in namedtuple-class
         collated_sequences.
     """
     # Check if an individual sample or a batch was given
@@ -235,7 +229,8 @@ class ProteinIterator:
             sequence = self.sequence(index=self.pos,
                                      id=f'{next_seq.id}',
                                      string=str(next_seq.seq),
-                                     encoded=[self.vocab.get(c, 0) for c in next_seq.seq])
+                                     encoded=[self.vocab.get(c, 0)
+                                              for c in next_seq.seq])
         except StopIteration:
             # Check if skipped sequences have been communicated back to main
             # process
@@ -289,7 +284,8 @@ class ProteinDataset(IterableDataset):
             else:
                 self.iter = SeqIO.parse(file, format=f_format, )
         else:
-            raise ValueError(f'Given file {file} does not exist or is not a file.')
+            raise ValueError(f'Given file {file} does not exist'
+                             f'or is not a file.')
 
     def __iter__(self):
         """ Return iterator over sequences in file. """

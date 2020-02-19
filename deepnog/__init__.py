@@ -7,7 +7,7 @@ protein families of given protein sequences based on pretrained neural
 networks.
 
 The main module of this tool is defined in deepnog.py. For details about the
-usage of the tool, the reader is referred to the documentation as well as 
+usage of the tool, the reader is referred to the documentation as well as
 deepnog.py.
 
 Available subpackages
