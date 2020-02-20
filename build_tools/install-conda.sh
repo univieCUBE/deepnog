@@ -29,5 +29,6 @@ fi
 
 # Finally load test environment to make sure we're using the specified Python version
 conda init bash
+source "$HOME/.bashrc"
 conda activate test
 python -c "import sys; print(sys.version)"
