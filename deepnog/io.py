@@ -3,6 +3,8 @@ Author: Roman Feldbauer
 Date: 2020-02-19
 """
 # SPDX-License-Identifier: BSD-3-Clause
+from os import environ
+from pathlib import Path
 import sys
 
 import pandas as pd
@@ -70,3 +72,34 @@ def create_df(class_labels, preds, confs, ids, indices, threshold=None,
                   file=sys.stderr)
         df = df[~duplicate_mask]
     return df
+
+
+def get_data_home(data_home=None):
+    """Return the path of the deepnog data dir.
+
+    This folder is used for large files that cannot go into the Python package
+    on PyPI etc. For example, the network parameters (weights) files may be
+    larger than 100MiB.
+    By default the data dir is set to a folder named 'deepnog_data' in the
+    user home folder.
+    Alternatively, it can be set by the 'DEEPNOG_DATA' environment
+    variable or programmatically by giving an explicit folder path.
+    If the folder does not already exist, it is automatically created.
+
+    Parameters
+    ----------
+    data_home : str | None
+        The path to deepnog data dir.
+
+    Notes
+    -----
+    Adapted from `https://github.com/scikit-learn/scikit-learn/blob/0.22.X/\
+    sklearn/datasets/_base.py`_
+    """
+    if data_home is None:
+        data_home = environ.get('DEEPNOG_DATA',
+                                Path.home()/'scikit_learn_data')
+    data_home = Path(data_home).expanduser()
+    if not data_home.exists():
+        data_home.mkdir(parents=True)
+    return data_home
