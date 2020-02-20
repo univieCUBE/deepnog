@@ -33,7 +33,7 @@ before_install:
   - bash build_tools/install-conda.sh
   - export PATH="$MINICONDA_DIR/bin:$PATH"
   - hash -r
-  - travis_wait 20 conda install pytorch cpuonly -c pytorch  # work-around
+  - pip install --force-reinstall torch==1.4.0+cpu -f https://download.pytorch.org/whl/torch_stable.html  # noqa
   - bash build_tools/install-pip.sh
 
 install:
