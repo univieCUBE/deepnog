@@ -23,7 +23,6 @@ Description:
 import argparse
 import sys
 import os.path
-from pathlib import Path
 
 from . import __version__
 
@@ -133,7 +132,7 @@ def start_prediction(args):
     import torch
     from .dataset import ProteinDataset
     from .inference import load_nn, predict
-    from .io import create_df
+    from .io import create_df, get_weights_path
     from .utils import set_device
 
     # Sanity check command line arguments
@@ -143,11 +142,10 @@ def start_prediction(args):
     if args.weights is not None:
         weights_path = args.weights
     else:
-        weights_path = (
-            Path(__file__).parent.absolute()/f"parameters/"
-                                             f"{args.database}/"
-                                             f"{str(args.tax)}/"
-                                             f"{args.architecture}.pth")
+        weights_path = get_weights_path(database=args.database,
+                                        level=str(args.tax),
+                                        architecture=args.architecture,
+                                        )
     # Set up device
     try:
         device = set_device(args.device)

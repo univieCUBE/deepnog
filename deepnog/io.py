@@ -3,9 +3,24 @@ Author: Roman Feldbauer
 Date: 2020-02-19
 """
 # SPDX-License-Identifier: BSD-3-Clause
+import logging
+from os import environ
+from pathlib import Path
+import shutil
 import sys
+from urllib.request import urlopen
+from urllib.parse import urljoin
 
 import pandas as pd
+
+__all__ = ['create_df',
+           'get_data_home',
+           'get_weights_path',
+           ]
+
+logger = logging.getLogger(__name__)
+DEEPNOG_REMOTE_DEFAULT = ('https://fileshare.csb.univie.ac.at/'
+                          'deepnog/parameters/')
 
 
 def create_df(class_labels, preds, confs, ids, indices, threshold=None,
@@ -70,3 +85,80 @@ def create_df(class_labels, preds, confs, ids, indices, threshold=None,
                   file=sys.stderr)
         df = df[~duplicate_mask]
     return df
+
+
+def get_data_home(data_home: str = None) -> Path:
+    """Return the path of the deepnog data dir.
+
+    This folder is used for large files that cannot go into the Python package
+    on PyPI etc. For example, the network parameters (weights) files may be
+    larger than 100MiB.
+    By default the data dir is set to a folder named 'deepnog_data' in the
+    user home folder.
+    Alternatively, it can be set by the 'DEEPNOG_DATA' environment
+    variable or programmatically by giving an explicit folder path.
+    If the folder does not already exist, it is automatically created.
+
+    Parameters
+    ----------
+    data_home : str | None
+        The path to deepnog data dir.
+
+    Notes
+    -----
+    Adapted from `https://github.com/scikit-learn/scikit-learn/blob/0.22.X/sklearn/datasets/_base.py`_  # noqa
+    """
+    if data_home is None:
+        data_home = environ.get('DEEPNOG_DATA',
+                                Path.home()/'deepnog_data')
+    data_home = Path(data_home).expanduser()
+    data_home.mkdir(parents=True, exist_ok=True)
+    return data_home
+
+
+def get_weights_path(database: str, level: str, architecture: str,
+                     data_home=None, download_if_missing=True) -> Path:
+    """ Get path to neural network weights.
+
+    This is a path on local storage. If the corresponding files are not
+    present, download from remote storage. The default remote URL can be
+    overridden by setting the environment variable DEEPNOG_REMOTE.
+
+    Parameters
+    ----------
+    database : str
+        The orthologous groups database. Example: eggNOG5
+    level: str
+        The taxonomic level within the database. Example: 2 (for bacteria)
+    architecture: str
+        Network architecture. Example: deepencoding
+    data_home : string, optional
+        Specify another download and cache folder for the weights.
+        By default all deepnog data is stored in '~/deepnog_data' subfolders.
+    download_if_missing : boolean, default=True
+        If False, raise a IOError if the data is not locally available
+        instead of trying to download the data from the source site.
+
+    Returns
+    -------
+    weights_path : Path
+        Path to file of network weights
+    """
+
+    data_home = get_data_home(data_home=data_home)
+    weights_dir = data_home/f'{database}/{level}/'
+    weights_file = weights_dir/f'{architecture}.pth'
+    available = weights_file.exists()
+
+    if not available and download_if_missing:
+        weights_dir.mkdir(parents=True, exist_ok=True)
+        remote_url = urljoin(
+            environ.get('DEEPNOG_REMOTE', DEEPNOG_REMOTE_DEFAULT),
+            f"{database}/{level}/{architecture}.pth")
+        logger.info(f"Downloading {remote_url}")
+        with urlopen(remote_url) as response, open(weights_file, 'wb') as f:
+            shutil.copyfileobj(response, f)
+    elif not available and not download_if_missing:
+        raise IOError("Data not found and `download_if_missing` is False")
+
+    return weights_file
