@@ -17,7 +17,7 @@ from deepnog import sync
 
 
 current_path = Path(__file__).parent.absolute()
-weights_path = current_path/'parameters/test_deepencoding.pth'
+weights_path = current_path/'parameters/test_deepencoding.pthsmall'
 data_path = current_path/'data/test_deepencoding.faa'
 data_skip_path = current_path/'data/test_skip_empty_sequences.faa'
 

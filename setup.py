@@ -34,7 +34,6 @@ install_requires = ['numpy',
                     'torch >= 1.2',
                     'Biopython',
                     'tqdm',
-                    'pytest',
                     ]
 
 setuptools.setup(
@@ -43,19 +42,23 @@ setuptools.setup(
     author='Lukas Gosch',
     author_email='gosch.lukas@gmail.com',
     description='Deep learning tool for protein orthologous group predictions',
-    keywords='deep learning bioinformatics neural networks protein families',
+    keywords=('deep-learning bioinformatics neural-networks protein-families'
+              'orthologous-groups eggnog'),
     long_description=long_description,
     long_description_content_type='text/markdown',
     install_requires=install_requires,
     url='',
     packages=setuptools.find_packages(),
     package_data={
-        'deepnog': ['parameters/*/*.pth',    # Include parameters of NNs trained directly on
-                                             # a whole database (currently not supported by DeepNOG).
-                    'parameters/*/*/*.pth',  # Include parameters of NNs trained on specific levels/parts of a db
+        'deepnog': ['parameters/*/*.pth',    # Include parameters of NNs
+                                             # trained on a whole database
+                                             # (currently not supported).
+                    'parameters/*/*/*.pth',  # Include parameters of NNs
+                                             # trained on specific levels/
+                                             # parts of a db
                     ],
-        'tests': ['data/*.faa',  # Include data and parameters for tests, edit if necessary!
-                  'parameters/*.pth',
+        'tests': ['data/*.faa',        # Include data and parameters for tests,
+                  'parameters/*.pth',  # edit if necessary!
                   ]
     },
     entry_points={
@@ -74,6 +77,7 @@ setuptools.setup(
         'Operating System :: OS Independent',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3.8',
         'Topic :: Scientific/Engineering :: Artificial Intelligence'
     ],
     python_requires='>=3',
