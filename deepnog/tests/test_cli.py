@@ -22,12 +22,14 @@ def test_entrypoint():
 @pytest.mark.parametrize('tax', [1, 2, ])
 def test_cmd_line_invocation(tax):
     outfile = f'out{tax}.csv'
-    subprocess.run(['deepnog',
-                    f'{test_file}',
-                    '--tax', f'{tax}',
-                    '--out', f'{outfile}',
-                    ],
-                   )
+    proc = subprocess.run(['deepnog',
+                           f'{test_file}',
+                           '--tax', f'{tax}',
+                           '--out', f'{outfile}',
+                           ],
+                          capture_output=True,
+                          )
     outfile = Path(outfile)
-    assert outfile.is_file()
+    assert outfile.is_file(), (f'Stdout of call:\n{proc.stdout}\n\n'
+                               f'Stderr of call:\n{proc.stderr}')
     outfile.unlink()
