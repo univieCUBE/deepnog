@@ -24,7 +24,7 @@ else # if it does not exist, we need to install miniconda
 fi
 
 # Is the specified Python version available? If not, install it.
-if not [[ -e "${MINICONDADIR}/envs/test/bin/python${TRAVIS_PYTHON_VERSION}" ]]; then
+if [[ ! -e "${MINICONDADIR}/envs/test/bin/python${TRAVIS_PYTHON_VERSION}" ]]; then
     conda create --yes -n test python="$TRAVIS_PYTHON_VERSION"
 fi
 
