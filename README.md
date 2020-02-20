@@ -15,9 +15,9 @@
   https://deepnog.readthedocs.io/en/latest/?badge=latest)
 
 
-# DeepNOG - predicting orthologous groups (OGs) of proteins
+# DeepNOG: protein orthologous groups prediction
 
-Predict protein orthologous groups on CPUs or GPUs with deep networks.
+Predict orthologous groups of proteins on CPUs or GPUs with deep networks.
 DeepNOG is both faster and more accurate than assigning OGs with HMMER.
 
 The `deepnog` command line tool is written in Python 3.7+. 
@@ -62,7 +62,7 @@ cache directory (default `~/deepnog_data/`). You can change this directory
 by setting the `DEEPNOG_DATA` environment variable.
 
 For help and advanced options, call `deepnog --help`,
-or see the [user & developer guide.](../doc/guide.pdf)
+or see the [user & developer guide](doc/guide.pdf).
 
 ## File formats supported
 
@@ -80,8 +80,8 @@ only.
 
 ## Neural network architectures supported
 
-*  DeepEncoding, for details, see the [report](../doc/report.pdf).
-(ToDo: change to paper)
+*  DeepEncoding, for details, see the [research article](https://doi.org).
+(TODO: change to paper)
 
 ## Required packages
 
