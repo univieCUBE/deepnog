@@ -28,6 +28,6 @@ if [[ ! -e "${MINICONDADIR}/envs/test/bin/python${TRAVIS_PYTHON_VERSION}" ]]; th
 fi
 
 # Finally load test environment to make sure we're using the specified Python version
-conda init
+conda init bash
 conda activate test
 python -c "import sys; print(sys.version)"
