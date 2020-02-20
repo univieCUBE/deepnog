@@ -33,6 +33,7 @@ before_install:
   - bash build_tools/install-conda.sh
   - export PATH="$MINICONDA_DIR/bin:$PATH"
   - hash -r
+  - conda install pytorch cpuonly -c pytorch  # work-around
   - bash build_tools/install-pip.sh
 
 install:
