@@ -78,7 +78,7 @@ def create_df(class_labels, preds, confs, ids, indices, threshold=None,
     return df
 
 
-def get_data_home(data_home=None):
+def get_data_home(data_home: str = None) -> Path:
     """Return the path of the deepnog data dir.
 
     This folder is used for large files that cannot go into the Python package
@@ -97,13 +97,11 @@ def get_data_home(data_home=None):
 
     Notes
     -----
-    Adapted from `https://github.com/scikit-learn/scikit-learn/blob/0.22.X/\
-    sklearn/datasets/_base.py`_
+    Adapted from `https://github.com/scikit-learn/scikit-learn/blob/0.22.X/sklearn/datasets/_base.py`_  # noqa
     """
     if data_home is None:
         data_home = environ.get('DEEPNOG_DATA',
-                                Path.home()/'scikit_learn_data')
+                                Path.home()/'deepnog_data')
     data_home = Path(data_home).expanduser()
-    if not data_home.exists():
-        data_home.mkdir(parents=True)
+    data_home.mkdir(parents=True, exist_ok=True)
     return data_home
