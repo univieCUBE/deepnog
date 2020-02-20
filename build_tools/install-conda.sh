@@ -16,6 +16,8 @@ else # if it does not exist, we need to install miniconda
 
     bash miniconda.sh -b -p "$MINICONDA_DIR"
     chown -R "$USER" "$MINICONDA_DIR"
+    source "$HOME/miniconda/etc/profile.d/conda.sh"
+    hash -r
     conda config --set always_yes yes --set changeps1 no
     conda update -q conda
     conda info -a # for debugging
@@ -29,6 +31,6 @@ fi
 
 # Finally load test environment to make sure we're using the specified Python version
 conda init bash
-source "$HOME/.bashrc"
+source "$HOME/miniconda/etc/profile.d/conda.sh"
 conda activate test
 python -c "import sys; print(sys.version)"
