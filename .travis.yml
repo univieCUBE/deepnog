@@ -32,8 +32,8 @@ env:
   - PYTHONIOENCODING=UTF8
 
 before_install:
+  - export PATH="${MINICONDA_DIR}/bin:$PATH"
   - bash build_tools/install-conda.sh
-  - export PATH="$MINICONDA_DIR/bin:$PATH"
   - hash -r
   - python -c "import sys; print(sys.version)"
   - bash build_tools/install-pip.sh

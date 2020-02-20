@@ -4,9 +4,13 @@ Date: 2020-02-19
 Description:
     Test client (cmd line interface)
 """
+import argparse
 from pathlib import Path
 import pytest
+from unittest import mock
 import subprocess
+
+from deepnog.deepnog import main
 
 test_file = Path(__file__).parent.absolute() / "data/test_deepencoding.faa"
 
@@ -33,3 +37,22 @@ def test_cmd_line_invocation(tax):
     assert outfile.is_file(), (f'Stdout of call:\n{proc.stdout}\n\n'
                                f'Stderr of call:\n{proc.stderr}')
     outfile.unlink()
+
+
+@mock.patch('argparse.ArgumentParser.parse_args',
+            return_value=argparse.Namespace(tax='2',
+                                            out='out.mock.2',
+                                            file=test_file,
+                                            fformat='fasta',
+                                            database='eggNOG5',
+                                            verbose=3,
+                                            device='auto',
+                                            num_workers=0,
+                                            architecture='deepencoding',
+                                            weights=None,
+                                            tab=None,
+                                            batch_size=1,
+                                            ))
+def test_main_and_argparsing(mock_args):
+    main()
+    Path('out.mock.2').unlink()
