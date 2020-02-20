@@ -56,6 +56,7 @@ cache:
       - "$HOME/.cache/pip"
       - "$HOME/virtualenv"
       - "$HOME/miniconda"
+      - "$HOME/deepnog_data"
 
 branches:
   only:
