@@ -1,6 +1,6 @@
 """
 Author: Lukas Gosch
-Date: 9.10.2019
+Date: 2019-10-09
 Description:
     Convolutional network (similar to DeepFam) for protein family prediction.
     Architecture conceived by Roman for multiclass-classification on different
@@ -11,23 +11,22 @@ Description:
     This networks consists of an embedding layer which learns a D-dimensional
     embedding for each amino acid. For a sequence of length L, the embedding
     has dimension DxL. A 1-D convolution with C filters of F different kernel-
-    sizes K_i are performed over the embedding resulting in Cx(L-K_i-1) output 
-    dimension for each kernelsize. SeLU activation is applied on the output 
-    followed by AdaptiveMaxPooling1D Layer reducing the dimension to of the 
-    output layer to Cx1 and resulting in the NN beeing sequence length 
+    sizes K_i are performed over the embedding resulting in Cx(L-K_i-1) output
+    dimension for each kernelsize. SeLU activation is applied on the output
+    followed by AdaptiveMaxPooling1D Layer reducing the dimension to of the
+    output layer to Cx1 and resulting in the NN beeing sequence length
     independent. The max-pooling layer is followed up by a classic Dropout-
-    Layer and then by a dense layer with as many output nodes as orthologous 
+    Layer and then by a dense layer with as many output nodes as orthologous
     groups/protein families to classify.
 """
+# SPDX-License-Identifier: BSD-3-Clause
 
 import torch
 import torch.nn as nn
 import numpy as np
-import os
-import sys
-import inspect
 
 from .. import dataset as ds
+
 
 class AminoAcidWordEmbedding(nn.Module):
     """ PyTorch nn.Embedding where each amino acid is considered one word.
@@ -47,23 +46,24 @@ class AminoAcidWordEmbedding(nn.Module):
         self.embedding = embeds
 
     def forward(self, sequence):
-        """ Embedd a given sequence. 
-        
+        """ Embedd a given sequence.
+
         Parameters
         ----------
         sequence : Tensor
-            The sequence or a batch of sequences to embed. They are assumed to 
-            be translated to numerical values given a generated vocabulary 
+            The sequence or a batch of sequences to embed. They are assumed to
+            be translated to numerical values given a generated vocabulary
             (see gen_amino_acid_vocab in dataset.py)
 
         Returns
         -------
         x : Tensor
-            The sequence (densely) embedded in a space of dimension 
+            The sequence (densely) embedded in a space of dimension
             embedding_dim.
         """
         x = self.embedding(sequence)
         return x
+
 
 class deepencoding(nn.Module):
     """ Convolutional network for protein family prediction on eggNOG5 classes.
@@ -82,7 +82,7 @@ class deepencoding(nn.Module):
         the model.
     """
 
-    def __init__(self, model_dict, device='cpu'):
+    def __init__(self, model_dict):
         super(deepencoding, self).__init__()
 
         # Read hyperparameter dictionary
@@ -98,12 +98,13 @@ class deepencoding(nn.Module):
         # Convolutional Layers
         for i, kernel in enumerate(kernel_sizes):
             conv_layer = nn.Conv1d(in_channels=encoding_dim,
-                               out_channels=n_filters,
-                               kernel_size=kernel)
+                                   out_channels=n_filters,
+                                   kernel_size=kernel)
             # Initialize Convolution Layers for SELU activation
-            conv_layer.weight.data.normal_(0.0, np.sqrt(1. / np.prod(conv_layer.kernel_size)))
+            conv_layer.weight.data.normal_(
+                0.0, np.sqrt(1. / np.prod(conv_layer.kernel_size)))
             self.add_module(f'conv{i+1}', conv_layer)
-        self.n_conv_layers = i + 1
+        self.n_conv_layers = len(kernel_sizes)
         # Non-linearity
         self.activation1 = nn.SELU()
         # Max Pooling layer
@@ -118,8 +119,9 @@ class deepencoding(nn.Module):
         # Regularization with dropout
         self.dropout1 = nn.Dropout(p=dropout)
         # Classifcation layer
-        self.classification1 = nn.Linear(in_features=n_filters * len(kernel_sizes),
-                                         out_features=n_classes[0])
+        self.classification1 = nn.Linear(
+            in_features=n_filters * len(kernel_sizes),
+            out_features=n_classes[0])
 
         # Softmax-Layer
         self.softmax = nn.Softmax(dim=1)
@@ -129,13 +131,13 @@ class deepencoding(nn.Module):
             self.threshold = model_dict['threshold']
 
     def forward(self, x):
-        """ Forward a batch of sequences through network. 
+        """ Forward a batch of sequences through network.
 
         Parameters
         ----------
         x : Tensor, shape (batch_size, sequence_len)
-            Sequence or batch of sequences to classify. Assumes they are 
-            translated using a vocabulary. (See gen_amino_acid_vocab in 
+            Sequence or batch of sequences to classify. Assumes they are
+            translated using a vocabulary. (See gen_amino_acid_vocab in
             dataset.py)
 
         Returns

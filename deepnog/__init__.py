@@ -7,7 +7,7 @@ protein families of given protein sequences based on pretrained neural
 networks.
 
 The main module of this tool is defined in deepnog.py. For details about the
-usage of the tool, the reader is referred to the documentation as well as 
+usage of the tool, the reader is referred to the documentation as well as
 deepnog.py.
 
 Available subpackages
@@ -34,4 +34,4 @@ tests
 # Dev branch marker is: 'X.Y.dev' or 'X.Y.devN' where N is an integer.
 # 'X.Y.dev0' is the canonical version of 'X.Y.dev'
 #
-__version__ = '1.0.1'
+__version__ = '1.0.2'

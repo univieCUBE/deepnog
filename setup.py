@@ -42,8 +42,7 @@ setuptools.setup(
     version=find_version('deepnog', '__init__.py'),
     author='Lukas Gosch',
     author_email='gosch.lukas@gmail.com',
-    description='Deep learning based command line tool for protein family '
-                + 'predictions.',
+    description='Deep learning tool for protein orthologous group predictions',
     keywords='deep learning bioinformatics neural networks protein families',
     long_description=long_description,
     long_description_content_type='text/markdown',
