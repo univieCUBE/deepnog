@@ -6,17 +6,42 @@ This is the API documentation for ``deepnog``.
 
 .. _data_ref:
 
-deepnog: :mod:`deepnog`
-=======================
-
 .. automodule:: deepnog
-    :no-members:
-    :no-inherited-members:
+    :members:
+    :noindex:
 
-.. currentmodule:: deepnog
+:mod:`deepnog.dataset`
+======================
 
-.. autosummary::
-   :nosignatures:
-   :toctree: _autosummary
+.. automodule:: deepnog.dataset
+    :members:
 
-   deepnog.deepnog.main
+:mod:`deepnog.deepnog`
+======================
+
+.. automodule:: deepnog.deepnog
+    :members:
+
+:mod:`deepnog.inference`
+========================
+
+.. automodule:: deepnog.inference
+    :members:
+
+:mod:`deepnog.io`
+=================
+
+.. automodule:: deepnog.io
+    :members:
+
+:mod:`deepnog.sync`
+===================
+
+.. automodule:: deepnog.sync
+    :members:
+
+:mod:`deepnog.utils`
+====================
+
+.. automodule:: deepnog.utils
+    :members:

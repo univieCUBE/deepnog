@@ -3,7 +3,7 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-`deepnog`: fast and accurate protein orthologous group prediction
+DeepNOG: fast and accurate protein orthologous group prediction
 =================================================================
 
 ``deepnog`` is a Python package for predicting protein orthologous groups
@@ -18,16 +18,15 @@ with deep networks.
    Quick start example <getting_started/example>
 
 .. toctree::
-   :maxdepth: 3
+   :maxdepth: 1
    :hidden:
    :caption: Documentation
 
    User Guide <documentation/user_guide>
    deepnog API <documentation/documentation>
-   History <documentation/history>
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :titlesonly:
    :hidden:
    :caption: Development
