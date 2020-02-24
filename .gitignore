@@ -1,5 +1,6 @@
 .idea
 doc/latex
+out.csv
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -71,7 +72,9 @@ instance/
 .scrapy
 
 # Sphinx documentation
-docs/_build/
+doc/_build/
+doc/_static/
+doc/_templates/
 
 # PyBuilder
 target/

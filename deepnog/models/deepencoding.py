@@ -28,6 +28,11 @@ import numpy as np
 from .. import dataset as ds
 
 
+__all__ = ['AminoAcidWordEmbedding',
+           'deepencoding',
+           ]
+
+
 class AminoAcidWordEmbedding(nn.Module):
     """ PyTorch nn.Embedding where each amino acid is considered one word.
 

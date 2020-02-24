@@ -16,11 +16,11 @@ First, we load the dataset and inspect its size.
 
 .. code-block:: python
 
-    from deepnog import predict
-    ...
+   from deepnog import predict
+   ...
 
 
 .. code-block:: bash
 
-    deepnog input.fa --out prediction.csv -db eggNOG5 --tax 2
+   deepnog input.fa --out prediction.csv -db eggNOG5 --tax 2
 

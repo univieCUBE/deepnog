@@ -1,8 +1,14 @@
 """
 Author: Lukas Gosch
+
 Date: 2019-10-18
+
 Usage: python deepnog.py --help
+
 Description:
+
+    Provides the ``deepnog`` command line client and entry point for users.
+
     DeepNOG predicts protein families/orthologous groups of given
     protein sequences with deep learning.
 

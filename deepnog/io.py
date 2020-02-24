@@ -1,6 +1,11 @@
 """
 Author: Roman Feldbauer
+
 Date: 2020-02-19
+
+Description:
+
+    Input/output helper functions
 """
 # SPDX-License-Identifier: BSD-3-Clause
 import logging
@@ -106,8 +111,10 @@ def get_data_home(data_home: str = None) -> Path:
 
     Notes
     -----
-    Adapted from `https://github.com/scikit-learn/scikit-learn/blob/0.22.X/sklearn/datasets/_base.py`_  # noqa
-    """
+    Adapted from SKLEARN_DATAHOME_.
+
+    .. _SKLEARN_DATAHOME: https://github.com/scikit-learn/scikit-learn/blob/0.22.X/sklearn/datasets/_base.py
+    """  # noqa
     if data_home is None:
         data_home = environ.get('DEEPNOG_DATA',
                                 Path.home()/'deepnog_data')

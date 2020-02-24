@@ -2,46 +2,23 @@
 API Documentation
 =================
 
+..
+   Note: Sphinx requires THREE SPACES indentation
+
 This is the API documentation for ``deepnog``.
 
-.. _data_ref:
-
 .. automodule:: deepnog
-    :members:
-    :noindex:
+   :members:
 
-:mod:`deepnog.dataset`
-======================
+.. toctree::
+   :maxdepth: 2
+   :caption: Modules and subpackages
 
-.. automodule:: deepnog.dataset
-    :members:
-
-:mod:`deepnog.deepnog`
-======================
-
-.. automodule:: deepnog.deepnog
-    :members:
-
-:mod:`deepnog.inference`
-========================
-
-.. automodule:: deepnog.inference
-    :members:
-
-:mod:`deepnog.io`
-=================
-
-.. automodule:: deepnog.io
-    :members:
-
-:mod:`deepnog.sync`
-===================
-
-.. automodule:: deepnog.sync
-    :members:
-
-:mod:`deepnog.utils`
-====================
-
-.. automodule:: deepnog.utils
-    :members:
+   dataset    <api/deepnog.dataset>
+   deepnog    <api/deepnog.deepnog>
+   inference  <api/deepnog.inference>
+   io         <api/deepnog.io>
+   models     <api/deepnog.models>
+   sync       <api/deepnog.sync>
+   tests      <api/deepnog.tests>
+   utils      <api/deepnog.utils>

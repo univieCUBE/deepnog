@@ -1,8 +1,11 @@
 """
 Author: Lukas Gosch
+
 Date: 2019-10-03
+
 Description:
-    Dataset classes and helper functions for usage with neural network models
+
+    Dataset classes and helper functions for usage with deep network models
     written in PyTorch.
 """
 from collections import namedtuple, deque
@@ -172,13 +175,6 @@ class ProteinIterator:
         If bigger or equal to two, the multi-process loading case happens.
     worker_id : int
         ID of worker this iterator belongs to
-
-    Attributes
-    ---------
-    sequence : namedtuple
-        Tuple subclass named sequence holding all relevant information
-        DeepNOG needs to correctly perform and store protein predictions
-        for one protein sequence.
     """
 
     def __init__(self, iterator, aa_vocab, num_workers=1, worker_id=0):
@@ -192,8 +188,22 @@ class ProteinIterator:
         # Number of sequences to skip for each next() call.
         self.step = num_workers - 1
         # Make Dataset return namedtuple
-        self.sequence = namedtuple('sequence',
-                                   ['index', 'id', 'string', 'encoded'])
+        self._sequence = namedtuple('sequence',
+                                    ['index', 'id', 'string', 'encoded'])
+
+    @property
+    def sequence(self):
+        """ Sequence data and metadata.
+
+        All relevant information DeepNOG needs to correctly perform
+        and store protein predictions for one protein sequence
+
+        Returns
+        -------
+        sequence : namedtuple
+            Contains index, id, str, encoded
+        """
+        return self._sequence
 
     def __iter__(self):
         return self
@@ -226,11 +236,11 @@ class ProteinIterator:
                 self.pos += self.step + 1
                 next_seq = next(self.iterator)
             # Generate sequence object from SeqRecord
-            sequence = self.sequence(index=self.pos,
-                                     id=f'{next_seq.id}',
-                                     string=str(next_seq.seq),
-                                     encoded=[self.vocab.get(c, 0)
-                                              for c in next_seq.seq])
+            sequence = self._sequence(index=self.pos,
+                                      id=f'{next_seq.id}',
+                                      string=str(next_seq.seq),
+                                      encoded=[self.vocab.get(c, 0)
+                                               for c in next_seq.seq])
         except StopIteration:
             # Check if skipped sequences have been communicated back to main
             # process

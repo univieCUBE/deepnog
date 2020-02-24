@@ -1,6 +1,11 @@
 """
 Author: Roman Feldbauer
+
 Date: 2020-02-19
+
+Description:
+
+    Predict orthologous groups of protein sequences.
 """
 # SPDX-License-Identifier: BSD-3-Clause
 from importlib import import_module

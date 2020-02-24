@@ -18,7 +18,7 @@ with deep networks.
    Quick start example <getting_started/example>
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
    :hidden:
    :caption: Documentation
 

@@ -26,7 +26,7 @@ You can change this path by setting the DEEPNOG_DATA environment variable.
 
 .. code-block:: bash
 
-    DEEPNOG_DATA="/custom/path/models" deepnog sequences.fa
+   DEEPNOG_DATA="/custom/path/models" deepnog sequences.fa
 
 
 Installation from source
@@ -36,10 +36,10 @@ You can always grab the latest version of ``deepnog`` directly from GitHub:
 
 .. code-block:: bash
 
-    cd install_dir
-    git clone git@github.com:VarIr/deepnog.git
-    cd deepnog
-    pip install -e .
+   cd install_dir
+   git clone git@github.com:VarIr/deepnog.git
+   cd deepnog
+   pip install -e .
 
 This is the recommended approach, if you want to contribute
 to the development of ``deepnog``.

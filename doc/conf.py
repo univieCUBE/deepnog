@@ -38,7 +38,7 @@ release = __version__
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = ['recommonmark',
-              'numpydoc',
+              # 'numpydoc',  # Napoleon >=1.3 supports NumPy style as well
               'sphinx_automodapi.automodapi',
               'sphinx.ext.autodoc',
               'sphinx.ext.autosectionlabel',
@@ -52,8 +52,8 @@ extensions = ['recommonmark',
               'sphinx.ext.doctest',
               'sphinx.ext.intersphinx',
               'sphinx.ext.linkcode',
-              # 'sphinx_gallery.gen_gallery',      # to automatically generate example pages from scripts
-              'sphinx_search.extension',         # readthedocs-sphinx-search with ElasticSearch
+              # 'sphinx_gallery.gen_gallery',  # to automatically generate example pages from scripts
+              'sphinx_search.extension',       # readthedocs-sphinx-search with ElasticSearch
               ]
 
 # Due to sphinx-automodapi
@@ -120,7 +120,8 @@ if on_rtd:
     html_theme = 'default'
 else:
     # html_theme = 'sphinx_pdj_theme'
-    html_theme = 'alabaster'
+    # html_theme = 'alabaster'
+    html_these = 'default'
 import sphinx_pdj_theme
 html_theme_path = [sphinx_pdj_theme.get_html_theme_path()]
 
