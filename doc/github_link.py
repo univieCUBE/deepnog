@@ -1,4 +1,4 @@
-# from https://github.com/scikit-learn/scikit-learn/blob/master/doc/sphinxext/github_link.py
+# from https://github.com/scikit-learn/scikit-learn/blob/master/doc/sphinxext/github_link.py  # noqa
 
 from operator import attrgetter
 import inspect

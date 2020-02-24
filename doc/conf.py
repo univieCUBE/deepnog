@@ -28,7 +28,7 @@ copyright = '2020, Lukas Gosch, Roman Feldbauer'
 author = 'Lukas Gosch, Roman Feldbauer'
 
 # The full version, including alpha/beta/rc tags
-from deepnog import __version__
+from deepnog import __version__  # noqa
 release = __version__
 
 
@@ -37,24 +37,25 @@ release = __version__
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ['recommonmark',
-              # 'numpydoc',  # Napoleon >=1.3 supports NumPy style as well
-              'sphinx_automodapi.automodapi',
-              'sphinx.ext.autodoc',
-              'sphinx.ext.autosectionlabel',
-              'sphinx.ext.autosummary',
-              'sphinx.ext.graphviz',
-              'sphinx.ext.inheritance_diagram',
-              'sphinx.ext.todo',
-              'sphinx.ext.napoleon',
-              'sphinx.ext.githubpages',
-              'sphinx.ext.mathjax',
-              'sphinx.ext.doctest',
-              'sphinx.ext.intersphinx',
-              'sphinx.ext.linkcode',
-              # 'sphinx_gallery.gen_gallery',  # to automatically generate example pages from scripts
-              'sphinx_search.extension',       # readthedocs-sphinx-search with ElasticSearch
-              ]
+extensions = [
+    'recommonmark',
+    # 'numpydoc',  # Napoleon >=1.3 supports NumPy style as well
+    'sphinx_automodapi.automodapi',
+    'sphinx.ext.autodoc',
+    'sphinx.ext.autosectionlabel',
+    'sphinx.ext.autosummary',
+    'sphinx.ext.graphviz',
+    'sphinx.ext.inheritance_diagram',
+    'sphinx.ext.todo',
+    'sphinx.ext.napoleon',
+    'sphinx.ext.githubpages',
+    'sphinx.ext.mathjax',
+    'sphinx.ext.doctest',
+    'sphinx.ext.intersphinx',
+    'sphinx.ext.linkcode',
+    # 'sphinx_gallery.gen_gallery',  # autogenerate examples from scripts
+    'sphinx_search.extension',       # rtd-sphinx-search with ElasticSearch
+]
 
 # Due to sphinx-automodapi
 numpydoc_show_class_members = False
@@ -77,7 +78,8 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store',
 # Mock packages that are not installed on rtd
 autodoc_mock_imports = MOCK_MODULES
 
-# The master toctree document. (see https://stackoverflow.com/a/56859983/6555620)
+# The master toctree document.
+# (see https://stackoverflow.com/a/56859983/6555620)
 master_doc = 'index'
 
 autosummary_generate = True
@@ -122,7 +124,7 @@ else:
     # html_theme = 'sphinx_pdj_theme'
     # html_theme = 'alabaster'
     html_these = 'default'
-import sphinx_pdj_theme
+import sphinx_pdj_theme  # noqa
 html_theme_path = [sphinx_pdj_theme.get_html_theme_path()]
 
 # Add any paths that contain custom static files (such as style sheets) here,
