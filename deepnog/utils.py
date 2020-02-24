@@ -50,7 +50,7 @@ def set_device(device):
             device = torch.device('cuda')
         else:
             raise RuntimeError('Device set to gpu but no cuda-enabled gpu '
-                               'available on machine.')
+                               'is available on this machine.')
     elif device == 'cpu':
         device = torch.device('cpu')
     else:
