@@ -86,7 +86,7 @@ autosummary_generate = True
 
 
 # The following is used by sphinx.ext.linkcode to provide links to github
-from doc.github_link import make_linkcode_resolve
+from doc.github_link import make_linkcode_resolve  # noqa
 
 linkcode_resolve = make_linkcode_resolve('deepnog',
                                          'https://github.com/VarIr/'
