@@ -9,7 +9,7 @@ Description:
 """
 # SPDX-License-Identifier: BSD-3-Clause
 from importlib import import_module
-import sys
+import warnings
 
 import torch
 from torch.utils.data import DataLoader
@@ -122,9 +122,13 @@ def predict(model, dataset, device='cpu', batch_size=16, num_workers=4,
     n_skipped = dataset.n_skipped
     # Check if sequences were skipped due to empty id
     if verbose > 0 and n_skipped > 0:
-        print(f'WARNING: Skipped {n_skipped} sequences as no sequence id '
-              f'could be detected.', file=sys.stderr)
-    # Merge individual output tensors
-    preds = torch.cat(pred_l)
-    confs = torch.cat(conf_l)
-    return preds, confs, ids, indices
+        warnings.warn(f'Skipped {n_skipped} sequences as no sequence id '
+                      f'could be detected.')
+    if len(pred_l) == 0:
+        warnings.warn(f'Skipped all sequences. No output will be provided.')
+        return None, None, None, None
+    else:
+        # Merge individual output tensors
+        preds = torch.cat(pred_l)
+        confs = torch.cat(conf_l)
+        return preds, confs, ids, indices

@@ -48,7 +48,7 @@ before_script:
 
 script:
   - python -c "import sys; print(sys.version)"
-  - pytest --cov=deepnog -s
+  - pytest --cov=deepnog
 
 after_success:
   - codecov

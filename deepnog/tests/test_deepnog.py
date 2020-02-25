@@ -50,18 +50,12 @@ def test_predict(architecture, weights, data, fformat, tolerance):
         is allowed to misclassfy before the test fails.
     """
     # Set up device
-    print('test_predict 1')
     cuda = torch.cuda.is_available()
-    print('test_predict 2')
     device = torch.device('cuda' if cuda else 'cpu')
     # Start test
-    print('test_predict 3')
     model_dict = torch.load(weights, map_location=device)
-    print('test_predict 4')
     model = load_nn(architecture, model_dict, device)
-    print('test_predict 5')
     dataset = ProteinDataset(data, f_format=fformat)
-    print('test_predict 6')
     preds, confs, ids, indices = predict(model, dataset, device)
     # Test correct output shape
     assert(preds.shape[0] == confs.shape[0])
@@ -87,7 +81,8 @@ def test_skip_empty_sequences(architecture, weights, data, fformat):
     model_dict = torch.load(weights, map_location=device)
     model = load_nn(architecture, model_dict, device)
     dataset = ProteinDataset(data, f_format=fformat)
-    preds, confs, ids, indices = predict(model, dataset, device)
+    with pytest.warns(UserWarning, match='no sequence id could be detected'):
+        preds, confs, ids, indices = predict(model, dataset, device)
     # Test correct output shape
     assert(preds.shape[0] == 70)
     # Test correct counted skipped sequences
