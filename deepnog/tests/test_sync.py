@@ -5,6 +5,7 @@ import torch
 
 from deepnog.dataset import ProteinDataset
 from deepnog.inference import load_nn, predict
+from deepnog.sync import SynchronizedCounter
 
 current_path = Path(__file__).parent.absolute()
 weights_path = current_path/'parameters/test_deepencoding.pthsmall'
@@ -26,3 +27,16 @@ def test_sync_counter_of_many_empty_sequences():
 
     # Test correct counted skipped sequences
     assert(int(dataset.n_skipped) == 2**16)
+
+
+def test_sync_counter():
+    cnt = SynchronizedCounter(init=0)
+    cnt.increment(1)
+    val = cnt.increment_and_get_value(4)
+    assert val == 5
+
+    assert cnt < 6
+    assert cnt <= 5
+    assert cnt > 4
+    assert cnt >= 5
+    assert cnt == 5

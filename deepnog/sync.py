@@ -42,8 +42,14 @@ class SynchronizedCounter:
     def __gt__(self, other):
         return int(self) > other
 
+    def __ge__(self, other):
+        return int(self) >= other
+
     def __lt__(self, other):
         return int(self) < other
+
+    def __le__(self, other):
+        return int(self) <= other
 
     def __eq__(self, other):
         return int(self) == other
