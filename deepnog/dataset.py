@@ -13,6 +13,7 @@ import gzip
 from itertools import islice
 import os
 from pathlib import Path
+import warnings
 
 import numpy as np
 import torch
@@ -165,19 +166,34 @@ class ProteinIterator:
 
     Parameters
     ----------
-    iterator : iterator
-        Iterator over sequence file returned by Biopython's
-        Bio.SeqIO.parse() function.
+    file_ : str
+        Path to sequence file, from which an iterator over the sequences
+        will be created with Biopython's Bio.SeqIO.parse() function.
     aa_vocab : dict
         Amino-acid vocabulary mapping letters to integers
+    f_format : str
+        File format in which to expect the protein sequences.
+        Must be supported by Biopython's Bio.SeqIO class.
     num_workers : int
         Number of workers set in DataLoader or one if no workers set.
         If bigger or equal to two, the multi-process loading case happens.
     worker_id : int
         ID of worker this iterator belongs to
+
+    Attributes
+    ----------
+    sequence : namedtuple
+        Sequence data and metadata: All relevant information DeepNOG needs to
+        perform and store protein predictions for one protein sequence
     """
 
-    def __init__(self, iterator, aa_vocab, num_workers=1, worker_id=0):
+    def __init__(self, file_, aa_vocab, f_format, num_workers=1, worker_id=0):
+        # Generate file-iterator
+        if Path(file_).suffix == '.gz':
+            f = gzip.open(file_, 'rt')
+            iterator = SeqIO.parse(f, format=f_format, )
+        else:
+            iterator = SeqIO.parse(file_, format=f_format, )
         self.iterator = iterator
         self.vocab = aa_vocab
         self.n_skipped = 0
@@ -187,23 +203,10 @@ class ProteinIterator:
         self.pos = None
         # Number of sequences to skip for each next() call.
         self.step = num_workers - 1
+
         # Make Dataset return namedtuple
-        self._sequence = namedtuple('sequence',
-                                    ['index', 'id', 'string', 'encoded'])
-
-    @property
-    def sequence(self):
-        """ Sequence data and metadata.
-
-        All relevant information DeepNOG needs to correctly perform
-        and store protein predictions for one protein sequence
-
-        Returns
-        -------
-        sequence : namedtuple
-            Contains index, id, str, encoded
-        """
-        return self._sequence
+        self.sequence = namedtuple('sequence',
+                                   ['index', 'id', 'string', 'encoded'])
 
     def __iter__(self):
         return self
@@ -236,11 +239,11 @@ class ProteinIterator:
                 self.pos += self.step + 1
                 next_seq = next(self.iterator)
             # Generate sequence object from SeqRecord
-            sequence = self._sequence(index=self.pos,
-                                      id=f'{next_seq.id}',
-                                      string=str(next_seq.seq),
-                                      encoded=[self.vocab.get(c, 0)
-                                               for c in next_seq.seq])
+            sequence = self.sequence(index=self.pos,
+                                     id=f'{next_seq.id}',
+                                     string=str(next_seq.seq),
+                                     encoded=[self.vocab.get(c, 0)
+                                              for c in next_seq.seq])
         except StopIteration:
             # Check if skipped sequences have been communicated back to main
             # process
@@ -252,14 +255,25 @@ class ProteinIterator:
                     # namespace.
                     sync.n_skipped = self.n_skipped
                 else:
-                    # Close reading pipe dedicated for this worker process
-                    os.close(sync.rpipe_l[self.start])
-                    # Prepare message to send to main process
-                    msg = f'{self.n_skipped}'.encode(encoding='utf-8')
-                    # Send message to main process
-                    os.write(sync.wpipe_l[self.start], msg)
+                    try:
+                        # Close reading pipe dedicated for this worker process
+                        os.close(sync.rpipe_l[self.start])
+                        # Prepare message to send to main process
+                        msg = f'{self.n_skipped}'.encode(encoding='utf-8')
+                        # Send message to main process
+                        os.write(sync.wpipe_l[self.start], msg)
+                    except (IndexError,  # if sync.pipes are not set up
+                            IOError):    # general errors
+                        warnings.warn(f'Interprocess communication failed. '
+                                      f'The reported number of problematic '
+                                      f'sequences will be unreliable. ')
                 self.communicated = True
+
+            # Close the file handle
+            self.iterator.close()
+
             raise StopIteration
+
         return sequence
 
 
@@ -282,27 +296,20 @@ class ProteinDataset(IterableDataset):
     """
 
     def __init__(self, file, f_format='fasta'):
-        """ Initialize iterator over sequences in file."""
+        """ Initialize sequence dataset from file."""
+        self.file = file
+        self.f_format = f_format
+
         # Generate amino-acid vocabulary
         self.alphabet = EXTENDED_IUPAC_PROTEIN_ALPHABET
         self.vocab = gen_amino_acid_vocab(self.alphabet)
-        # Generate file-iterator
-        if os.path.isfile(file):
-            if Path(file).suffix == '.gz':
-                f = gzip.open(file, 'rt')
-                self.iter = SeqIO.parse(f, format=f_format, )
-            else:
-                self.iter = SeqIO.parse(file, format=f_format, )
-        else:
-            raise ValueError(f'Given file {file} does not exist'
-                             f'or is not a file.')
 
     def __iter__(self):
         """ Return iterator over sequences in file. """
         worker_info = torch.utils.data.get_worker_info()
         if worker_info is None:
-            return ProteinIterator(self.iter, self.vocab)
+            return ProteinIterator(self.file, self.vocab, self.f_format)
         else:
-            return ProteinIterator(self.iter, self.vocab,
+            return ProteinIterator(self.file, self.vocab, self.f_format,
                                    worker_info.num_workers,
                                    worker_info.id)

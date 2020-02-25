@@ -16,10 +16,10 @@ __all__ = ['rpipe_l',
            ]
 
 #: List of read pipes for each worker
-rpipe_l = []
+rpipe_l: list = []
 
 #: List of write pipes for each worker
-wpipe_l = []
+wpipe_l: list = []
 
 #: Number of skipped sequences (due to empty ID)
 n_skipped: int = 0
@@ -30,3 +30,6 @@ def init():
     global rpipe_l
     global wpipe_l
     global n_skipped
+    #rpipe_l = []
+    #wpipe_l = []
+    #n_skipped = 0

@@ -30,8 +30,6 @@ import argparse
 import sys
 import os.path
 
-from . import __version__
-
 
 def get_parser():
     """ Creates a new argument parser.
@@ -41,6 +39,7 @@ def get_parser():
     parser : ArgumentParser
         ArgumentParser object to parse program arguments.
     """
+    from . import __version__
     parser = argparse.ArgumentParser(
         usage='%(prog)s proteins.faa --out proteins.csv',
         description=('Predict orthologous groups from protein sequences '

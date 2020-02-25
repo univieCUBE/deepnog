@@ -4,32 +4,49 @@ Date: 2019-10-03
 Description:
     Test dataset module.
 """
+from collections import namedtuple
+import os
 from pathlib import Path
 import pytest
 
 from torch.utils.data import DataLoader
 from deepnog import dataset as ds
+from deepnog import sync
 
 test_file = Path(__file__).parent.absolute() / "data/GCF_000007025.1.faa"
+test_file_gzip = Path(__file__).parent.absolute()/"data/GCF_000007025.1.faa.gz"
 
 
-@pytest.mark.parametrize("num_workers", [None, 2, 3, 4])
-def test_multiprocess_data_loading(num_workers, f_format='fasta'):
+@pytest.mark.parametrize("f", [test_file, test_file_gzip, ])
+@pytest.mark.parametrize("num_workers", [1, 2, 3, 4])
+def test_multiprocess_data_loading(f, num_workers, f_format='fasta'):
     """ Test if different workers produce different sequences and process
         whole sequence file.
     """
-    dataset = ds.ProteinDataset(test_file, f_format=f_format)
+    # Need to set up the pipes here, as otherwise done in inference.predict()
+    sync.init()
+    for pipes in range(num_workers):
+        r, w = os.pipe()
+        os.set_inheritable(r, True)  # Compatibility with Windows
+        os.set_inheritable(w, True)  # Compatibility with Windows
+        sync.rpipe_l.append(r)
+        sync.wpipe_l.append(w)
+
+    dataset = ds.ProteinDataset(f, f_format=f_format)
+    data_loader = DataLoader(dataset,
+                             num_workers=num_workers,
+                             batch_size=1,
+                             collate_fn=ds.collate_sequences, )
     s = set()
     i = 0
-    for i, batch in enumerate(DataLoader(dataset, num_workers=0,
-                                         batch_size=1,
-                                         collate_fn=ds.collate_sequences)):
+    for i, batch in enumerate(data_loader):
         # Check uniqueness of IDs for loaded data
         for identifier in batch.ids:
             assert(identifier not in s)
             s.add(identifier)
     # Check if all data was loaded
     assert(i == 1288)
+    assert len(s) == 1289
 
 
 @pytest.mark.parametrize("batch_size", [None, 1, 16, 32])

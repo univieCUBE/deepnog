@@ -11,6 +11,15 @@ usage of the tool, the reader is referred to the documentation as well as
 deepnog.py.
 
 """
+from . import (dataset,
+               deepnog,
+               inference,
+               io,
+               models,
+               sync,
+               utils,
+               )
+
 # PEP0440 compatible formatted version, see:
 # https://www.python.org/dev/peps/pep-0440/
 #
@@ -28,3 +37,13 @@ deepnog.py.
 # 'X.Y.dev0' is the canonical version of 'X.Y.dev'
 #
 __version__ = '1.0.3'
+
+__all__ = ['dataset',
+           'deepnog',
+           'inference',
+           'io',
+           'models',
+           'sync',
+           'utils',
+           '__version__',
+           ]
