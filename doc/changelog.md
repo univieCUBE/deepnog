@@ -11,10 +11,12 @@
 - Remove network weights from the repository, because files are too large for
   github and/or PyPI. `deepnog` automatically downloads these from
   [CUBE](https://cube.univie.ac.at) servers, and caches them locally.
+- More robust inter-process communication in data loading
 
 ### Fixes
 - Fix error on very short amino acid sequences
 - Fix error on unrecognized symbols in sequences (stop codons etc.)
+- Fix multiprocess data loading from gzipped files
 
 ### Maintenance
 - Continuous integration on

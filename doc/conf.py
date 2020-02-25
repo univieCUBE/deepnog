@@ -39,7 +39,6 @@ release = __version__
 # ones.
 extensions = [
     'recommonmark',
-    # 'numpydoc',  # Napoleon >=1.3 supports NumPy style as well
     'sphinx_automodapi.automodapi',
     'sphinx.ext.autodoc',
     'sphinx.ext.autosectionlabel',
@@ -53,7 +52,6 @@ extensions = [
     'sphinx.ext.doctest',
     'sphinx.ext.intersphinx',
     'sphinx.ext.linkcode',
-    # 'sphinx_gallery.gen_gallery',  # autogenerate examples from scripts
     'sphinx_search.extension',       # rtd-sphinx-search with ElasticSearch
 ]
 
@@ -93,24 +91,6 @@ linkcode_resolve = make_linkcode_resolve('deepnog',
                                          'deepnog/blob/{revision}/'
                                          '{package}/{path}#L{lineno}')
 
-# sphinx gallery: where to take scripts from and where to save output to
-# Enable, when example scripts are available
-# sphinx_gallery_conf = {
-#     'examples_dirs':   # path to your example scripts:
-#         ['../examples/deepnog',
-#          '../examples/prediction',
-#          ],
-#     'gallery_dirs':    # path to where to save gallery generated output:
-#         ['documentation/auto_examples_deepnog',
-#          'documentation/auto_examples_prediction',
-#          ],
-# }
-
-# suppress numerous "duplicate label" warnings from sphinx-gallery
-# suppress_warnings = [
-#     'autosectionlabel.*',
-# ]
-
 # -- Options for HTML output -------------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
@@ -121,9 +101,8 @@ on_rtd = os.environ.get('READTHEDOCS') == 'True'
 if on_rtd:
     html_theme = 'default'
 else:
-    # html_theme = 'sphinx_pdj_theme'
-    # html_theme = 'alabaster'
-    html_these = 'default'
+    html_theme = 'sphinx_pdj_theme'
+
 import sphinx_pdj_theme  # noqa
 html_theme_path = [sphinx_pdj_theme.get_html_theme_path()]
 

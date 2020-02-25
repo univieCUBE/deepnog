@@ -121,7 +121,7 @@ Testing
 =======
 
 In `deepnog`, we aim for high code coverage. As of Feb 2020,
-roughly 94% of all code lines are visited at least once when
+more than 95% of all code lines are visited at least once when
 running the complete test suite. This is primarily to ensure:
 
 * correctness of the code (to some extent) and

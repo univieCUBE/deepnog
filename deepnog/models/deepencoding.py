@@ -12,10 +12,10 @@ Description:
     embedding for each amino acid. For a sequence of length L, the embedding
     has dimension DxL. A 1-D convolution with C filters of F different kernel-
     sizes K_i are performed over the embedding resulting in Cx(L-K_i-1) output
-    dimension for each kernelsize. SeLU activation is applied on the output
+    dimension for each kernel size. SeLU activation is applied on the output
     followed by AdaptiveMaxPooling1D Layer reducing the dimension to of the
-    output layer to Cx1 and resulting in the NN beeing sequence length
-    independent. The max-pooling layer is followed up by a classic Dropout-
+    output layer to Cx1 and resulting in the NN being sequence length
+    independent. The max-pooling layer is followed up by a classic dropout
     Layer and then by a dense layer with as many output nodes as orthologous
     groups/protein families to classify.
 """
@@ -51,7 +51,7 @@ class AminoAcidWordEmbedding(nn.Module):
         self.embedding = embeds
 
     def forward(self, sequence):
-        """ Embedd a given sequence.
+        """ Embed a given sequence.
 
         Parameters
         ----------
@@ -73,8 +73,12 @@ class AminoAcidWordEmbedding(nn.Module):
 class deepencoding(nn.Module):
     """ Convolutional network for protein family prediction on eggNOG5 classes.
 
-    The architecture is based on DeepFam, with some changes (learned encoding,
-    activation functions, output layers, etc.)
+    Compared to DeepFam, this architecture provides:
+
+        - learned amino acid embeddings
+        - self-normalizing network with SELU
+        - sequence length independence
+        - stream-lined output layer
 
     Note on class name: using function naming style to match file name to
         dynamically load different architectures. Furthermore, NN-model
