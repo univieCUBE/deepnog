@@ -4,7 +4,6 @@ Date: 2019-10-03
 Description:
     Test dataset module.
 """
-from collections import namedtuple
 import os
 from pathlib import Path
 import pytest

@@ -30,6 +30,3 @@ def init():
     global rpipe_l
     global wpipe_l
     global n_skipped
-    #rpipe_l = []
-    #wpipe_l = []
-    #n_skipped = 0
