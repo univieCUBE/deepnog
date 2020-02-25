@@ -13,7 +13,6 @@ import torch
 from deepnog.dataset import ProteinDataset
 from deepnog.inference import load_nn, predict
 from deepnog.io import create_df
-from deepnog import sync
 
 
 current_path = Path(__file__).parent.absolute()
@@ -92,7 +91,7 @@ def test_skip_empty_sequences(architecture, weights, data, fformat):
     # Test correct output shape
     assert(preds.shape[0] == 70)
     # Test correct counted skipped sequences
-    assert(sync.n_skipped == 20)
+    assert(int(dataset.n_skipped) == 20)
 
 
 def test_create_df():

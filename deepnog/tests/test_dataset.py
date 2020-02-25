@@ -4,13 +4,11 @@ Date: 2019-10-03
 Description:
     Test dataset module.
 """
-import os
 from pathlib import Path
 import pytest
 
 from torch.utils.data import DataLoader
 from deepnog import dataset as ds
-from deepnog import sync
 
 test_file = Path(__file__).parent.absolute() / "data/GCF_000007025.1.faa"
 test_file_gzip = Path(__file__).parent.absolute()/"data/GCF_000007025.1.faa.gz"
@@ -22,15 +20,6 @@ def test_multiprocess_data_loading(f, num_workers, f_format='fasta'):
     """ Test if different workers produce different sequences and process
         whole sequence file.
     """
-    # Need to set up the pipes here, as otherwise done in inference.predict()
-    sync.init()
-    for pipes in range(num_workers):
-        r, w = os.pipe()
-        os.set_inheritable(r, True)  # Compatibility with Windows
-        os.set_inheritable(w, True)  # Compatibility with Windows
-        sync.rpipe_l.append(r)
-        sync.wpipe_l.append(w)
-
     dataset = ds.ProteinDataset(f, f_format=f_format)
     data_loader = DataLoader(dataset,
                              num_workers=num_workers,

@@ -11,16 +11,15 @@ Description:
 from collections import namedtuple, deque
 import gzip
 from itertools import islice
-import os
 from pathlib import Path
-import warnings
+from typing import Union
 
 import numpy as np
 import torch
 from torch.utils.data import IterableDataset
 from torch.utils.data.dataloader import default_collate
 
-from . import sync
+from .sync import SynchronizedCounter
 from .utils import EXTENDED_IUPAC_PROTEIN_ALPHABET, SeqIO
 
 # Class of data-minibatches
@@ -187,7 +186,9 @@ class ProteinIterator:
         perform and store protein predictions for one protein sequence
     """
 
-    def __init__(self, file_, aa_vocab, f_format, num_workers=1, worker_id=0):
+    def __init__(self, file_, aa_vocab, f_format,
+                 n_skipped: Union[int, SynchronizedCounter] = 0,
+                 num_workers=1, worker_id=0):
         # Generate file-iterator
         if Path(file_).suffix == '.gz':
             f = gzip.open(file_, 'rt')
@@ -195,12 +196,14 @@ class ProteinIterator:
         else:
             iterator = SeqIO.parse(file_, format=f_format, )
         self.iterator = iterator
+
         self.vocab = aa_vocab
-        self.n_skipped = 0
-        self.communicated = False
+        self.n_skipped = n_skipped
+
         # Start position
         self.start = worker_id
         self.pos = None
+
         # Number of sequences to skip for each next() call.
         self.step = num_workers - 1
 
@@ -245,29 +248,6 @@ class ProteinIterator:
                                      encoded=[self.vocab.get(c, 0)
                                               for c in next_seq.seq])
         except StopIteration:
-            # Check if skipped sequences have been communicated back to main
-            # process
-            if not self.communicated:
-                # Check if subprocesses (workers) were created to read data
-                if self.step == 0:
-                    # If no workers were used to read the data, ProteinIterator
-                    # runs in same process as main module and can access its
-                    # namespace.
-                    sync.n_skipped = self.n_skipped
-                else:
-                    try:
-                        # Close reading pipe dedicated for this worker process
-                        os.close(sync.rpipe_l[self.start])
-                        # Prepare message to send to main process
-                        msg = f'{self.n_skipped}'.encode(encoding='utf-8')
-                        # Send message to main process
-                        os.write(sync.wpipe_l[self.start], msg)
-                    except (IndexError,  # if sync.pipes are not set up
-                            IOError):    # general errors
-                        warnings.warn(f'Interprocess communication failed. '
-                                      f'The reported number of problematic '
-                                      f'sequences will be unreliable. ')
-                self.communicated = True
 
             # Close the file handle
             self.iterator.close()
@@ -304,12 +284,16 @@ class ProteinDataset(IterableDataset):
         self.alphabet = EXTENDED_IUPAC_PROTEIN_ALPHABET
         self.vocab = gen_amino_acid_vocab(self.alphabet)
 
+        self.n_skipped = SynchronizedCounter(init=0)
+
     def __iter__(self):
         """ Return iterator over sequences in file. """
         worker_info = torch.utils.data.get_worker_info()
         if worker_info is None:
-            return ProteinIterator(self.file, self.vocab, self.f_format)
+            return ProteinIterator(self.file, self.vocab, self.f_format,
+                                   n_skipped=0)
         else:
             return ProteinIterator(self.file, self.vocab, self.f_format,
-                                   worker_info.num_workers,
-                                   worker_info.id)
+                                   n_skipped=self.n_skipped,
+                                   num_workers=worker_info.num_workers,
+                                   worker_id=worker_info.id)
