@@ -1,8 +1,14 @@
 """
 Author: Lukas Gosch
+
 Date: 2019-10-18
+
 Usage: python deepnog.py --help
+
 Description:
+
+    Provides the ``deepnog`` command line client and entry point for users.
+
     DeepNOG predicts protein families/orthologous groups of given
     protein sequences with deep learning.
 
@@ -24,8 +30,6 @@ import argparse
 import sys
 import os.path
 
-from . import __version__
-
 
 def get_parser():
     """ Creates a new argument parser.
@@ -35,6 +39,7 @@ def get_parser():
     parser : ArgumentParser
         ArgumentParser object to parse program arguments.
     """
+    from . import __version__
     parser = argparse.ArgumentParser(
         usage='%(prog)s proteins.faa --out proteins.csv',
         description=('Predict orthologous groups from protein sequences '

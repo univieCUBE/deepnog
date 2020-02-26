@@ -1,6 +1,11 @@
 """
 Author: Roman Feldbauer
+
 Date: 2020-02-19
+
+Description:
+
+     Various utility functions
 """
 # SPDX-License-Identifier: BSD-3-Clause
 import warnings
@@ -22,12 +27,12 @@ with warnings.catch_warnings():
     from Bio import SeqIO
 
 
-def set_device(user_choice):
-    """ Sets calc. device depending on users choices and availability.
+def set_device(device):
+    """ Set device (CPU/GPU) depending on user choice and availability.
 
     Parameters
     ----------
-    user_choice : str
+    device : str
         Device set by user as an argument to DeepNOG call.
 
     Returns
@@ -36,16 +41,18 @@ def set_device(user_choice):
         Object containing the device type to be used for prediction
         calculations.
     """
-    if user_choice == 'auto':
+    if device == 'auto':
         cuda = torch.cuda.is_available()
         device = torch.device('cuda' if cuda else 'cpu')
-    elif user_choice == 'gpu':
+    elif device == 'gpu':
         cuda = torch.cuda.is_available()
         if cuda:
             device = torch.device('cuda')
         else:
             raise RuntimeError('Device set to gpu but no cuda-enabled gpu '
-                               'available on machine!')
-    else:
+                               'is available on this machine.')
+    elif device == 'cpu':
         device = torch.device('cpu')
+    else:
+        raise ValueError(f'Unknown device "{device}". Try "auto".')
     return device

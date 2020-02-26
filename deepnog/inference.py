@@ -1,18 +1,21 @@
 """
 Author: Roman Feldbauer
+
 Date: 2020-02-19
+
+Description:
+
+    Predict orthologous groups of protein sequences.
 """
 # SPDX-License-Identifier: BSD-3-Clause
 from importlib import import_module
-import os
-import sys
+import warnings
 
 import torch
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from .dataset import collate_sequences
-from . import sync
 
 __all__ = ['load_nn', 'predict', ]
 
@@ -88,20 +91,7 @@ def predict(model, dataset, device='cpu', batch_size=16, num_workers=4,
     ids = []
     indices = []
 
-    # Prepare communication (set up globals)
-    sync.init()
-    n_pipes: int = 0
-    if num_workers >= 2:
-        # Prepare message passing for multi-process data loading
-        n_pipes = num_workers
-        # Dedicate one communication pipe for each worker
-        for pipes in range(n_pipes):
-            r, w = os.pipe()
-            os.set_inheritable(r, True)  # Compatibility with Windows
-            os.set_inheritable(w, True)  # Compatibility with Windows
-            sync.rpipe_l.append(r)
-            sync.wpipe_l.append(w)
-    else:
+    if num_workers < 2:
         num_workers = 0
     # Create data-loader for protein dataset
     data_loader = DataLoader(dataset,
@@ -129,16 +119,16 @@ def predict(model, dataset, device='cpu', batch_size=16, num_workers=4,
 
     # Collect skipped-sequences messages from workers in the case of
     # multi-process data-loading
-    if num_workers >= 2:
-        for workers in range(n_pipes):
-            os.close(sync.wpipe_l[workers])
-            r = os.fdopen(sync.rpipe_l[workers])
-            sync.n_skipped += int(r.read())
+    n_skipped = dataset.n_skipped
     # Check if sequences were skipped due to empty id
-    if verbose > 0 and sync.n_skipped > 0:
-        print(f'WARNING: Skipped {sync.n_skipped} sequences as no sequence id '
-              f'could be detected.', file=sys.stderr)
-    # Merge individual output tensors
-    preds = torch.cat(pred_l)
-    confs = torch.cat(conf_l)
-    return preds, confs, ids, indices
+    if verbose > 0 and n_skipped > 0:
+        warnings.warn(f'Skipped {n_skipped} sequences as no sequence id '
+                      f'could be detected.')
+    if len(pred_l) == 0:
+        warnings.warn(f'Skipped all sequences. No output will be provided.')
+        return None, None, None, None
+    else:
+        # Merge individual output tensors
+        preds = torch.cat(pred_l)
+        confs = torch.cat(conf_l)
+        return preds, confs, ids, indices
