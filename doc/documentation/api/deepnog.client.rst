@@ -1,8 +1,8 @@
 
-:mod:`deepnog.deepnog`
+:mod:`deepnog.client`
 ======================
 
-.. automodule:: deepnog.deepnog
+.. automodule:: deepnog.client
    :members:
    :undoc-members:
    :inherited-members:
