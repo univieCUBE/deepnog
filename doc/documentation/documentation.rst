@@ -14,8 +14,8 @@ This is the API documentation for ``deepnog``.
    :maxdepth: 2
    :caption: Modules and subpackages
 
+   client     <api/deepnog.client>
    dataset    <api/deepnog.dataset>
-   deepnog    <api/deepnog.deepnog>
    inference  <api/deepnog.inference>
    io         <api/deepnog.io>
    models     <api/deepnog.models>

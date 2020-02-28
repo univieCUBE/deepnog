@@ -50,11 +50,14 @@ install:
   # compiled extensions and are not provided as pre-built wheel packages,
   # pip will build them from source using the MSVC compiler matching the
   # target Python version and architecture
+  # Currently, PyTorch for Windows is not on PyPI
+  - "python -m pip install -r requirements/win.txt -f https://download.pytorch.org/whl/torch_stable.html "
   - "python -m pip install -r requirements/dev.txt"
 
 build_script:
   # Build the compiled extension
   - "python setup.py build"
+  - "python -m pip install ."
 
 test_script:
   # Run the project tests

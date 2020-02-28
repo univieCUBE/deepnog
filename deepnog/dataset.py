@@ -178,12 +178,6 @@ class ProteinIterator:
         If bigger or equal to two, the multi-process loading case happens.
     worker_id : int
         ID of worker this iterator belongs to
-
-    Attributes
-    ----------
-    sequence : namedtuple
-        Sequence data and metadata: All relevant information DeepNOG needs to
-        perform and store protein predictions for one protein sequence
     """
 
     def __init__(self, file_, aa_vocab, f_format,
@@ -225,6 +219,9 @@ class ProteinIterator:
         sequence : namedtuple
             Element at current + step + 1 position or start position.
             Furthermore prefixes element with unique sequential ID.
+            Contains sequence data and metadata, i.e. all relevant
+            information deepnog needs to perform and store predictions
+            for one protein sequence.
         """
         # Check if iterator has been positioned correctly.
         if self.pos is not None:

@@ -152,18 +152,27 @@ class deepencoding(nn.Module):
         Returns
         -------
         out : Tensor, shape (batch_size, n_classes)
-            Confidence of sequence(s) beeing in one of the n_classes.
+            Confidence of sequence(s) being in one of the n_classes.
         """
+        # Fix type mismatch on Windows
+        x = x.long()
+
+        # Amino acid embedding
         x = self.encoding(x).permute(0, 2, 1).contiguous()
+
+        # Convolution with variable kernel sizes and adaptive max pooling
         max_pool_layer = []
         for i in range(self.n_conv_layers):
             x_conv = getattr(self, f'conv{i+1}')(x)
             x_conv = self.activation1(x_conv)
             x_conv = self.pool1(x_conv)
             max_pool_layer.append(x_conv)
+
         # Concatenate max_pooling output of different convolutions
         x = torch.cat(max_pool_layer, dim=1)
         x = x.view(-1, x.shape[1])
+
+        # Classification layer
         x = self.classification1(x)
         out = self.softmax(x)
         return out

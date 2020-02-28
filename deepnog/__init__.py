@@ -11,8 +11,8 @@ usage of the tool, the reader is referred to the documentation as well as
 deepnog.py.
 
 """
-from . import (dataset,
-               deepnog,
+from . import (client,
+               dataset,
                inference,
                io,
                models,
@@ -36,10 +36,10 @@ from . import (dataset,
 # Dev branch marker is: 'X.Y.dev' or 'X.Y.devN' where N is an integer.
 # 'X.Y.dev0' is the canonical version of 'X.Y.dev'
 #
-__version__ = '1.0.3'
+__version__ = '1.0.4'
 
-__all__ = ['dataset',
-           'deepnog',
+__all__ = ['client',
+           'dataset',
            'inference',
            'io',
            'models',
