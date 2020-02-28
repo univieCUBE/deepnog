@@ -10,7 +10,7 @@ import pytest
 from unittest import mock
 import subprocess
 
-from deepnog.deepnog import main
+from deepnog.client import main
 
 test_file = Path(__file__).parent.absolute() / "data/test_deepencoding.faa"
 

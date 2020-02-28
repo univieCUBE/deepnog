@@ -22,7 +22,7 @@ DeepNOG is both faster and more accurate than assigning OGs with HMMER.
 
 The `deepnog` command line tool is written in Python 3.7+. 
 
-Current version: 1.0.2
+Current version: 1.0.4
 
 ## Installation guide
 
@@ -80,10 +80,10 @@ only.
 
 ## Neural network architectures supported
 
-*  DeepEncoding, for details, see the [research article](https://doi.org).
-(TODO: change to paper)
+*  DeepEncoding (=DeepNOG in the research article)
 
-## Required packages
+
+## Required packages (and minimum version)
 
 *  PyTorch 1.2.0
 *  NumPy 1.16.4
@@ -97,14 +97,4 @@ This research is supported by the Austrian Science Fund (FWF): P27703, P31988,
 and by the GPU grant program of Nvidia corporation.
 
 ## Citation
-If you use this software in a scientific project, please cite:
-
-```latex
-@article{Feldbauer2020,
-author  = {Roman Feldbauer and Lukas Gosch and Patrick Hyden and Thomas Rattei},
-title   = {DeepNOG: Fast and accurate protein orthologous group prediction},
-journal = {Projected: Bioinformatics},
-year    = {Projected: 2020},
-notes   = {\textit{in preparation}}
-}
-```
+A research article is currently in preparation.

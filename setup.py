@@ -63,7 +63,7 @@ setuptools.setup(
     },
     entry_points={
         'console_scripts': [
-            'deepnog = deepnog.deepnog:main'
+            'deepnog = deepnog.client:main'
         ]
     },
     classifiers=[

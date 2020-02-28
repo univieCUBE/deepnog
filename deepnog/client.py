@@ -3,7 +3,7 @@ Author: Lukas Gosch
 
 Date: 2019-10-18
 
-Usage: python deepnog.py --help
+Usage: python client.py --help
 
 Description:
 
