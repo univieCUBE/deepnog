@@ -22,7 +22,7 @@ DeepNOG is both faster and more accurate than assigning OGs with HMMER.
 
 The `deepnog` command line tool is written in Python 3.7+. 
 
-Current version: 1.0.4
+Current version: 1.1.0
 
 ## Installation guide
 

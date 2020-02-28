@@ -1,6 +1,7 @@
 .idea
 doc/latex
 out.csv
+new_pypi_release.bash
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
