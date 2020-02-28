@@ -2,7 +2,7 @@
   https://travis-ci.com/VarIr/deepnog.svg?token=Pv7ns6A7X34baaBVUTz8&branch=master)](
   https://travis-ci.com/VarIr/deepnog)
 [![Windows builds on AppVeyor](
-  https://ci.appveyor.com/api/projects/status/xxxxxxxxxxxxxx/branch/master?svg=true)](
+  https://ci.appveyor.com/api/projects/status/g3h5ocwb51ygxylf/branch/master?svg=true)](
   https://ci.appveyor.com/project/VarIr/deepnog/branch/master)
 [![codecov](
   https://codecov.io/gh/VarIr/deepnog/branch/master/graph/badge.svg?token=aP6UBdQDmk)](
