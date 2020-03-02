@@ -1,15 +1,15 @@
 [![Linux/MacOS builds on Travis](
-  https://travis-ci.com/VarIr/deepnog.svg?token=Pv7ns6A7X34baaBVUTz8&branch=master)](
-  https://travis-ci.com/VarIr/deepnog)
+  https://travis-ci.com/univieCUBE/deepnog.svg?branch=master)](
+  https://travis-ci.com/univieCUBE/deepnog)
 [![Windows builds on AppVeyor](
-  https://ci.appveyor.com/api/projects/status/g3h5ocwb51ygxylf/branch/master?svg=true)](
+  https://ci.appveyor.com/api/projects/status/ccdysyv0o2gey6iu/branch/master?svg=true)](
   https://ci.appveyor.com/project/VarIr/deepnog/branch/master)
 [![codecov](
-  https://codecov.io/gh/VarIr/deepnog/branch/master/graph/badge.svg?token=aP6UBdQDmk)](
-  https://codecov.io/gh/VarIr/deepnog)
+  https://codecov.io/gh/univieCUBE/deepnog/branch/master/graph/badge.svg)](
+  https://codecov.io/gh/univieCUBE/deepnog)
 [![Language grade: Python](
-  https://img.shields.io/lgtm/grade/python/g/VarIr/deepnog.svg?logo=lgtm&logoWidth=18)](
-  https://lgtm.com/projects/g/VarIr/deepnog/context:python)
+  https://img.shields.io/lgtm/grade/python/g/univieCUBE/deepnog.svg?logo=lgtm&logoWidth=18)](
+  https://lgtm.com/projects/g/univieCUBE/deepnog/context:python)
 [![Documentation Status](
   https://readthedocs.org/projects/deepnog/badge/?version=latest)](
   https://deepnog.readthedocs.io/en/latest/?badge=latest)

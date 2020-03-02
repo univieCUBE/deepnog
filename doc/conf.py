@@ -87,7 +87,7 @@ autosummary_generate = True
 from doc.github_link import make_linkcode_resolve  # noqa
 
 linkcode_resolve = make_linkcode_resolve('deepnog',
-                                         'https://github.com/VarIr/'
+                                         'https://github.com/univieCUBE/'
                                          'deepnog/blob/{revision}/'
                                          '{package}/{path}#L{lineno}')
 

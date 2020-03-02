@@ -25,10 +25,10 @@
 
 ### Maintenance
 - Continuous integration on
-  - [Travis](https://travis-ci.com/VarIr/deepnog/) (Linux, MacOS)
+  - [Travis](https://travis-ci.com/univieCUBE/deepnog/) (Linux, MacOS)
   - [AppVeyor](https://ci.appveyor.com/project/VarIr/deepnog) (Windows)
-- [Codecov](https://codecov.io/gh/VarIr/deepnog/) coverage reports
-- [LGTM](https://lgtm.com/projects/g/VarIr/deepnog) code quality/security reports
+- [Codecov](https://codecov.io/gh/univieCUBE/deepnog/) coverage reports
+- [LGTM](https://lgtm.com/projects/g/univieCUBE/deepnog) code quality/security reports
 - Documentation on [ReadTheDocs](https://deepnog.readthedocs.io)
 - Upload to [PyPI](https://pypi.org/project/deepnog/), thus enabling
   `$ pip install deepnog`.
@@ -44,8 +44,8 @@ It already contains the following features:
 - CPU and GPU support
 - Runs on all major platforms (Linux, MacOS, Windows)
 
-[Next release]: https://github.com/VarIr/deepnog/compare/v1.1.0...HEAD
-[1.1.0]: https://github.com/VarIr/deepnog/releases/tag/v1.1.0
-[1.0.0]: https://github.com/VarIr/deepnog/releases/tag/v1.0.0final
+[Next release]: https://github.com/univieCUBE/deepnog/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/univieCUBE/deepnog/releases/tag/v1.1.0
+[1.0.0]: https://github.com/univieCUBE/deepnog/releases/tag/v1.0.0final
 
 [//]: # "Sections: Added, Fixed, Changed, Removed"

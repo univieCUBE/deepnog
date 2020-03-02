@@ -37,7 +37,7 @@ You can always grab the latest version of ``deepnog`` directly from GitHub:
 .. code-block:: bash
 
    cd install_dir
-   git clone git@github.com:VarIr/deepnog.git
+   git clone git@github.com:univieCUBE/deepnog.git
    cd deepnog
    pip install -e .
 
