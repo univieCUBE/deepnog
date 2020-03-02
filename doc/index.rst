@@ -32,7 +32,7 @@ with deep networks.
    :caption: Development
 
    Contributing <development/contributing>
-   Github Repository <https://github.com/VarIr/deepnog>
+   Github Repository <https://github.com/univieCUBE/deepnog>
    What's new (Changelog) <changelog.md>
 
 
@@ -70,7 +70,7 @@ to this free open source software. We highly appreciate all input from the
 community, be it bug reports or code contributions.
 
 Source code, issue tracking, discussion, and continuous integration appear on
-our `GitHub page <https://github.com/VarIr/deepnog>`_.
+our `GitHub page <https://github.com/univieCUBE/deepnog>`_.
 
 
 `What's new <changelog.html>`_

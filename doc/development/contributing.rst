@@ -14,7 +14,7 @@ Even small contributions improve the software's quality.
 
 Even if you are not familiar with programming languages and tools,
 you may contribute by filing bugs or any problems as a
-`GitHub issue <https://github.com/VarIr/deepnog/issues>`_.
+`GitHub issue <https://github.com/univieCUBE/deepnog/issues>`_.
 
 
 Git and branching model
@@ -38,19 +38,19 @@ Workflow
 
 In case of large changes to the software, please first get in contact
 with the authors for coordination, for example by filing an
-`issue <https://github.com/VarIr/deepnog/issues>`_.
+`issue <https://github.com/univieCUBE/deepnog/issues>`_.
 If you want to fix small issues (typos in the docs, obvious errors, etc.)
 you can - of course - directly submit a pull request (PR).
 
 #. Create a fork of `deepnog` in your GitHub account.
-    Simply click "Fork" button on `<https://github.com/VarIr/deepnog>`_.
+    Simply click "Fork" button on `<https://github.com/univieCUBE/deepnog>`_.
 
 
 #. Clone your fork on your computer.
     $ ``git clone git@github.com:YOUR-ACCOUNT-GOES-HERE/deepnog.git && cd deepnog``
 
 #. Add remote upstream.
-    $ ``git remote add upstream git@github.com:VarIr/deepnog.git``
+    $ ``git remote add upstream git@github.com:univieCUBE/deepnog.git``
 
 #. Create feature/bugfix branch.
     $ ``git checkout -b bugfix123 master``
