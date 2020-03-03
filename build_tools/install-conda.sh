@@ -26,11 +26,5 @@ fi
 
 # Is the specified Python version available? If not, install it.
 if [[ ! -e "${MINICONDADIR}/envs/test/bin/python${TRAVIS_PYTHON_VERSION}" ]]; then
-    conda create --yes -n test python="$TRAVIS_PYTHON_VERSION"
+    "$MINICONDA_DIR/bin/conda" create --yes -n test python="$TRAVIS_PYTHON_VERSION"
 fi
-
-# Finally load test environment to make sure we're using the specified Python version
-conda init bash
-source "$HOME/miniconda/etc/profile.d/conda.sh"
-conda activate test
-python -c "import sys; print(sys.version)"
