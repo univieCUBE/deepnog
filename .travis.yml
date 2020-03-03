@@ -34,6 +34,7 @@ env:
 before_install:
   - bash build_tools/install-conda.sh
   - source "$HOME/miniconda/etc/profile.d/conda.sh"
+  - export PATH="${MINICONDA_DIR}/bin:$PATH"
   - conda activate test
   - hash -r
   - bash build_tools/install-pip.sh
