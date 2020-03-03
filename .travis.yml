@@ -32,14 +32,13 @@ env:
   - PYTHONIOENCODING=UTF8
 
 before_install:
-  - export PATH="${MINICONDA_DIR}/bin:$PATH"
   - bash build_tools/install-conda.sh
+  - source "$HOME/miniconda/etc/profile.d/conda.sh"
+  - conda activate test
   - hash -r
-  - python -c "import sys; print(sys.version)"
   - bash build_tools/install-pip.sh
 
 install:
-  - python -c "import sys; print(sys.version)"
   - python setup.py build
   - python setup.py install
 
@@ -47,7 +46,6 @@ before_script:
   - flake8
 
 script:
-  - python -c "import sys; print(sys.version)"
   - pytest --cov=deepnog
 
 after_success:
