@@ -11,15 +11,6 @@ usage of the tool, the reader is referred to the documentation as well as
 deepnog.py.
 
 """
-from . import (client,
-               dataset,
-               inference,
-               io,
-               models,
-               sync,
-               utils,
-               )
-
 # PEP0440 compatible formatted version, see:
 # https://www.python.org/dev/peps/pep-0440/
 #
