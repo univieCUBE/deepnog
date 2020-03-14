@@ -8,6 +8,7 @@ Description:
      Various utility functions
 """
 # SPDX-License-Identifier: BSD-3-Clause
+import sys
 import warnings
 
 import torch
@@ -56,3 +57,7 @@ def set_device(device):
     else:
         raise ValueError(f'Unknown device "{device}". Try "auto".')
     return device
+
+
+def eprint(*args, **kwargs):
+    print(*args, file=sys.stderr, **kwargs)

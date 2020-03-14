@@ -41,9 +41,9 @@ def get_parser():
     """
     from . import __version__
     parser = argparse.ArgumentParser(
-        usage='%(prog)s proteins.faa --out proteins.csv',
-        description=('Predict orthologous groups from protein sequences '
-                     'with deep learning.'))
+        usage='%(prog)s proteins.faa --out predictions.csv',
+        description='Predict orthologous groups from protein sequences with deep learning.'
+    )
     parser.add_argument('--version',
                         action='version',
                         version=f'%(prog)s {__version__}')
@@ -53,15 +53,19 @@ def get_parser():
                               "classification."))
     parser.add_argument("-o", "--out",
                         metavar='FILE',
-                        default='out.csv',
+                        default=None,
                         help=("Store orthologous group predictions to output"
-                              "file (default format CSV)"))
+                              "file. Per default, write predictions to stdout."))
     parser.add_argument("-ff", "--fformat",
                         type=str,
                         default='fasta',
                         help=("File format of protein sequences. Must be "
                               "supported by Biopythons Bio.SeqIO class "
                               "(default: fasta)"))
+    parser.add_argument("-of", "--outformat",
+                        default="csv",
+                        choices=["csv", "tsv", "legacy"],
+                        help="The file format of the output file produced by deepnog.")
     parser.add_argument("-db", "--database",
                         type=str,
                         choices=['eggNOG5', ],
@@ -111,8 +115,6 @@ def get_parser():
     parser.add_argument("-w", "--weights",
                         metavar='FILE',
                         help="Custom weights file path (optional)")
-    parser.add_argument("--tab", action='store_true',
-                        help='Use tab-separation in output')
     parser.add_argument("-bs", "--batch-size",
                         type=int,
                         default=1,
@@ -138,7 +140,7 @@ def start_prediction(args):
     from .dataset import ProteinDataset
     from .inference import load_nn, predict
     from .io import create_df, get_weights_path
-    from .utils import set_device
+    from .utils import set_device, eprint
 
     # Sanity check command line arguments
     if args.batch_size <= 0:
@@ -158,7 +160,7 @@ def start_prediction(args):
         sys.exit(f'RuntimeError: {err} \nLeaving the ship and aborting '
                  f'calculations.')
     if args.verbose >= 2:
-        print(f'Device set to "{device}"')
+        eprint(f'Device set to "{device}"')
 
     # Set number of threads to 1 automatic (internal) parallelization is
     # quite inefficient
@@ -166,7 +168,7 @@ def start_prediction(args):
 
     # Load neural network parameters
     if args.verbose >= 2:
-        print(f'Loading NN-parameters from {weights_path} ...')
+        eprint(f'Loading NN-parameters from {weights_path} ...')
     model_dict = torch.load(weights_path, map_location=device)
     # Load neural network model
     model = load_nn(args.architecture, model_dict, device)
@@ -175,14 +177,14 @@ def start_prediction(args):
 
     # Load dataset
     if args.verbose >= 2:
-        print(f'Accessing dataset from {args.file} ...')
+        eprint(f'Accessing dataset from {args.file} ...')
     dataset = ProteinDataset(args.file, f_format=args.fformat)
 
     # Predict labels of given data
     if args.verbose >= 2:
-        print(f'Predicting protein families ...')
+        eprint(f'Predicting protein families ...')
         if args.verbose >= 3:
-            print(f'Process {args.batch_size} sequences per iteration: ')
+            eprint(f'Process {args.batch_size} sequences per iteration: ')
     preds, confs, ids, indices = predict(model, dataset, device,
                                          batch_size=args.batch_size,
                                          num_workers=args.num_workers,
@@ -196,21 +198,24 @@ def start_prediction(args):
     df = create_df(class_labels, preds, confs, ids, indices,
                    threshold=threshold, verbose=args.verbose)
 
-    # Construct path to save prediction
-    if os.path.isdir(args.out):
-        save_file = os.path.join(args.out, 'out.csv')
+    if args.out is not None:
+        # Construct path to save prediction
+        if os.path.isdir(args.out):
+            save_file = os.path.join(args.out, 'out.csv')
+        else:
+            save_file = args.out
+        # Write to file
+        if args.verbose >= 2:
+            eprint(f'Writing prediction to {save_file}')
     else:
-        save_file = args.out
-    # Write to file
-    if args.verbose >= 2:
-        print(f'Writing prediction to {save_file}')
+        save_file = sys.stdout
+
     columns = ['sequence_id', 'prediction', 'confidence']
-    if args.tab:
-        df.to_csv(save_file, sep='\t', index=False, columns=columns)
-    else:
-        df.to_csv(save_file, sep=';', index=False, columns=columns)
+    separator = {'csv': ',', 'tsv': '\t', 'legacy': ';'}.get(args.outformat)
+    df.to_csv(save_file, sep=separator, index=False, columns=columns)
+
     if args.verbose >= 2:
-        print(f'Finished magic.')
+        eprint(f'Finished magic.')
     return
 
 
