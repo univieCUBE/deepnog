@@ -42,7 +42,8 @@ def get_parser():
     from . import __version__
     parser = argparse.ArgumentParser(
         usage='%(prog)s proteins.faa --out predictions.csv',
-        description='Predict orthologous groups from protein sequences with deep learning.'
+        description='Predict orthologous groups from protein sequences with deep learning.',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
     parser.add_argument('--version',
                         action='version',
@@ -60,8 +61,7 @@ def get_parser():
                         type=str,
                         default='fasta',
                         help=("File format of protein sequences. Must be "
-                              "supported by Biopythons Bio.SeqIO class "
-                              "(default: fasta)"))
+                              "supported by Biopythons Bio.SeqIO class."))
     parser.add_argument("-of", "--outformat",
                         default="csv",
                         choices=["csv", "tsv", "legacy"],
@@ -70,14 +70,13 @@ def get_parser():
                         type=str,
                         choices=['eggNOG5', ],
                         default='eggNOG5',
-                        help="Orthologous group/family database to use "
-                             "(default: eggNOG5)")
+                        help="Orthologous group/family database to use.")
     parser.add_argument("-t", "--tax",
                         type=int,
                         choices=[1, 2, ],
                         default=2,
                         help="Taxonomic level to use in specified database "
-                             "(default: 2 = bacteria)")
+                             "(1 = root, 2 = bacteria)")
     parser.add_argument("--verbose",
                         type=int,
                         default=3,
@@ -96,7 +95,7 @@ def get_parser():
                         choices=['auto', 'cpu', 'gpu', ],
                         help=("Define device for calculating protein sequence "
                               "classification. Auto chooses GPU if available, "
-                              "otherwise CPU (default: auto)"))
+                              "otherwise CPU."))
     parser.add_argument("-nw", "--num-workers",
                         type=int,
                         default=0,
@@ -106,12 +105,11 @@ def get_parser():
                               'data loading. '
                               'Note: Only use multi-process data loading if '
                               'you are calculating on a gpu '
-                              '(otherwise inefficient)! Default: 0'))
+                              '(otherwise inefficient)!'))
     parser.add_argument("-a", "--architecture",
                         default='deepencoding',
                         choices=['deepencoding', ],
-                        help="Network architecture to use for classification "
-                             "(default: deepencoding)")
+                        help="Network architecture to use for classification.")
     parser.add_argument("-w", "--weights",
                         metavar='FILE',
                         help="Custom weights file path (optional)")
