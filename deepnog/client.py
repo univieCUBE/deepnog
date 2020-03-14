@@ -194,8 +194,8 @@ def start_prediction(args):
         if 0.0 <= args.confidence_threshold <= 1.0:
             threshold = float(args.confidence_threshold)
         else:
-            raise RuntimeError('Invalid confidence threshold specified '
-                               '({args.confidence_threshold}).')
+            raise RuntimeError(f'Invalid confidence threshold specified '
+                               f'({args.confidence_threshold}).')
     elif hasattr(model, 'threshold'):
         threshold = float(model.threshold)
         eprint(f'Applying confidence threshold from model: {threshold}')
@@ -204,7 +204,7 @@ def start_prediction(args):
 
     # Predict labels of given data
     if args.verbose >= 2:
-        eprint(f'Predicting protein families ...')
+        eprint('Predicting protein families ...')
         if args.verbose >= 3:
             eprint(f'Process {args.batch_size} sequences per iteration: ')
     preds, confs, ids, indices = predict(model, dataset, device,
