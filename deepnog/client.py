@@ -41,7 +41,7 @@ def get_parser():
     """
     from . import __version__
     parser = argparse.ArgumentParser(
-        usage='%(prog)s proteins.faa --out predictions.csv',
+        usage='%(prog)s proteins.faa > predictions.csv',
         description='Predict orthologous groups from protein sequences with deep learning.',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )

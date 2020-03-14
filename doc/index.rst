@@ -15,7 +15,7 @@ with deep networks.
    :caption: Getting Started
 
    Installation <getting_started/installation>
-   Quick start example <getting_started/example>
+   Quick Start Example <getting_started/example>
 
 .. toctree::
    :maxdepth: 2
@@ -23,7 +23,7 @@ with deep networks.
    :caption: Documentation
 
    User Guide <documentation/user_guide>
-   deepnog API <documentation/documentation>
+
 
 .. toctree::
    :maxdepth: 1
@@ -33,7 +33,8 @@ with deep networks.
 
    Contributing <development/contributing>
    Github Repository <https://github.com/univieCUBE/deepnog>
-   What's new (Changelog) <changelog.md>
+   What's New (Changelog) <changelog.md>
+
 
 
 `Getting started <getting_started/installation.html>`_
@@ -50,16 +51,8 @@ see all core functionality applied in a single
 
 The `User Guide <documentation/user_guide.html>`_ introduces the main concepts
 of ``deepnog``.
-
-
-`API Documentation <documentation/documentation.html>`_
---------------------------------------------------------
-
-The `API Documentation <documentation/documentation.html>`_ provides detailed
-information of the implemented methods.
-This information includes method descriptions, parameters, references,
-examples, etc. Find all the information about specific modules and functions
-of ``deepnog`` in this section.
+It also contains complete `CLI <documentation/cli.html>`_
+and `API <documentation/api.html>`_ documentations of the package.
 
 
 `Development <development/contributing.html>`_
