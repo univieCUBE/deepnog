@@ -16,6 +16,7 @@ import torch
 
 __all__ = ['EXTENDED_IUPAC_PROTEIN_ALPHABET',
            'set_device',
+           'eprint',
            'SeqIO',
            ]
 

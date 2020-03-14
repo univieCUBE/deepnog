@@ -59,6 +59,7 @@ def get_parser():
                               "file. Per default, write predictions to stdout."))
     parser.add_argument("-ff", "--fformat",
                         type=str,
+                        metavar='STR',
                         default='fasta',
                         help=("File format of protein sequences. Must be "
                               "supported by Biopythons Bio.SeqIO class."))
@@ -77,8 +78,16 @@ def get_parser():
                         default=2,
                         help="Taxonomic level to use in specified database "
                              "(1 = root, 2 = bacteria)")
+    parser.add_argument("-c", "--confidence-threshold",
+                        metavar='FLOAT',
+                        type=float,
+                        default=None,
+                        help="The confidence value below which predictions are masked by deepnog. "
+                             "By default, apply the confidence threshold saved in the model if one "
+                             "exists, and else do not apply a confidence threshold.")
     parser.add_argument("--verbose",
                         type=int,
+                        metavar='INT',
                         default=3,
                         help=("Define verbosity of DeepNOGs output written to "
                               "stdout or stderr. 0 only writes errors to "
@@ -98,6 +107,7 @@ def get_parser():
                               "otherwise CPU."))
     parser.add_argument("-nw", "--num-workers",
                         type=int,
+                        metavar='INT',
                         default=0,
                         help=('Number of subprocesses (workers) to use for '
                               'data loading. '
@@ -115,6 +125,7 @@ def get_parser():
                         help="Custom weights file path (optional)")
     parser.add_argument("-bs", "--batch-size",
                         type=int,
+                        metavar='INT',
                         default=1,
                         help=('Batch size used for prediction.'
                               'Defines how many sequences should be '
@@ -178,6 +189,19 @@ def start_prediction(args):
         eprint(f'Accessing dataset from {args.file} ...')
     dataset = ProteinDataset(args.file, f_format=args.fformat)
 
+    # If given, set confidence threshold for prediction
+    if args.confidence_threshold is not None:
+        if 0.0 <= args.confidence_threshold <= 1.0:
+            threshold = float(args.confidence_threshold)
+        else:
+            raise RuntimeError('Invalid confidence threshold specified '
+                               '({args.confidence_threshold}).')
+    elif hasattr(model, 'threshold'):
+        threshold = float(model.threshold)
+        eprint(f'Applying confidence threshold from model: {threshold}')
+    else:
+        threshold = None
+
     # Predict labels of given data
     if args.verbose >= 2:
         eprint(f'Predicting protein families ...')
@@ -188,10 +212,6 @@ def start_prediction(args):
                                          num_workers=args.num_workers,
                                          verbose=args.verbose)
 
-    # If given, set confidence threshold for prediction
-    threshold = None
-    if hasattr(model, 'threshold'):
-        threshold = model.threshold
     # Construct results dataframe
     df = create_df(class_labels, preds, confs, ids, indices,
                    threshold=threshold, verbose=args.verbose)
