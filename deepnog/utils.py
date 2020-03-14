@@ -8,6 +8,7 @@ Description:
      Various utility functions
 """
 # SPDX-License-Identifier: BSD-3-Clause
+import sys
 import warnings
 
 import torch
@@ -15,6 +16,7 @@ import torch
 
 __all__ = ['EXTENDED_IUPAC_PROTEIN_ALPHABET',
            'set_device',
+           'eprint',
            'SeqIO',
            ]
 
@@ -56,3 +58,7 @@ def set_device(device):
     else:
         raise ValueError(f'Unknown device "{device}". Try "auto".')
     return device
+
+
+def eprint(*args, **kwargs):
+    print(*args, file=sys.stderr, **kwargs)

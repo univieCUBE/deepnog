@@ -44,13 +44,14 @@ def test_cmd_line_invocation(tax):
                                             out='out.mock.2',
                                             file=test_file,
                                             fformat='fasta',
+                                            outformat='csv',
                                             database='eggNOG5',
                                             verbose=3,
                                             device='auto',
                                             num_workers=0,
+                                            confidence_threshold=None,
                                             architecture='deepencoding',
                                             weights=None,
-                                            tab=None,
                                             batch_size=1,
                                             ))
 def test_main_and_argparsing(mock_args):

@@ -50,7 +50,7 @@ def create_df(class_labels, preds, confs, ids, indices, threshold=None,
     indices : list[int]
         Stores the unique indices of sequences mapping to their position
         in the file
-    threshold : int
+    threshold : float
         If given, prediction labels and confidences are set to '' if
         confidence in prediction is not at least threshold.
     verbose : int
