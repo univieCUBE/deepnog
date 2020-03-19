@@ -37,8 +37,7 @@ before_install:
   - export PATH="${MINICONDA_DIR}/bin:$PATH"
   - conda activate test
   - hash -r
-  - bash build_tools/install-pip.sh
-  - bash build_tools/install-pytorch-nightly.sh
+  - bash build_tools/install-requirements.sh
 
 install:
   - python setup.py build
