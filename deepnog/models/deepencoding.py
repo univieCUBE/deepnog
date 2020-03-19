@@ -2,11 +2,7 @@
 Author: Lukas Gosch
 Date: 2019-10-09
 Description:
-    Convolutional network (similar to DeepFam) for protein family prediction.
-    Architecture conceived by Roman for multiclass-classification on different
-    databases, adapted by Lukas to focus on single-task classification
-    (using only one database). Adaption due to comparability with DeepFam
-    architecture and usage of more training data.
+    Convolutional network for protein orthologous group prediction.
 
     This networks consists of an embedding layer which learns a D-dimensional
     embedding for each amino acid. For a sequence of length L, the embedding
@@ -71,7 +67,7 @@ class AminoAcidWordEmbedding(nn.Module):
 
 
 class deepencoding(nn.Module):
-    """ Convolutional network for protein family prediction on eggNOG5 classes.
+    """ Convolutional network for protein orthologous group prediction.
 
     Compared to DeepFam, this architecture provides:
 
@@ -89,6 +85,10 @@ class deepencoding(nn.Module):
     model_dict : dict
         Dictionary storing the hyperparameters and learned parameters of
         the model.
+
+    Notes
+    -----
+    The scientific article refers to this Module as `DeepNOG`.
     """
 
     def __init__(self, model_dict):

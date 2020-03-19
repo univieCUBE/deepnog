@@ -9,3 +9,4 @@ User Guide
     Core Concepts <concepts>
     CLI Documentation <cli>
     API Documentation <api>
+    New models/architectures <training>

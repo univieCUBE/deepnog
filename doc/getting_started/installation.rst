@@ -29,6 +29,8 @@ You can change this path by setting the DEEPNOG_DATA environment variable.
    DEEPNOG_DATA="/custom/path/models" deepnog sequences.fa
 
 
+.. _install-from-source:
+
 Installation from source
 ========================
 
