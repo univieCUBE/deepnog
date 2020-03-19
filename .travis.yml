@@ -47,7 +47,7 @@ before_script:
   - flake8
 
 script:
-  - pytest --cov=deepnog
+  - export MKLDNN_VERBOSE=1 pytest --cov=deepnog
 
 after_success:
   - codecov
