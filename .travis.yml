@@ -48,6 +48,7 @@ before_script:
 
 script:
   - export MKLDNN_VERBOSE=1
+  - export DNNL_VERBOSE=1
   - pytest --cov=deepnog
 
 after_success:
