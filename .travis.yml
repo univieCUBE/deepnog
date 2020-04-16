@@ -1,8 +1,6 @@
 # No default os and language here, due to special macos config
 
 jobs:
-  allow_failures:  # Linux builds currently fail with on Travis, but work on
-    - os: linux    # local machine. Allow failures, until reason is found.
   include:
     - name: Python 3.7 on Ubuntu Linux 18.04
       os: linux
@@ -39,7 +37,7 @@ before_install:
   - export PATH="${MINICONDA_DIR}/bin:$PATH"
   - conda activate test
   - hash -r
-  - bash build_tools/install-pip.sh
+  - bash build_tools/install-requirements.sh
 
 install:
   - python setup.py build
