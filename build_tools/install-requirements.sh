@@ -5,7 +5,7 @@ set -e
 MINICONDA_DIR="$HOME/miniconda"
 source "$HOME/miniconda/etc/profile.d/conda.sh"
 # export PATH="${MINICONDA_DIR}/bin:$PATH"
-"$MINICONDA_DIR/bin/conda" activate test
+conda activate test
 hash -r
 
 echo "which pip"
