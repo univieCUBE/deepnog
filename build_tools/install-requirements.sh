@@ -14,7 +14,7 @@ hash -r
 if [[ "$TRAVIS_OS_NAME" == 'linux' ]]; then
   echo "install and upgrade PyTorch nightly"
   conda install --yes pytorch cpuonly -c pytorch-nightly
-  conda upgrade --yes pytorch
+  conda upgrade --yes pytorch cpuonly -c pytorch-nightly
   echo "pip installing required python packages"
   pip install -r requirements/travis_ubuntu.txt
   python -c "import torch; print(f'PyTorch version = {torch.__version__}')"
