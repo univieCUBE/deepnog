@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Union
 
 import numpy as np
+import pandas as pd
 import torch
 from torch.utils.data import IterableDataset
 from torch.utils.data.dataloader import default_collate
@@ -270,12 +271,20 @@ class ProteinDataset(IterableDataset):
     f_format : str
         File format in which to expect the protein sequences.
         Must be supported by Biopython's Bio.SeqIO class.
+    labels_file : str, optional
+        Path to file storing labels associated to the sequences.
+        This is required for training, and ignored during inference.
+        Must be in CSV format with header line, that is, compatible to be
+        read by pandas.read_csv()
     """
 
-    def __init__(self, file, f_format='fasta'):
+    def __init__(self, file, f_format='fasta', labels_file: str = None):
         """ Initialize sequence dataset from file."""
         self.file = file
         self.f_format = f_format
+        self.labels_file = labels_file
+        if self.labels_file is not None:
+            self.labels = pd.read_csv(self.labels_file)
 
         # Generate amino-acid vocabulary
         self.alphabet = EXTENDED_IUPAC_PROTEIN_ALPHABET

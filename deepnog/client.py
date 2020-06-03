@@ -147,9 +147,9 @@ def start_prediction(args):
     # Importing here makes CLI more snappy
     import torch
     from .dataset import ProteinDataset
-    from .inference import load_nn, predict
+    from .inference import predict
     from .io import create_df, get_weights_path
-    from .utils import set_device, eprint
+    from .utils import set_device, eprint, load_nn
 
     # Sanity check command line arguments
     if args.batch_size <= 0:

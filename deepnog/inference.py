@@ -8,7 +8,6 @@ Description:
     Predict orthologous groups of protein sequences.
 """
 # SPDX-License-Identifier: BSD-3-Clause
-from importlib import import_module
 import warnings
 
 import torch
@@ -17,38 +16,7 @@ from tqdm import tqdm
 
 from .dataset import collate_sequences
 
-__all__ = ['load_nn', 'predict', ]
-
-
-def load_nn(architecture, model_dict, device='cpu'):
-    """ Import NN architecture and set loaded parameters.
-
-    Parameters
-    ----------
-    architecture : str
-        Name of neural network module and class to import.
-    model_dict : dict
-        Dictionary holding all parameters and hyper-parameters of the model.
-    device : [str, torch.device]
-        Device to load the model into.
-
-    Returns
-    -------
-    model : torch.nn.Module
-        Neural network object of type architecture with parameters
-        loaded from model_dict and moved to device.
-    """
-    # Import and instantiate neural network class
-    model_module = import_module(f'.models.{architecture}', 'deepnog')
-    model_class = getattr(model_module, architecture)
-    model = model_class(model_dict)
-    # Set trained parameters of model
-    model.load_state_dict(model_dict['model_state_dict'])
-    # Move to GPU, if available
-    model.to(device)
-    # Inform neural network layers to be in evaluation mode
-    model = model.eval()
-    return model
+__all__ = ['predict', ]
 
 
 def predict(model, dataset, device='cpu', batch_size=16, num_workers=4,
