@@ -9,7 +9,6 @@ Description:
 """
 # SPDX-License-Identifier: BSD-3-Clause
 from importlib import import_module
-import sys
 from typing import Union
 import warnings
 
@@ -19,7 +18,6 @@ import torch
 __all__ = ['EXTENDED_IUPAC_PROTEIN_ALPHABET',
            'set_device',
            'count_parameters',
-           'eprint',
            'load_nn',
            'SeqIO',
            ]
@@ -33,14 +31,24 @@ with warnings.catch_warnings():
     from Bio import SeqIO
 
 
-def count_parameters(model):
-    """ Count the number of trainable parameters in model.
+def count_parameters(model, tunable_only: bool = True) -> int:
+    """ Count the number of parameters in the given model.
 
-    Reference
-    ---------
+    Parameters
+    ----------
+    model : torch.nn.Module
+        PyTorch model (deep network)
+    tunable_only : bool, optional
+        Count only tunable network parameters
+
+    References
+    ----------
     https://stackoverflow.com/questions/49201236/check-the-total-number-of-parameters-in-a-pytorch-model
     """
-    return sum(p.numel() for p in model.parameters() if p.requires_grad)
+    if tunable_only:
+        return sum(p.numel() for p in model.parameters() if p.requires_grad)
+    else:
+        return sum(p.numel() for p in model.parameters())
 
 
 def set_device(device: Union[str, torch.device]) -> torch.device:
@@ -67,8 +75,10 @@ def set_device(device: Union[str, torch.device]) -> torch.device:
         if cuda:
             device = torch.device('cuda')
         else:
-            raise RuntimeError('Device set to gpu but no cuda-enabled gpu '
-                               'is available on this machine.')
+            raise RuntimeError('Device set to "gpu", but could not access '
+                               'any CUDA-enabled GPU. Please make sure that '
+                               'a GPU is available and CUDA is installed'
+                               'on this machine.')
     elif device == 'cpu':
         device = torch.device('cpu')
     else:
@@ -76,7 +86,8 @@ def set_device(device: Union[str, torch.device]) -> torch.device:
     return device
 
 
-def load_nn(architecture, model_dict=None, phase='eval', device='cpu'):
+def load_nn(architecture: str, model_dict: dict = None, phase: str = 'eval',
+            device: Union[torch.device, str] = 'cpu'):
     """ Import NN architecture and set loaded parameters.
 
     Parameters
@@ -86,8 +97,8 @@ def load_nn(architecture, model_dict=None, phase='eval', device='cpu'):
     model_dict : dict, optional
         Dictionary holding all parameters and hyper-parameters of the model.
         Required during inference, optional for training.
-    phase : ['train', 'eval']
-        Set network in training or evaluation mode with effects on
+    phase : ['train', 'infer', 'eval']
+        Set network in training or inference=evaluation mode with effects on
         storing gradients, dropout, etc.
     device : [str, torch.device]
         Device to load the model into.
@@ -103,20 +114,20 @@ def load_nn(architecture, model_dict=None, phase='eval', device='cpu'):
     model_class = getattr(model_module, architecture)
     model = model_class(model_dict)
     # Set trained parameters of model
-    if model_dict is not None:
+    try:
         model.load_state_dict(model_dict['model_state_dict'])
+    except KeyError as e:
+        if not phase.lower().startswith('train'):
+            raise RuntimeError(f'No trained weights available '
+                               f'during inference.') from e
     # Move to GPU, if selected
     model.to(device)
     # Inform neural network layers to be in evaluation or training mode
     if phase.lower().startswith('train'):
         model = model.train()
-    elif phase.lower().startswith('eval'):
+    elif phase.lower().startswith('eval') or phase.lower().startswith('infer'):
         model = model.eval()
     else:
         raise ValueError(f'Unknown phase "{phase}". '
-                         f'Must be "train", or "eval".')
+                         f'Must be "train", "infer", or "eval".')
     return model
-
-
-def eprint(*args, **kwargs):
-    print(*args, file=sys.stderr, **kwargs)

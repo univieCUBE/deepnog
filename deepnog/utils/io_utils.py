@@ -8,28 +8,83 @@ Description:
     Input/output helper functions
 """
 # SPDX-License-Identifier: BSD-3-Clause
-import logging
+import logging as log
 from os import environ
 from pathlib import Path
 import shutil
-import sys
+from typing import List
 from urllib.request import urlopen
 from urllib.parse import urljoin
+import warnings
 
 import pandas as pd
+from torch import Tensor
 
 __all__ = ['create_df',
            'get_data_home',
+           'get_logger',
            'get_weights_path',
+           'init_global_logger',
+           'logging',
            ]
 
-logger = logging.getLogger(__name__)
 DEEPNOG_REMOTE_DEFAULT = ('https://fileshare.csb.univie.ac.at/'
                           'deepnog/parameters/')
 
+log.addLevelName(log.DEBUG, "\033[1;32m%s\033[1;0m" % log.getLevelName(log.DEBUG))
+log.addLevelName(log.INFO, "\033[1;34m%s\033[1;0m" % log.getLevelName(log.INFO))
+log.addLevelName(log.WARNING, "\033[1;33m%s\033[1;0m" % log.getLevelName(log.WARNING))
+log.addLevelName(log.ERROR, "\033[1;41m%s\033[1;0m" % log.getLevelName(log.ERROR))
 
-def create_df(class_labels, preds, confs, ids, indices, threshold=None,
-              verbose=3):
+global logging
+
+
+def init_global_logger(logger_name, verbose):
+    global logging
+    logging = get_logger(logger_name, verbose)
+
+
+def get_logger(initname: str = 'deepnog', verbose: int = 0) -> log.Logger:
+    """
+    This function provides a nicely formatted logger.
+
+    Parameters
+    ----------
+    initname : str
+        The name of the logger to show up in log.
+    verbose : int
+        Increasing levels of verbosity
+
+    References
+    ----------
+    Shamelessly stolen from phenotrex
+    """
+    logger = log.getLogger(initname)
+    if type(verbose) is bool:
+        logger.setLevel(log.INFO if verbose else log.WARNING)
+    else:
+        logger.setLevel(verbose)
+    ch = log.StreamHandler()
+    if verbose <= 0:
+        ch.setLevel(log.ERROR)
+    elif verbose == 1:
+        ch.setLevel(log.WARNING)
+    elif verbose == 2:
+        ch.setLevel(log.INFO)
+    else:
+        ch.setLevel(log.DEBUG)
+    logstring = '\033[1;32m[%(asctime)s]\033[1;0m \033[1m%(name)s\033[1;0m - %(levelname)s - %(message)s'
+    formatter = log.Formatter(logstring, '%Y-%m-%d %H:%M:%S')
+    ch.setFormatter(formatter)
+    if logger.hasHandlers():
+        logger.handlers.clear()
+    logger.addHandler(ch)
+    logger.propagate = False
+    return logger
+
+
+def create_df(class_labels: list, preds: Tensor, confs: Tensor, ids: List[str],
+              indices: List[int], threshold: float = None):
     """ Creates one dataframe storing all relevant prediction information.
 
     The rows in the returned dataframe have the same order as the
@@ -53,8 +108,6 @@ def create_df(class_labels, preds, confs, ids, indices, threshold=None,
     threshold : float
         If given, prediction labels and confidences are set to '' if
         confidence in prediction is not at least threshold.
-    verbose : int
-        If bigger 0, outputs warning if duplicates detected.
 
     Returns
     -------
@@ -71,7 +124,7 @@ def create_df(class_labels, preds, confs, ids, indices, threshold=None,
         confs = [str(conf) if conf >= threshold
                  else '' for conf in confs]
     else:
-        labels = [class_labels[pred] for pred in preds]
+        labels = [class_labels[int(pred)] for pred in preds]
     # Create prediction results frame
     df = pd.DataFrame(data={'index': indices,
                             'sequence_id': ids,
@@ -82,12 +135,10 @@ def create_df(class_labels, preds, confs, ids, indices, threshold=None,
     duplicate_mask = df.sequence_id.duplicated(keep='first')
     n_duplicates = sum(duplicate_mask)
     if n_duplicates > 0:
-        if verbose > 0:
-            print(f'WARNING: Detected {n_duplicates} duplicate sequences '
-                  f'based on their extracted sequence id. Keeping the first '
-                  f'sequence among the duplicates when writing prediction '
-                  f'output file.',
-                  file=sys.stderr)
+        warnings.warn(f'Detected {n_duplicates} duplicate sequences based on '
+                      f'their extracted sequence id. Keeping the first '
+                      f'sequence among the duplicates when writing prediction '
+                      f'output file.')
         df = df[~duplicate_mask]
     return df
 
@@ -151,7 +202,6 @@ def get_weights_path(database: str, level: str, architecture: str,
     weights_path : Path
         Path to file of network weights
     """
-
     data_home = get_data_home(data_home=data_home)
     weights_dir = data_home/f'{database}/{level}/'
     weights_file = weights_dir/f'{architecture}.pth'
@@ -162,8 +212,8 @@ def get_weights_path(database: str, level: str, architecture: str,
         remote_url = urljoin(
             environ.get('DEEPNOG_REMOTE', DEEPNOG_REMOTE_DEFAULT),
             f"{database}/{level}/{architecture}.pth")
-        logger.info(f"Downloading {remote_url}")
-        with urlopen(remote_url) as response, open(weights_file, 'wb') as f:
+        logging.info(f"Downloading {remote_url}")
+        with urlopen(remote_url) as response, weights_file.open('wb') as f:
             shutil.copyfileobj(response, f)
     elif not available and not download_if_missing:
         raise IOError("Data not found and `download_if_missing` is False")

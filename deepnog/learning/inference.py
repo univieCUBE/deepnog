@@ -15,6 +15,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from .dataset import collate_sequences
+from .io_utils import logging
 
 __all__ = ['predict', ]
 
@@ -89,11 +90,13 @@ def predict(model, dataset, device='cpu', batch_size=16, num_workers=4,
     # multi-process data-loading
     n_skipped = dataset.n_skipped
     # Check if sequences were skipped due to empty id
-    if verbose > 0 and n_skipped > 0:
+    if n_skipped > 0:
         warnings.warn(f'Skipped {n_skipped} sequences as no sequence id '
                       f'could be detected.')
     if len(pred_l) == 0:
-        warnings.warn(f'Skipped all sequences. No output will be provided.')
+        logging.error(f'Skipped all sequences. No output will be provided. '
+                      f'Sequences might have had no sequence IDs in the '
+                      f'input file.')
         return None, None, None, None
     else:
         # Merge individual output tensors

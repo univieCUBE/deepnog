@@ -12,39 +12,44 @@ from collections import namedtuple, deque
 import gzip
 from itertools import islice
 from pathlib import Path
-from typing import Union
+from typing import List, Union
 
 import numpy as np
 import pandas as pd
+from sklearn.preprocessing import LabelEncoder
 import torch
 from torch.utils.data import IterableDataset
 from torch.utils.data.dataloader import default_collate
 
-from .sync import SynchronizedCounter
-from .utils import EXTENDED_IUPAC_PROTEIN_ALPHABET, SeqIO
+from deepnog.sync import SynchronizedCounter
+from deepnog.utils import EXTENDED_IUPAC_PROTEIN_ALPHABET, SeqIO
 
 # Class of data-minibatches
 collated_sequences = namedtuple('collated_sequences',
-                                ['indices', 'ids', 'sequences'])
+                                ['indices', 'ids', 'sequences', 'labels'])
 
 
-def collate_sequences(batch, zero_padding=True):
+def collate_sequences(batch: Union[List[namedtuple], namedtuple],
+                      zero_padding: bool = True, min_length: int = 36):
     """ Collate and zero-pad encoded sequence.
 
     Parameters
     ----------
-    batch : list[namedtuple] or namedtuple
-        Batch of protein sequences to classify stored as a namedtuple-class
+    batch : namedtuple, or list of namedtuples
+        Batch of protein sequences to classify stored as a namedtuple
         sequence (see ProteinDataset).
     zero_padding : bool
-        If True, zero-pads protein sequences through appending zeros until
-        every sequence is as long as the longest sequences in batch. If False
-        raise NotImplementedError.
+        Zero-pad protein sequences, that is, append zeros until every sequence
+        is as long as the longest sequences in batch.
+    min_length : int, optional
+        Zero-pad sequences to at least ``min_length``.
+        By default, this is set to 36, which is the largest kernel size in the
+        default DeepNOG/DeepEncoding architecture.
 
     Returns
     -------
     batch : namedtuple
-        Input batch zero-padded and stored in namedtuple-class
+        Input batch zero-padded and stored in namedtuple
         collated_sequences.
     """
     # Check if an individual sample or a batch was given
@@ -52,7 +57,7 @@ def collate_sequences(batch, zero_padding=True):
         batch = [batch]
 
     # Find the longest sequence, in order to zero pad the others
-    max_len = 36
+    max_len = min_length
     n_data = 0
     for seq in batch:
         query = seq.encoded
@@ -82,9 +87,17 @@ def collate_sequences(batch, zero_padding=True):
     # Collate the indices
     indices = [seq.index for seq in batch]
 
+    # Collate the labels
+    try:
+        labels = np.array([b.label for b in batch], dtype=np.int)
+        labels = default_collate(labels)
+    except AttributeError:
+        labels = None
+
     return collated_sequences(indices=indices,
                               ids=ids,
-                              sequences=sequences)
+                              sequences=sequences,
+                              labels=labels)
 
 
 def gen_amino_acid_vocab(alphabet=None):
@@ -153,9 +166,7 @@ class ProteinIterator:
     and then skips the next few sequences dedicated to the other workers.
     This works by each worker skipping num_worker - 1 data samples
     for each call to __next__(). Furthermore, each worker skips
-    worker_id data samples in the initialization. At the end of the
-    workers lifetime, it sends the number of skipped sequences back to the
-    main process through a pipe the main process created.
+    worker_id data samples in the initialization.
 
     The ProteinIterator class also makes sure that a unique ID is set for each
     SeqRecord obtained from the data-iterator. This allows unambiguous handling
@@ -169,6 +180,11 @@ class ProteinIterator:
     file_ : str
         Path to sequence file, from which an iterator over the sequences
         will be created with Biopython's Bio.SeqIO.parse() function.
+    labels : pd.DataFrame
+        Dataframe storing labels associated to the sequences.
+        This is required for training, and ignored during inference.
+        Must contain 'protein_id' and 'label_num' columns providing
+        identifiers and numerical labels.
     aa_vocab : dict
         Amino-acid vocabulary mapping letters to integers
     f_format : str
@@ -181,7 +197,7 @@ class ProteinIterator:
         ID of worker this iterator belongs to
     """
 
-    def __init__(self, file_, aa_vocab, f_format,
+    def __init__(self, file_, labels: pd.DataFrame, aa_vocab, f_format,
                  n_skipped: Union[int, SynchronizedCounter] = 0,
                  num_workers=1, worker_id=0):
         # Generate file-iterator
@@ -191,6 +207,15 @@ class ProteinIterator:
         else:
             iterator = SeqIO.parse(file_, format=f_format, )
         self.iterator = iterator
+
+        if labels is None:
+            self.label_from_id = {}
+        else:
+            # NOTE: this only supports single-label experiments!
+            # In case of multi-labels, the last label will overwrite
+            # any previously seen labels.
+            self.label_from_id = {row.protein_id: row.label_num
+                                  for row in labels.itertuples()}
 
         self.vocab = aa_vocab
         self.n_skipped = n_skipped
@@ -204,7 +229,7 @@ class ProteinIterator:
 
         # Make Dataset return namedtuple
         self.sequence = namedtuple('sequence',
-                                   ['index', 'id', 'string', 'encoded'])
+                                   ['index', 'id', 'string', 'encoded', 'label'])
 
     def __iter__(self):
         return self
@@ -233,23 +258,23 @@ class ProteinIterator:
             self.pos = self.start + 1
         try:
             next_seq = next(self.iterator)
-            # If sequences has no identifier, skip it
+            # If sequence has no identifier, skip it
             while next_seq.id == '':
                 self.n_skipped += 1
                 consume(self.iterator, n=self.step)
                 self.pos += self.step + 1
                 next_seq = next(self.iterator)
             # Generate sequence object from SeqRecord
+            sequence_id = f'{next_seq.id}'
             sequence = self.sequence(index=self.pos,
-                                     id=f'{next_seq.id}',
+                                     id=sequence_id,
                                      string=str(next_seq.seq),
                                      encoded=[self.vocab.get(c, 0)
-                                              for c in next_seq.seq])
+                                              for c in next_seq.seq],
+                                     label=self.label_from_id.get(sequence_id))
         except StopIteration:
-
             # Close the file handle
             self.iterator.close()
-
             raise StopIteration
 
         return sequence
@@ -268,23 +293,30 @@ class ProteinDataset(IterableDataset):
     ----------
     file : str
         Path to file storing the protein sequences.
-    f_format : str
-        File format in which to expect the protein sequences.
-        Must be supported by Biopython's Bio.SeqIO class.
     labels_file : str, optional
         Path to file storing labels associated to the sequences.
         This is required for training, and ignored during inference.
         Must be in CSV format with header line, that is, compatible to be
-        read by pandas.read_csv()
+        read by pandas.read_csv(). The labels are expected in the last column.
+    f_format : str
+        File format in which to expect the protein sequences.
+        Must be supported by Biopython's Bio.SeqIO class.
     """
 
-    def __init__(self, file, f_format='fasta', labels_file: str = None):
+    def __init__(self, file, labels_file: str = None, f_format='fasta'):
         """ Initialize sequence dataset from file."""
         self.file = file
         self.f_format = f_format
+
+        # Read labels, if available
         self.labels_file = labels_file
-        if self.labels_file is not None:
-            self.labels = pd.read_csv(self.labels_file)
+        if self.labels_file is None:
+            self.labels = None
+        else:
+            self.labels = pd.read_csv(labels_file)
+            self.label_encoder = LabelEncoder()
+            self.labels['label_num'] = self.label_encoder.fit_transform(
+                self.labels.iloc[:, -1])
 
         # Generate amino-acid vocabulary
         self.alphabet = EXTENDED_IUPAC_PROTEIN_ALPHABET
@@ -296,10 +328,18 @@ class ProteinDataset(IterableDataset):
         """ Return iterator over sequences in file. """
         worker_info = torch.utils.data.get_worker_info()
         if worker_info is None:
-            return ProteinIterator(self.file, self.vocab, self.f_format,
-                                   n_skipped=0)
+            return ProteinIterator(self.file, self.labels, self.vocab,
+                                   self.f_format, n_skipped=0)
         else:
-            return ProteinIterator(self.file, self.vocab, self.f_format,
-                                   n_skipped=self.n_skipped,
+            return ProteinIterator(self.file, self.labels, self.vocab,
+                                   self.f_format, n_skipped=self.n_skipped,
                                    num_workers=worker_info.num_workers,
                                    worker_id=worker_info.id)
+
+    def __len__(self):
+        try:
+            return self.labels.label_num.size
+        except AttributeError:
+            raise TypeError(f"object of type 'ProteinDataset' has no len(), "
+                            f"unless a label file is provided during its "
+                            f"construction.") from None
