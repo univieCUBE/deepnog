@@ -8,11 +8,11 @@ Description:
     Dataset classes and helper functions for usage with deep network models
     written in PyTorch.
 """
-from collections import namedtuple, deque
+from collections import deque
 import gzip
 from itertools import islice
 from pathlib import Path
-from typing import List, Union
+from typing import List, Union, NamedTuple
 
 import numpy as np
 import pandas as pd
@@ -21,23 +21,44 @@ import torch
 from torch.utils.data import IterableDataset
 from torch.utils.data.dataloader import default_collate
 
-from deepnog.sync import SynchronizedCounter
-from deepnog.utils import EXTENDED_IUPAC_PROTEIN_ALPHABET, SeqIO
+from ..utils import SynchronizedCounter
+from ..utils import EXTENDED_IUPAC_PROTEIN_ALPHABET, SeqIO
+
+__all__ = ['collate_sequences',
+           'gen_amino_acid_vocab',
+           'ProteinDataset',
+           'ProteinIterator',
+           'ShuffledProteinDataset',
+           ]
+
+# Make Dataset return namedtuple
+sequence_tuple = NamedTuple('sequence',
+                            [('index', int),
+                             ('id', str),
+                             ('string', str),
+                             ('encoded', list),
+                             ('label', torch.Tensor)])
 
 # Class of data-minibatches
-collated_sequences = namedtuple('collated_sequences',
-                                ['indices', 'ids', 'sequences', 'labels'])
+collated_sequences = NamedTuple('collated_sequences',
+                                [('indices', List[int]),
+                                 ('ids', List[str]),
+                                 ('sequences', torch.Tensor),
+                                 ('labels', torch.Tensor)])
+
+UNINITIALIZED_POS = -999
 
 
-def collate_sequences(batch: Union[List[namedtuple], namedtuple],
-                      zero_padding: bool = True, min_length: int = 36):
+def collate_sequences(batch: Union[List[sequence_tuple], sequence_tuple],
+                      zero_padding: bool = True, min_length: int = 36,
+                      random_padding: bool = False) -> collated_sequences:
     """ Collate and zero-pad encoded sequence.
 
     Parameters
     ----------
     batch : namedtuple, or list of namedtuples
         Batch of protein sequences to classify stored as a namedtuple
-        sequence (see ProteinDataset).
+        sequence.
     zero_padding : bool
         Zero-pad protein sequences, that is, append zeros until every sequence
         is as long as the longest sequences in batch.
@@ -45,10 +66,13 @@ def collate_sequences(batch: Union[List[namedtuple], namedtuple],
         Zero-pad sequences to at least ``min_length``.
         By default, this is set to 36, which is the largest kernel size in the
         default DeepNOG/DeepEncoding architecture.
-
+    random_padding : bool, optional
+        Zero pad sequences by prepending and appending zeros. The fraction
+        is determined randomly. This may counter detrimental effects, when
+        short sequences would always have long zero-tails, otherwise.
     Returns
     -------
-    batch : namedtuple
+    batch : NamedTuple
         Input batch zero-padded and stored in namedtuple
         collated_sequences.
     """
@@ -60,9 +84,9 @@ def collate_sequences(batch: Union[List[namedtuple], namedtuple],
     max_len = min_length
     n_data = 0
     for seq in batch:
-        query = seq.encoded
+        sequence = seq.encoded
         n_data += 1
-        sequence_len = len(query)
+        sequence_len = len(sequence)
         if sequence_len > max_len:
             max_len = sequence_len
 
@@ -70,28 +94,34 @@ def collate_sequences(batch: Union[List[namedtuple], namedtuple],
     if zero_padding:
         sequences = np.zeros((n_data, max_len,), dtype=np.int)
         for i, seq in enumerate(batch):
-            query = np.array(seq.encoded)
-            start = 0
-            end = len(query)
+            sequence = np.array(seq.encoded)
+            # If selected, choose randomly, where to insert zeros
+            if random_padding and len(sequence) < max_len:
+                n_zeros = max_len - len(sequence)
+                start = np.random.choice(n_zeros + 1)
+                end = start + len(sequence)
+            else:
+                start = 0
+                end = len(sequence)
             # Zero pad
-            sequences[i, start:end] = query[:].T
+            sequences[i, start:end] = sequence[:].T
         # Convert NumPy array to PyTorch Tensor
         sequences = default_collate(sequences)
     else:
         # no zero-padding, must use minibatches of size 1 downstream!
         raise NotImplementedError('Batching requires zero padding!')
 
-    # Collate the ids
+    # Collate the protein ids (str)
     ids = [seq.id for seq in batch]
 
-    # Collate the indices
-    indices = [seq.index for seq in batch]
+    # Collate the numerical indices
+    indices: List[int] = [seq.index for seq in batch]
 
     # Collate the labels
     try:
         labels = np.array([b.label for b in batch], dtype=np.int)
         labels = default_collate(labels)
-    except AttributeError:
+    except (AttributeError, TypeError):
         labels = None
 
     return collated_sequences(indices=indices,
@@ -135,7 +165,7 @@ def gen_amino_acid_vocab(alphabet=None):
     return vocab
 
 
-def consume(iterator, n=None):
+def _consume(iterator, n=None):
     """ Advance the iterator n-steps ahead. If n is None, consume entirely.
 
     Function from Itertools Recipes in official Python 3.7.4. docs.
@@ -209,6 +239,7 @@ class ProteinIterator:
         self.iterator = iterator
 
         if labels is None:
+            self.has_labels = False
             self.label_from_id = {}
         else:
             # NOTE: this only supports single-label experiments!
@@ -216,20 +247,17 @@ class ProteinIterator:
             # any previously seen labels.
             self.label_from_id = {row.protein_id: row.label_num
                                   for row in labels.itertuples()}
+            self.has_labels = True
 
         self.vocab = aa_vocab
         self.n_skipped = n_skipped
 
         # Start position
-        self.start = worker_id
-        self.pos = None
+        self.start: int = worker_id
+        self.pos: int = UNINITIALIZED_POS
 
         # Number of sequences to skip for each next() call.
-        self.step = num_workers - 1
-
-        # Make Dataset return namedtuple
-        self.sequence = namedtuple('sequence',
-                                   ['index', 'id', 'string', 'encoded', 'label'])
+        self.step: int = num_workers - 1
 
     def __iter__(self):
         return self
@@ -250,28 +278,32 @@ class ProteinIterator:
             for one protein sequence.
         """
         # Check if iterator has been positioned correctly.
-        if self.pos is not None:
-            consume(self.iterator, n=self.step)
-            self.pos += self.step + 1
-        else:
-            consume(self.iterator, n=self.start)
+        if self.pos == UNINITIALIZED_POS:
+            _consume(self.iterator, n=self.start)
             self.pos = self.start + 1
+        else:
+            _consume(self.iterator, n=self.step)
+            self.pos += self.step + 1
         try:
             next_seq = next(self.iterator)
-            # If sequence has no identifier, skip it
-            while next_seq.id == '':
+            # If sequence has no identifier, skip it.
+            # Also skip sequences that should have labels, but don't.
+            sequence_id: str = f'{next_seq.id}'
+            label = self.label_from_id.get(sequence_id)
+            while sequence_id == '' or (self.has_labels and label is None):
                 self.n_skipped += 1
-                consume(self.iterator, n=self.step)
+                _consume(self.iterator, n=self.step)
                 self.pos += self.step + 1
                 next_seq = next(self.iterator)
+                sequence_id: str = f'{next_seq.id}'
+                label = self.label_from_id.get(sequence_id)
             # Generate sequence object from SeqRecord
-            sequence_id = f'{next_seq.id}'
-            sequence = self.sequence(index=self.pos,
-                                     id=sequence_id,
-                                     string=str(next_seq.seq),
-                                     encoded=[self.vocab.get(c, 0)
-                                              for c in next_seq.seq],
-                                     label=self.label_from_id.get(sequence_id))
+            encoded = [self.vocab.get(c, 0) for c in next_seq.seq]
+            sequence = sequence_tuple(index=self.pos,
+                                      id=sequence_id,
+                                      string=str(next_seq.seq),
+                                      encoded=encoded,
+                                      label=label)
         except StopIteration:
             # Close the file handle
             self.iterator.close()
@@ -296,14 +328,20 @@ class ProteinDataset(IterableDataset):
     labels_file : str, optional
         Path to file storing labels associated to the sequences.
         This is required for training, and ignored during inference.
-        Must be in CSV format with header line, that is, compatible to be
-        read by pandas.read_csv(). The labels are expected in the last column.
+        Must be in CSV format with header line and index column, that is,
+        compatible to be read by pandas.read_csv(..., index_col=0).
+        The labels are expected in a column named "eggnog_id" or
+        in the last column.
     f_format : str
         File format in which to expect the protein sequences.
         Must be supported by Biopython's Bio.SeqIO class.
+    label_encoder : LabelEncoder, optional
+        The label encoder maps str class names to numerical labels.
+        Provide a label encoder during validation.
     """
 
-    def __init__(self, file, labels_file: str = None, f_format='fasta'):
+    def __init__(self, file, labels_file: str = None, f_format='fasta',
+                 label_encoder: LabelEncoder = None):
         """ Initialize sequence dataset from file."""
         self.file = file
         self.f_format = f_format
@@ -313,10 +351,30 @@ class ProteinDataset(IterableDataset):
         if self.labels_file is None:
             self.labels = None
         else:
-            self.labels = pd.read_csv(labels_file)
-            self.label_encoder = LabelEncoder()
-            self.labels['label_num'] = self.label_encoder.fit_transform(
-                self.labels.iloc[:, -1])
+            self.labels = pd.read_csv(labels_file, index_col=0, compression='infer')
+
+            # Sequence IDs and labels are assumed in named columns,
+            # but if not, let's try a specific order and hope for the best
+            try:
+                self.labels.eggnog_id
+            except AttributeError:
+                self.labels.rename(columns={self.labels.columns[-1]: 'eggnog_id'},
+                                   inplace=True)
+            try:
+                self.labels.protein_id
+            except AttributeError:
+                self.labels.rename(columns={self.labels.columns[0]: 'protein_id'},
+                                   inplace=True)
+
+            # Transform class names to numerical labels
+            if label_encoder is None:
+                self.label_encoder = LabelEncoder()
+                self.labels['label_num'] = self.label_encoder.fit_transform(
+                    self.labels.eggnog_id)
+            else:
+                self.label_encoder = label_encoder
+                self.labels['label_num'] = self.label_encoder.transform(
+                    self.labels.eggnog_id)
 
         # Generate amino-acid vocabulary
         self.alphabet = EXTENDED_IUPAC_PROTEIN_ALPHABET
@@ -343,3 +401,57 @@ class ProteinDataset(IterableDataset):
             raise TypeError(f"object of type 'ProteinDataset' has no len(), "
                             f"unless a label file is provided during its "
                             f"construction.") from None
+
+
+class ShuffledProteinDataset(ProteinDataset):
+    """ Shuffle an iterable ProteinDataset by introducing a shuffle buffer.
+
+    Parameters
+    ----------
+    dataset : ProteinDataset
+        The PyTorch dataset for protein sequences
+    buffer_size : int
+        How many objects will be buffered, i.e. are available to choose from.
+
+    References
+    ----------
+    Adapted from code by Sharvil Nanavati, see
+    https://discuss.pytorch.org/t/how-to-shuffle-an-iterable-dataset/64130/5
+    """
+    def __init__(self, file, labels_file: str = None, f_format='fasta',
+                 label_encoder: LabelEncoder = None, buffer_size: int = 1000):
+        super().__init__(file=file, labels_file=labels_file, f_format=f_format,
+                         label_encoder=label_encoder)
+        self.dataset = self
+        self.buffer_size = buffer_size
+
+    def __iter__(self):
+        shufbuf = []
+        worker_info = torch.utils.data.get_worker_info()
+        if worker_info is None:
+            dataset_iter = ProteinIterator(self.file, self.labels, self.vocab,
+                                           self.f_format, n_skipped=0)
+        else:
+            dataset_iter = ProteinIterator(self.file, self.labels, self.vocab,
+                                           self.f_format, n_skipped=self.n_skipped,
+                                           num_workers=worker_info.num_workers,
+                                           worker_id=worker_info.id)
+        try:
+            for i in range(self.buffer_size):
+                shufbuf.append(next(dataset_iter))
+        except StopIteration:
+            self.buffer_size = len(shufbuf)
+
+        try:
+            while True:
+                try:
+                    item = next(dataset_iter)
+                    evict_idx = np.random.randint(0, self.buffer_size - 1)
+                    yield shufbuf[evict_idx]
+                    shufbuf[evict_idx] = item
+                except StopIteration:
+                    break
+            while len(shufbuf) > 0:
+                yield shufbuf.pop()
+        except GeneratorExit:
+            pass
