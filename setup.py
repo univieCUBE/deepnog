@@ -31,6 +31,7 @@ def find_version(*file_paths):
 
 install_requires = ['numpy',
                     'pandas',
+                    'scikit-learn',
                     'torch >= 1.2',
                     'Biopython',
                     'tqdm',
