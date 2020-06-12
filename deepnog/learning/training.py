@@ -9,7 +9,6 @@ Description:
 """
 # SPDX-License-Identifier: BSD-3-Clause
 
-from collections import Counter, namedtuple
 import copy
 from datetime import datetime
 from functools import partial
@@ -18,7 +17,7 @@ import random
 import string
 import tempfile
 import time
-from typing import List, Union, NamedTuple
+from typing import Dict, List, Union, NamedTuple
 import warnings
 
 import numpy as np
@@ -32,37 +31,37 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
-from ..data.dataset import ProteinDataset, collate_sequences
+from ..data import ProteinDataset, collate_sequences, ShuffledProteinDataset
+from ..utils import set_device, load_nn, count_parameters
 from ..utils.io_utils import logging
-from ..utils.utils import set_device, load_nn, count_parameters
 
-__all__ = ['train_and_validate_model',
-           'fit',
+__all__ = ['fit',
            ]
 
-collated_batch = NamedTuple('collated_batch',
-                            [('sequence', torch.Tensor),
-                             ('label', torch.Tensor)])
 train_val_result = NamedTuple('train_val_result',
                               [('model', nn.Module),
-                               ('dataset', torch.utils.data.Dataset),
+                               ('training_dataset', torch.utils.data.Dataset),
+                               ('validation_dataset', torch.utils.data.Dataset),
                                ('evaluation', List[dict]),
-                               ('y_true', np.ndarray),
-                               ('y_pred', np.ndarray)])
+                               ('y_train_true', np.ndarray),
+                               ('y_train_pred', np.ndarray),
+                               ('y_val_true', np.ndarray),
+                               ('y_val_pred', np.ndarray),
+                               ])
 
 
-def train_and_validate_model(model: nn.Module, criterion, optimizer,
-                             scheduler, data_loader, *,
-                             num_epochs=2,
-                             tensorboard_exp=None,
-                             stop_after: int = None,
-                             l2_coeff=None,
-                             log_interval: int = 100,
-                             device: torch.device = 'cuda',
-                             validation_only: bool = False,
-                             early_stopping: int = 0,
-                             save_each_epoch: bool = True,
-                             verbose: int = 2) -> train_val_result:
+def _train_and_validate_model(model: nn.Module, criterion, optimizer,
+                              scheduler, data_loaders: dict, *,
+                              num_epochs=2,
+                              tensorboard_exp=None,
+                              stop_after: int = None,
+                              l2_coeff=None,
+                              log_interval: int = 100,
+                              device: torch.device = 'cuda',
+                              validation_only: bool = False,
+                              early_stopping: int = 0,
+                              save_each_epoch: bool = True,
+                              verbose: int = 2) -> train_val_result:
     """ Perform training and validation of a given model, data, and hyperparameters.
 
     Parameters
@@ -75,8 +74,8 @@ def train_and_validate_model(model: nn.Module, criterion, optimizer,
         PyTorch optimizer instance, e.g., Adam
     scheduler
         PyTorch learning rate scheduler
-    data_loader : torch.utils.DataLoader
-        PyTorch DataLoader (Dataset plus some parameters)
+    data_loaders : dict of torch.utils.DataLoader
+        PyTorch DataLoaders (Dataset plus some parameters) for train and val set.
     num_epochs : int
         Maximum number of training passes over the dataset
     tensorboard_exp : [None, str], optional
@@ -125,10 +124,13 @@ def train_and_validate_model(model: nn.Module, criterion, optimizer,
     best_acc: float = 0.0
     best_epoch: int = 0
     evaluation: list = []
-    batch_size: int = data_loader.batch_size
-    y_true: np.ndarray = -np.ones((num_epochs, len(data_loader.dataset)), dtype=np.int32)
-    y_pred: np.ndarray = -np.ones_like(y_true)
-    tqdm_disable: bool = True if verbose < 2 else False
+    batch_sizes: Dict[str, int] = {phase: loader.batch_size
+                                   for phase, loader in data_loaders.items()}
+    y_true: Dict[str, np.ndarray] = {phase: -np.ones((num_epochs, len(loader.dataset)), dtype=np.int32)
+                                     for phase, loader in data_loaders.items()}
+    y_pred: Dict[str, np.ndarray] = {phase: -np.ones_like(y_true[phase])
+                                     for phase, loader in data_loaders.items()}
+    tqdm_disable: bool = True if verbose < 3 else False
 
     for epoch in range(num_epochs):
         logging.info(f'Epoch {epoch}/{num_epochs - 1}')
@@ -136,14 +138,19 @@ def train_and_validate_model(model: nn.Module, criterion, optimizer,
 
         # Each epoch has a training and validation phase
         for phase in ['train', 'val']:
-
+            data_loader = data_loaders[phase]
+            dataset = data_loader.dataset
+            batch_size = batch_sizes[phase]
             if phase == 'train':
+                logging.debug(f'Setting model.train() mode')
+                model.train()  # Set model to training mode
                 if validation_only:
                     continue  # skip training
                 else:
-                    model.train()  # Set model to training mode
+                    logging.info(f'Scheduler: learning rate = {scheduler.get_last_lr()}')
             else:
-                model.eval()  # Set model to evaluate mode
+                logging.debug(f'Setting model.eval() mode')
+                model.eval()
 
             running_loss: torch.float32 = 0.
             running_corrects: torch.int = 0
@@ -154,16 +161,15 @@ def train_and_validate_model(model: nn.Module, criterion, optimizer,
 
             # Iterate over data.
             n_processed_sequences = 0
-            numerator = stop_after if stop_after else len(data_loader.dataset)
+            numerator = stop_after if stop_after else len(dataset)
             denominator = batch_size if batch_size else None
             tqdm_total = numerator // denominator + 1 if denominator else None
             for batch_nr, batch in enumerate(tqdm(data_loader,
                                                   total=tqdm_total,
                                                   disable=tqdm_disable,
-                                                  desc='deepnog training',
+                                                  desc=f'deepnog {phase}',
                                                   unit=f' minibatches'
                                                   )):
-                # About minibatch tuple: ['query', 'hits', 'similarity', 'query_labels', 'hits_labels']
                 sequence = batch.sequences
                 labels = batch.labels
 
@@ -195,20 +201,20 @@ def train_and_validate_model(model: nn.Module, criterion, optimizer,
                     # save to global ground truth and prediction arrays
                     start = n_processed_sequences - current_batch_size
                     end = n_processed_sequences
-                    y_true[epoch, start:end] = labels.detach().cpu().numpy()
-                    y_pred[epoch, start:end] = preds.detach().cpu().numpy()
+                    y_true[phase][epoch, start:end] = labels.detach().cpu().numpy()
+                    y_pred[phase][epoch, start:end] = preds.detach().cpu().numpy()
 
                 # statistics
                 batch_loss = loss.item()
                 batch_corrects = torch.sum(preds == labels)
 
                 log_loss += float(batch_loss)
-                log_corrects += float(batch_corrects)
+                log_corrects += int(batch_corrects)
                 log_n_objects += len(labels)
 
                 if tensorboard_writer is not None and batch_nr % log_interval == 0:
                     tensorboard_writer.add_scalar(f'{phase}/loss',
-                                                  log_loss / log_n_objects,
+                                                  log_loss,
                                                   n_processed_sequences)
                     tensorboard_writer.add_scalar(f'{phase}/accuracy',
                                                   log_corrects / log_n_objects,
@@ -229,7 +235,7 @@ def train_and_validate_model(model: nn.Module, criterion, optimizer,
 
             # Finishing train or val phase
             epoch_loss = running_loss / n_processed_sequences
-            epoch_acc = running_corrects.double() / n_processed_sequences
+            epoch_acc = float(running_corrects) / n_processed_sequences
             evaluation.append({'phase': phase,
                                'epoch': epoch,
                                'accuracy': float(epoch_acc),
@@ -242,13 +248,18 @@ def train_and_validate_model(model: nn.Module, criterion, optimizer,
             logging.info(f'{phase} --- loss: {epoch_loss:.4f}  --- acc: {epoch_acc:.4f}\n')
 
             if phase == 'train' and scheduler is not None:
+                logging.debug(f'Learning rate scheduler.step()')
                 scheduler.step()
 
             # empty cache if possible
+            logging.debug(f'Emptying CUDA cache')
             torch.cuda.empty_cache()
 
             # deep copy the model
             if phase == 'val' and epoch_acc > best_acc:
+                logging.debug(f'Validation performance improved in current '
+                              f'epoch with accuracy {epoch_acc:.3f} > '
+                              f'{best_acc:.3f} (previous best).')
                 best_acc = epoch_acc
                 best_model_wts = copy.deepcopy(model.state_dict())
                 best_epoch = epoch
@@ -256,7 +267,8 @@ def train_and_validate_model(model: nn.Module, criterion, optimizer,
         # temporarily save network
         if save_each_epoch:
             save_file = tensorboard_exp/f'_epoch{epoch:02d}.pt'
-            torch.save({'classes': data_loader.dataset.label_encoder.classes_,
+            logging.debug(f'Saving current epoch {epoch} model to {save_file}')
+            torch.save({'classes': dataset.label_encoder.classes_,
                         'model_state_dict': model.state_dict(),
                         'optimizer_state_dict': optimizer.state_dict(),
                         'scheduler_state_dict': scheduler.state_dict(),
@@ -279,56 +291,17 @@ def train_and_validate_model(model: nn.Module, criterion, optimizer,
     # load best model weights
     model.load_state_dict(best_model_wts)
     return train_val_result(model=model,
-                            dataset=data_loader.dataset,
+                            training_dataset=data_loaders['train'].dataset,
+                            validation_dataset=data_loaders['val'].dataset,
                             evaluation=evaluation,
-                            y_true=y_true,
-                            y_pred=y_pred)
+                            y_train_true=y_true['train'],
+                            y_train_pred=y_pred['train'],
+                            y_val_true=y_true['val'],
+                            y_val_pred=y_pred['val'],
+                            )
 
 
-def collate_sequences_with_labels(batch: List[namedtuple],
-                                  zero_padding: bool = True,
-                                  random_padding: bool = False) -> NamedTuple:
-    """ Collate query and (optionally) labels. """
-
-    # Find the longest sequence, in order to zero pad the others; and optionally skip self hits
-    max_len, n_features = 0, 1  # batch.query_encoded.shape
-    n_data = 0
-    for b in batch:
-        sequence = b.query_encoded
-        n_data += 1
-        sequence_len = len(sequence)
-        if sequence_len > max_len:
-            max_len = sequence_len
-
-    # Collate the sequences
-    if zero_padding:
-        sequences = np.zeros((n_data, max_len,), dtype=np.int)
-        for i, b in enumerate(batch):
-            sequence = np.array(b.query_encoded)
-            # If selected, choose randomly, where to insert zeros
-            if random_padding and len(sequence) < max_len:
-                n_zeros = max_len - len(sequence)
-                start = np.random.choice(n_zeros + 1)
-                end = start + len(sequence)
-            else:
-                start = 0
-                end = len(sequence)
-
-            # Zero pad and / or slice
-            sequences[i, start:end] = sequence[:].T
-        sequences = default_collate(sequences)
-    else:  # no zero-padding, must use minibatches of size 1 downstream!
-        # sequences = [torch.from_numpy(x) for x in batch.hits_encoded]
-        raise NotImplementedError
-
-    # Collate the labels
-    labels = np.array([b.query_labels for b in batch], dtype=np.int)
-    labels = default_collate(labels)
-
-    return collated_batch(sequence=sequences, label=labels)
-
-
-def fit(architecture, sequences, labels, *,
+def fit(architecture, training_sequences, validation_sequences, labels, *,
         data_loader_params: dict = None,
         n_epochs: int = 15,
         shuffle: bool = False,
@@ -345,39 +318,50 @@ def fit(architecture, sequences, labels, *,
         ):
     device = set_device(device)
     logging.info(f'Training device: {device}')
-    rnd_state = np.random.RandomState(random_state_numpy)
+    np.random.seed(random_state_numpy)
     torch.manual_seed(random_state_torch)
     torch.cuda.manual_seed(random_state_torch)
 
     # PyTorch DataLoader default arguments
-    if data_loader_params is None:
-        data_loader_params = {'batch_size': 32,
-                              # TODO enable shuffling, e.g. via this approach:
-                              # https://discuss.pytorch.org/t/how-to-shuffle-an-iterable-dataset/64130/6
-                              'shuffle': shuffle,
-                              'num_workers': 4,
-                              'collate_fn': partial(
-                                  collate_sequences,
-                                  zero_padding=True),
-                              'pin_memory': True,
-                              }
+    default_data_loader_params = {'batch_size': 32,
+                                  'num_workers': 4,
+                                  'collate_fn': partial(
+                                      collate_sequences,
+                                      zero_padding=True),
+                                  'pin_memory': True,
+                                  }
+    if data_loader_params is not None:
+        default_data_loader_params.update(data_loader_params)
+    data_loader_params = default_data_loader_params
+    logging.debug(f'Data loader parameters: {data_loader_params}')
     if learning_rate_params is None:
         learning_rate_params = {'step_size': 1,
                                 'gamma': 0.75,
                                 'last_epoch': -1,
                                 }
+    logging.debug(f'Scheduler parameters: {learning_rate_params}')
 
-    # Set up training data set with sequences and labels
-    if isinstance(sequences, str):
-        dataset = ProteinDataset(file=sequences,
-                                 labels_file=labels)
+    # Set up training and validation data set with sequences and labels
+    dataset: dict = {}
+    if shuffle:
+        buffer_size = 2 ** 16
+        dataset['train'] = ShuffledProteinDataset(file=training_sequences,
+                                                  labels_file=labels,
+                                                  buffer_size=buffer_size)
+        logging.info(f'Using iterable dataset with shuffle buffer, '
+                     f'and buffer size = {buffer_size}.')
     else:
-        dataset = sequences
-    data_loader = DataLoader(dataset, **data_loader_params)
+        dataset['train'] = ProteinDataset(file=validation_sequences,
+                                          labels_file=labels)
+        logging.info(f'Using iterable dataset without shuffling.')
+    dataset['val'] = ProteinDataset(file=validation_sequences,
+                                    labels_file=labels)
+    data_loader = {phase: DataLoader(d, **data_loader_params)
+                   for phase, d in dataset.items()}
 
     # Deep network hyperparameter default values
     # TODO allow user changes in CLI
-    model_dict = {'n_classes': [len(dataset.label_encoder.classes_)],
+    model_dict = {'n_classes': [len(dataset['train'].label_encoder.classes_)],
                   'encoding_dim': 10,
                   'kernel_size': [8, 12, 16, 20, 24, 28, 32, 36],
                   'n_filters': 150,
@@ -391,8 +375,9 @@ def fit(architecture, sequences, labels, *,
     elif tensorboard_dir == 'auto':
         now = datetime.now().strftime("%Y-%m-%d_%H-%m-%S_%f")
         random_letters = ''.join(random.sample(string.ascii_letters, 4))
-        tmp_dir = tempfile.mkdtemp(prefix='tensorboard_')
-        experiment = Path(tmp_dir)/f'deepnog_{now}_{random_letters}'
+        tmp_dir = Path(tempfile.gettempdir())/'tensorboard'
+        tmp_dir.mkdir(parents=True, exist_ok=True)
+        experiment = tmp_dir/f'deepnog_{now}_{random_letters}'
     else:
         try:
             experiment = Path(tensorboard_dir)
@@ -405,6 +390,8 @@ def fit(architecture, sequences, labels, *,
     # Load model, and send to selected device. Set up training.
     model = load_nn(architecture=architecture, model_dict=model_dict, phase='train',
                     device=device)
+    # NOTE: CrossEntropyLoss is LogSoftmax+NLLoss, that is, no softmax layer
+    # should be in the forward pass of the network.
     criterion = nn.CrossEntropyLoss()
     optimizer = optimizer_cls(model.parameters(),
                               lr=learning_rate)
@@ -418,16 +405,16 @@ def fit(architecture, sequences, labels, *,
     logging.info(f'Number of classes: {model.n_classes}')
     logging.info(f'Tunable parameters: {count_parameters(model)}')
 
-    result = train_and_validate_model(model=model,
-                                      criterion=criterion,
-                                      optimizer=optimizer,
-                                      scheduler=scheduler,
-                                      data_loader=data_loader,
-                                      num_epochs=n_epochs,
-                                      tensorboard_exp=experiment,
-                                      log_interval=log_interval,
-                                      device=device,
-                                      save_each_epoch=save_each_epoch,
-                                      verbose=verbose,
-                                      )
+    result = _train_and_validate_model(model=model,
+                                       criterion=criterion,
+                                       optimizer=optimizer,
+                                       scheduler=scheduler,
+                                       data_loaders=data_loader,
+                                       num_epochs=n_epochs,
+                                       tensorboard_exp=experiment,
+                                       log_interval=log_interval,
+                                       device=device,
+                                       save_each_epoch=save_each_epoch,
+                                       verbose=verbose,
+                                       )
     return result
