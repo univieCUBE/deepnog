@@ -14,8 +14,8 @@ import torch
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from .dataset import collate_sequences
-from .io_utils import logging
+from ..data.dataset import collate_sequences
+from ..utils.io_utils import logging
 
 __all__ = ['predict', ]
 
@@ -55,6 +55,8 @@ def predict(model, dataset, device='cpu', batch_size=16, num_workers=4,
         Stores the unique indices of sequences mapping to their position
         in the file
     """
+    logging.info(f'Inference device: {device}')
+
     pred_l = []
     conf_l = []
     ids = []
@@ -74,11 +76,13 @@ def predict(model, dataset, device='cpu', batch_size=16, num_workers=4,
         disable_tqdm = verbose < 3
         for i, batch in enumerate(tqdm(data_loader,
                                        disable=disable_tqdm,
-                                       desc="Predicting batch")):
+                                       desc="deepnog inference")):
             # Push sequences on correct device
             sequences = batch.sequences.to(device)
             # Predict protein families
             output = model(sequences)
+            output = model.softmax(output)
+
             conf, pred = torch.max(output, 1)
             # Store predictions
             pred_l.append(pred)
@@ -86,6 +90,7 @@ def predict(model, dataset, device='cpu', batch_size=16, num_workers=4,
             ids.extend(batch.ids)
             indices.extend(batch.indices)
 
+    logging.info(f'Inference complete.')
     # Collect skipped-sequences messages from workers in the case of
     # multi-process data-loading
     n_skipped = dataset.n_skipped
