@@ -21,7 +21,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 
-from .. import dataset as ds
+from ..data.dataset import gen_amino_acid_vocab
 
 
 __all__ = ['AminoAcidWordEmbedding',
@@ -41,7 +41,7 @@ class AminoAcidWordEmbedding(nn.Module):
     def __init__(self, embedding_dim=10):
         super(AminoAcidWordEmbedding, self).__init__()
         # Get protein sequence vocabulary
-        self.vocab = ds.gen_amino_acid_vocab()
+        self.vocab = gen_amino_acid_vocab()
         # Create embedding (initialized randomly)
         embeds = nn.Embedding(len(self.vocab) // 2 + 1, embedding_dim)
         self.embedding = embeds
@@ -95,7 +95,7 @@ class deepencoding(nn.Module):
         super(deepencoding, self).__init__()
 
         # Read hyperparameter dictionary
-        n_classes = model_dict['n_classes']
+        self.n_classes = model_dict['n_classes'][0]
         encoding_dim = model_dict['encoding_dim']
         kernel_sizes = model_dict['kernel_size']
         n_filters = model_dict['n_filters']
@@ -130,7 +130,7 @@ class deepencoding(nn.Module):
         # Classifcation layer
         self.classification1 = nn.Linear(
             in_features=n_filters * len(kernel_sizes),
-            out_features=n_classes[0])
+            out_features=self.n_classes)
 
         # Softmax-Layer
         self.softmax = nn.Softmax(dim=1)
@@ -174,5 +174,7 @@ class deepencoding(nn.Module):
 
         # Classification layer
         x = self.classification1(x)
-        out = self.softmax(x)
-        return out
+
+        # NOTE: v1.2.0 removed the softmax here. Must now be performed in
+        # inference module (otherwise, cross entropy loss requires hacks)
+        return x
