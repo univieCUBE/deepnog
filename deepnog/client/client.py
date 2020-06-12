@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """
 Author: Lukas Gosch
         Roman Feldbauer
@@ -36,8 +37,11 @@ import os.path
 from pathlib import Path
 import sys
 
+__all__ = ['main',
+           ]
 
-def get_parser():
+
+def _get_parser():
     """ Create a new argument parser.
 
     Returns
@@ -61,10 +65,6 @@ def get_parser():
 
     # Arguments for both training and inference
     for p in [parser_train, parser_infer]:
-        p.add_argument("file",
-                       metavar='SEQUENCE_FILE',
-                       help=("File containing protein sequences for "
-                             "classification (inference or training)."))
         p.add_argument("-ff", "--fformat",
                        type=str,
                        metavar='STR',
@@ -109,10 +109,10 @@ def get_parser():
         p.add_argument("-w", "--weights",
                        metavar='FILE',
                        help="Custom weights file path (optional)")
-        p.add_argument("-bs", "--batch-size",
+        p.add_argument("-bs", "--batch_size",
                        type=int,
                        metavar='INT',
-                       default=1,
+                       default=64,
                        help=('Batch size used for prediction or training.'
                              'Defines how many sequences should be '
                              'processed in the network at once. '
@@ -160,6 +160,10 @@ def get_parser():
                               help="Taxonomic level in specified database")
 
     # Arguments for INFERENCE only
+    parser_infer.add_argument("file",
+                              metavar='SEQUENCE_FILE',
+                              help=("File containing protein sequences for "
+                                    "classification (inference or training)."))
     parser_infer.add_argument("-of", "--outformat",
                               default="csv",
                               choices=["csv", "tsv", "legacy"],
@@ -173,28 +177,49 @@ def get_parser():
                                    "exists, and else do not apply a confidence threshold.")
 
     # Arguments for TRAINING only
+    parser_train.add_argument("training_sequences",
+                              metavar='TRAIN_SEQUENCE_FILE',
+                              help="File containing protein sequences training set.")
+    parser_train.add_argument("validation_sequences",
+                              metavar='VAL_SEQUENCE_FILE',
+                              help="File containing protein sequences validation set.")
     parser_train.add_argument("labels",
                               metavar='LABELS_FILE',
-                              help="Orthologous group labels for given protein "
-                                   "sequences. Must be a CSV file and parseable "
-                                   "by pandas.read_csv().")
+                              help="Orthologous group labels for training and validation set "
+                                   "protein sequences. Must be a CSV file and parseable "
+                                   "by pandas.read_csv(..., index_col=1). The first column "
+                                   "must be a numerical index. The other columns should "
+                                   "be named 'protein_id' and 'eggnog_id', or be in order "
+                                   "sequence_identifier first, label_identifier second.")
     parser_train.add_argument("-e", "--n_epochs",
                               metavar='N_EPOCHS',
                               type=int,
                               default=15,
                               help="Number of training epochs, that is, "
                                    "passes over the complete data set.")
-
+    parser_train.add_argument("-s", "--shuffle",
+                              action='store_true',
+                              help=f'Shuffle the training sequences. Note that a shuffle '
+                                   f'buffer is used in combination with an iterable dataset. '
+                                   f'That is, not all sequences have equal probability to '
+                                   f'be chosen. If you have highly structured sequence files '
+                                   f'consider shuffling them in advance. '
+                                   f'Default buffer size = {2**16}')
+    parser_train.add_argument("-lr", "--learning-rate",
+                              metavar='LEARNING_RATE',
+                              type=float,
+                              default=1e-2,
+                              help=f'Initial learning rate, subject to adaptations by '
+                                   f'chosen optimizer and scheduler.')
     return parser
 
 
-def start_prediction_or_training(args):
+def _start_prediction_or_training(args):
     # Importing here makes CLI more snappy
-    from .utils.io_utils import init_global_logger
-    from .utils.utils import set_device
+    from deepnog.utils import init_global_logger, set_device
 
     init_global_logger('deepnog', verbose=args.verbose)
-    from .utils.io_utils import logging
+    from deepnog.utils.io_utils import logging
 
     logging.info(f'Starting deepnog')
 
@@ -202,13 +227,9 @@ def start_prediction_or_training(args):
     if args.batch_size <= 0:
         raise ValueError(f'Batch size must be at least one. '
                          f'Got batch size = {args.batch_size} instead.')
-    # Check that out dir is empty
-    try:
-        if any(Path(args.out).iterdir()):
-            logging.warning(f'Output directory {args.out} is not empty.')
-    except FileNotFoundError:
-        logging.info(f'Creating output directory: {args.out}')
-        Path(args.out).mkdir()
+
+    if Path(args.out).is_file():
+        logging.warning(f'Output file {args.out} already exists.')
 
     # Set up device
     try:
@@ -216,7 +237,6 @@ def start_prediction_or_training(args):
     except RuntimeError as err:
         logging.error(f"Could not select processing device: {args.device}")
         raise err
-    logging.info(f'Device set to "{args.device}"')
 
     if 'inference'.startswith(args.phase.lower()):
         # Default inference: eggNOG5 bacteria level
@@ -232,18 +252,24 @@ def start_prediction_or_training(args):
         if not args.database or not args.tax:
             raise ValueError(f'Please provide both a database name and '
                              f'taxonomy level the new model corresponds to.')
+        try:
+            if any(Path(args.out).iterdir()):
+                logging.warning(f'Output directory {args.out} is not empty.')
+        except FileNotFoundError:
+            logging.info(f'Creating output directory: {args.out}')
+            Path(args.out).mkdir()
         return _start_training(args=args)
     else:
         logging.error(f'Please run one of "deepnog train" or "deepnog infer" commands.')
-        return 1
+        return
 
 
 def _start_inference(args):
     import torch
-    from .data.dataset import ProteinDataset
-    from .learning.inference import predict
-    from .utils.io_utils import create_df, get_weights_path, logging
-    from .utils.utils import load_nn
+    from deepnog.data import ProteinDataset
+    from deepnog.learning import predict
+    from deepnog.utils import create_df, get_weights_path, load_nn
+    from deepnog.utils.io_utils import logging
 
     # Set number of threads to 1, b/c automatic (internal) parallelization is
     # quite inefficient
@@ -269,7 +295,10 @@ def _start_inference(args):
     dataset = ProteinDataset(args.file, f_format=args.fformat)
 
     # Load class names
-    class_labels = model_dict.get('classes', dataset.label_encoder.classes_)
+    try:
+        class_labels = model_dict['classes']
+    except KeyError:
+        class_labels = dataset.label_encoder.classes_
 
     # Load neural network model
     model = load_nn(architecture=args.architecture,
@@ -316,8 +345,8 @@ def _start_inference(args):
     columns = ['sequence_id', 'prediction', 'confidence']
     separator = {'csv': ',', 'tsv': '\t', 'legacy': ';'}.get(args.outformat)
     df.to_csv(save_file, sep=separator, index=False, columns=columns)
-    logging.info(f'Finished inference.')
-    return 0
+    logging.info(f'All done.')
+    return
 
 
 def _start_training(args):
@@ -326,15 +355,20 @@ def _start_training(args):
     import numpy as np
     from pandas import DataFrame
     import torch
-    from .learning.training import fit
-    from .utils.io_utils import logging
+    from deepnog.learning import fit
+    from deepnog.utils.io_utils import logging
 
     results = fit(architecture=args.architecture,
-                  sequences=args.file,
+                  training_sequences=args.training_sequences,
+                  validation_sequences=args.validation_sequences,
+                  data_loader_params={'batch_size': args.batch_size,
+                                      'num_workers': args.num_workers},
+                  learning_rate=args.learning_rate,
                   labels=args.labels,
                   device=args.device,
                   verbose=args.verbose,
                   n_epochs=args.n_epochs,
+                  shuffle=args.shuffle,
                   # TODO add the rest of the parameters to the client
                   )
     random_letters = ''.join(random.sample(string.ascii_letters, 4))
@@ -342,7 +376,7 @@ def _start_training(args):
     # Save model to output dir
     model_file = Path(args.out)/f'{experiment_name}_model.pt'
     logging.info(f'Saving model to {model_file}...')
-    torch.save({'classes': results.dataset.label_encoder.classes_,
+    torch.save({'classes': results.training_dataset.label_encoder.classes_,
                 'model_state_dict': results.model.state_dict()},
                model_file)
     # Save a dataframe of several training/validation statistics
@@ -355,18 +389,21 @@ def _start_training(args):
     logging.info(f'Saving ground truth (y_true) and predicted (y_pred) '
                  f'labels (from training/validation) to {classes_file}... '
                  f'Load with numpy.load().')
-    np.savez(classes_file, y_true=results.y_true, y_pred=results.y_pred)
+    np.savez(classes_file,
+             y_train_true=results.y_train_true,
+             y_train_pred=results.y_train_pred,
+             y_val_true=results.y_val_true,
+             y_val_pred=results.y_val_pred)
 
-    logging.info(f'Finished training.')
-    return 0
+    logging.info(f'All done.')
+    return
 
 
 def main():
     """ DeepNOG command line tool. """
-    parser = get_parser()
+    parser = _get_parser()
     args = parser.parse_args()
-    exit_code = start_prediction_or_training(args)
-    sys.exit(exit_code)
+    _start_prediction_or_training(args)
 
 
 if __name__ == '__main__':
