@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 from torch.utils.data import DataLoader
-from deepnog import dataset as ds
+from deepnog.data import dataset as ds
 
 test_file = Path(__file__).parent.absolute() / "data/GCF_000007025.1.faa"
 test_file_gzip = Path(__file__).parent.absolute()/"data/GCF_000007025.1.faa.gz"

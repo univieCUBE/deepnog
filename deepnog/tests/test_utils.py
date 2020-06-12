@@ -33,6 +33,6 @@ def test_gpu_device_available():
 @pytest.mark.skipif(GPU_AVAILABLE, reason='GPU is available')
 def test_gpu_device_unavailable():
     device = 'gpu'
-    msg = 'no cuda-enabled gpu is available on this machine'
+    msg = 'could not access any CUDA-enabled GPU'
     with pytest.raises(RuntimeError, match=msg):
         set_device(device)

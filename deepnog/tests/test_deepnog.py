@@ -10,9 +10,9 @@ import pytest
 import torch.nn as nn
 import torch
 
-from deepnog.dataset import ProteinDataset
-from deepnog.inference import load_nn, predict
-from deepnog.io import create_df
+from deepnog.data.dataset import ProteinDataset
+from deepnog.learning import predict
+from deepnog.utils import create_df, load_nn
 
 
 current_path = Path(__file__).parent.absolute()
@@ -30,7 +30,7 @@ def test_load_nn(architecture, weights):
     device = torch.device('cuda' if cuda else 'cpu')
     # Start test
     model_dict = torch.load(weights, map_location=device)
-    model = load_nn(architecture, model_dict, device)
+    model = load_nn(architecture, model_dict, phase='infer', device=device)
     assert(issubclass(type(model), nn.Module))
     assert(isinstance(model, nn.Module))
 
@@ -54,7 +54,7 @@ def test_predict(architecture, weights, data, fformat, tolerance):
     device = torch.device('cuda' if cuda else 'cpu')
     # Start test
     model_dict = torch.load(weights, map_location=device)
-    model = load_nn(architecture, model_dict, device)
+    model = load_nn(architecture, model_dict, phase='infer', device=device)
     dataset = ProteinDataset(data, f_format=fformat)
     preds, confs, ids, indices = predict(model, dataset, device)
     # Test correct output shape
@@ -62,9 +62,9 @@ def test_predict(architecture, weights, data, fformat, tolerance):
     assert(confs.shape[0] == len(ids))
     assert(len(ids) == len(indices))
     # Test satisfying prediction accuracy
-    N = len(ids)
+    n = len(ids)
     ids = torch.tensor(list(map(int, ids)))
-    assert(sum((ids == preds.cpu()).long()) >= N - tolerance)
+    assert(sum((ids == preds.cpu()).long()) >= n - tolerance)
 
 
 @pytest.mark.parametrize("architecture", ['deepencoding'])
@@ -79,7 +79,7 @@ def test_skip_empty_sequences(architecture, weights, data, fformat):
     device = torch.device('cuda' if cuda else 'cpu')
     # Start test
     model_dict = torch.load(weights, map_location=device)
-    model = load_nn(architecture, model_dict, device)
+    model = load_nn(architecture, model_dict, phase='infer', device=device)
     dataset = ProteinDataset(data, f_format=fformat)
     with pytest.warns(UserWarning, match='no sequence id could be detected'):
         preds, confs, ids, indices = predict(model, dataset, device)
