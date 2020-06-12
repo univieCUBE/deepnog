@@ -398,9 +398,9 @@ class ProteinDataset(IterableDataset):
         try:
             return self.labels.label_num.size
         except AttributeError:
-            raise TypeError(f"object of type 'ProteinDataset' has no len(), "
-                            f"unless a label file is provided during its "
-                            f"construction.") from None
+            raise TypeError("object of type 'ProteinDataset' has no len(), "
+                            "unless a label file is provided during its "
+                            "construction.") from None
 
 
 class ShuffledProteinDataset(ProteinDataset):

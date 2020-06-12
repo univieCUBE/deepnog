@@ -73,7 +73,8 @@ def get_logger(initname: str = 'deepnog', verbose: int = 0) -> log.Logger:
         ch.setLevel(log.INFO)
     else:
         ch.setLevel(log.DEBUG)
-    logstring = '\033[1;32m[%(asctime)s]\033[1;0m \033[1m%(name)s\033[1;0m - %(levelname)s - %(message)s'
+    logstring = ('\033[1;32m[%(asctime)s]\033[1;0m \033[1m%(name)s'
+                 '\033[1;0m - %(levelname)s - %(message)s')
     formatter = log.Formatter(logstring, '%Y-%m-%d %H:%M:%S')
     ch.setFormatter(formatter)
     if logger.hasHandlers():
