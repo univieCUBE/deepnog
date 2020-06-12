@@ -10,25 +10,18 @@ Description:
 # SPDX-License-Identifier: BSD-3-Clause
 from importlib import import_module
 from typing import Union
-import warnings
 
 import torch
 
+try:
+    from .io_utils import logging
+except ImportError:
+    import logging
 
-__all__ = ['EXTENDED_IUPAC_PROTEIN_ALPHABET',
-           'set_device',
+__all__ = ['set_device',
            'count_parameters',
            'load_nn',
-           'SeqIO',
            ]
-
-# Bio.Alphabet.ExtendendIUPACProtein (deprecated in 2020)
-EXTENDED_IUPAC_PROTEIN_ALPHABET = 'ACDEFGHIKLMNPQRSTVWYBXZJUO'
-
-# Biopython warns about Alphabet, even if you don't use Alphabet...
-with warnings.catch_warnings():
-    warnings.filterwarnings("ignore", category=PendingDeprecationWarning)
-    from Bio import SeqIO
 
 
 def count_parameters(model, tunable_only: bool = True) -> int:
@@ -116,7 +109,9 @@ def load_nn(architecture: str, model_dict: dict = None, phase: str = 'eval',
     # Set trained parameters of model
     try:
         model.load_state_dict(model_dict['model_state_dict'])
+        logging.debug(f'Loaded trained network weights.')
     except KeyError as e:
+        logging.debug(f'Did not load any trained network weights.')
         if not phase.lower().startswith('train'):
             raise RuntimeError(f'No trained weights available '
                                f'during inference.') from e
@@ -124,8 +119,10 @@ def load_nn(architecture: str, model_dict: dict = None, phase: str = 'eval',
     model.to(device)
     # Inform neural network layers to be in evaluation or training mode
     if phase.lower().startswith('train'):
+        logging.debug(f'Setting model.train() mode')
         model = model.train()
     elif phase.lower().startswith('eval') or phase.lower().startswith('infer'):
+        logging.debug(f'Setting model.eval() mode')
         model = model.eval()
     else:
         raise ValueError(f'Unknown phase "{phase}". '

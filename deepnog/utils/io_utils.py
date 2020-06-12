@@ -171,6 +171,7 @@ def get_data_home(data_home: str = None) -> Path:
                                 Path.home()/'deepnog_data')
     data_home = Path(data_home).expanduser()
     data_home.mkdir(parents=True, exist_ok=True)
+    logging.debug(f'DEEPNOG_DATA = {data_home}')
     return data_home
 
 
@@ -214,8 +215,13 @@ def get_weights_path(database: str, level: str, architecture: str,
             f"{database}/{level}/{architecture}.pth")
         logging.info(f"Downloading {remote_url}")
         with urlopen(remote_url) as response, weights_file.open('wb') as f:
+            logging.info(f'Saving to {weights_file}')
             shutil.copyfileobj(response, f)
     elif not available and not download_if_missing:
         raise IOError("Data not found and `download_if_missing` is False")
 
     return weights_file
+
+
+# Always initialize here, so that ``logging`` is always available
+init_global_logger('deepnog', verbose=0)
