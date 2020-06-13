@@ -36,8 +36,6 @@ log.addLevelName(log.INFO, "\033[1;34m%s\033[1;0m" % log.getLevelName(log.INFO))
 log.addLevelName(log.WARNING, "\033[1;33m%s\033[1;0m" % log.getLevelName(log.WARNING))
 log.addLevelName(log.ERROR, "\033[1;41m%s\033[1;0m" % log.getLevelName(log.ERROR))
 
-global logging
-
 
 def init_global_logger(logger_name, verbose):
     global logging

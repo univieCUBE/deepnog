@@ -24,9 +24,7 @@ import numpy as np
 from tqdm.auto import tqdm
 
 import torch
-from torch import nn
-from torch.optim import lr_scheduler
-import torch.optim as optim
+from torch.optim import Adam, lr_scheduler
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
@@ -38,7 +36,7 @@ __all__ = ['fit',
            ]
 
 train_val_result = NamedTuple('train_val_result',
-                              [('model', nn.Module),
+                              [('model', torch.nn.Module),
                                ('training_dataset', torch.utils.data.Dataset),
                                ('validation_dataset', torch.utils.data.Dataset),
                                ('evaluation', List[dict]),
@@ -49,7 +47,7 @@ train_val_result = NamedTuple('train_val_result',
                                ])
 
 
-def _train_and_validate_model(model: nn.Module, criterion, optimizer,
+def _train_and_validate_model(model: torch.nn.Module, criterion, optimizer,
                               scheduler, data_loaders: dict, *,
                               num_epochs=2,
                               tensorboard_exp=None,
@@ -65,7 +63,7 @@ def _train_and_validate_model(model: nn.Module, criterion, optimizer,
 
     Parameters
     ----------
-    model : nn.Module
+    model : torch.nn.Module
         Deep network PyTorch module
     criterion
         PyTorch loss function, e.g., CrossEntropyLoss
@@ -307,7 +305,7 @@ def fit(architecture, training_sequences, validation_sequences, labels, *,
         shuffle: bool = False,
         learning_rate: float = 1e-2,
         learning_rate_params: dict = None,
-        optimizer_cls=optim.Adam,
+        optimizer_cls=Adam,
         device: Union[str, torch.device] = 'auto',
         tensorboard_dir: Union[None, str] = 'auto',
         log_interval: int = 100,
@@ -392,7 +390,7 @@ def fit(architecture, training_sequences, validation_sequences, labels, *,
                     device=device)
     # NOTE: CrossEntropyLoss is LogSoftmax+NLLoss, that is, no softmax layer
     # should be in the forward pass of the network.
-    criterion = nn.CrossEntropyLoss()
+    criterion = torch.nn.CrossEntropyLoss()
     optimizer = optimizer_cls(model.parameters(),
                               lr=learning_rate)
     scheduler = lr_scheduler.StepLR(optimizer, **learning_rate_params)
