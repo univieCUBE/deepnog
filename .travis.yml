@@ -47,7 +47,8 @@ before_script:
   - flake8
 
 script:
-  - pytest --cov=deepnog
+  # -x exits after first failure
+  - pytest -x --cov=deepnog
 
 after_success:
   - codecov
