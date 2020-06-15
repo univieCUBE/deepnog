@@ -144,6 +144,7 @@ def _get_parser():
     parser_infer.add_argument("-db", "--database",
                               type=str,
                               choices=['eggNOG5', ],
+                              default='eggNOG5',
                               help="Orthologous group/family database to use.")
     parser_train.add_argument("-db", "--database",
                               type=str,
@@ -152,6 +153,7 @@ def _get_parser():
     parser_infer.add_argument("-t", "--tax",
                               type=int,
                               choices=[1, 2, ],
+                              default=2,
                               help="Taxonomic level to use in specified database "
                                    "(1 = root, 2 = bacteria)")
     parser_train.add_argument("-t", "--tax",
@@ -228,40 +230,17 @@ def _start_prediction_or_training(args):
         raise ValueError(f'Batch size must be at least one. '
                          f'Got batch size = {args.batch_size} instead.')
 
-    if Path(args.out).is_file():
-        logging.warning(f'Output file {args.out} already exists.')
+    # Better safe than sorry -- don't overwrite existing files
+    if args.out is not None and Path(args.out).is_file():
+        raise FileExistsError(f'Output file {args.out} already exists.')
 
     # Set up device
-    try:
-        args.device = set_device(args.device)
-    except RuntimeError as err:
-        logging.error(f"Could not select processing device: {args.device}")
-        raise err
+    args.device = set_device(args.device)
 
-    if 'inference'.startswith(args.phase.lower()):
-        # Default inference: eggNOG5 bacteria level
-        if not args.database:
-            args.database = 'eggNOG5'
-        if not args.tax:
-            args.tax = '2'
+    if args.phase == 'infer':
         return _start_inference(args=args)
-    elif 'training'.startswith(args.phase.lower()):
-        if args.n_epochs <= 0:
-            raise ValueError(f'Number of epochs must be greater than or equal '
-                             f'one. Got n_epochs = {args.n_epochs} instead.')
-        if not args.database or not args.tax:
-            raise ValueError(f'Please provide both a database name and '
-                             f'taxonomy level the new model corresponds to.')
-        try:
-            if any(Path(args.out).iterdir()):
-                logging.warning(f'Output directory {args.out} is not empty.')
-        except FileNotFoundError:
-            logging.info(f'Creating output directory: {args.out}')
-            Path(args.out).mkdir()
+    elif args.phase == 'train':
         return _start_training(args=args)
-    else:
-        logging.error(f'Please run one of "deepnog train" or "deepnog infer" commands.')
-        return
 
 
 def _start_inference(args):
@@ -284,11 +263,8 @@ def _start_inference(args):
                                         architecture=args.architecture,
                                         )
     # Load neural network parameters
-    if weights_path is None:
-        model_dict = None
-    else:
-        logging.info(f'Loading NN-parameters from {weights_path} ...')
-        model_dict = torch.load(weights_path, map_location=args.device)
+    logging.info(f'Loading NN-parameters from {weights_path} ...')
+    model_dict = torch.load(weights_path, map_location=args.device)
 
     # Load dataset
     logging.info(f'Accessing dataset from {args.file} ...')
@@ -308,12 +284,12 @@ def _start_inference(args):
 
     # If given, set confidence threshold for prediction
     if args.confidence_threshold is not None:
-        if 0.0 <= args.confidence_threshold <= 1.0:
+        if 0.0 < args.confidence_threshold <= 1.0:
             threshold = float(args.confidence_threshold)
         else:
             raise ValueError(f'Invalid confidence threshold specified: '
                              f'{args.confidence_threshold} not in range '
-                             f'[0, 1].')
+                             f'(0, 1].')
     elif hasattr(model, 'threshold'):
         threshold = float(model.threshold)
         logging.info(f'Applying confidence threshold from model: {threshold}')
@@ -332,15 +308,11 @@ def _start_inference(args):
     df = create_df(class_labels, preds, confs, ids, indices, threshold=threshold)
 
     if args.out is not None:
-        # Construct path to save prediction
-        if os.path.isdir(args.out):
-            save_file = os.path.join(args.out, 'out.csv')
-        else:
-            save_file = args.out
-        # Write to file
+        save_file = args.out
         logging.info(f'Writing prediction to {save_file}')
     else:
         save_file = sys.stdout
+        logging.info('Writing predictions to stdout')
 
     columns = ['sequence_id', 'prediction', 'confidence']
     separator = {'csv': ',', 'tsv': '\t', 'legacy': ';'}.get(args.outformat)
@@ -358,6 +330,22 @@ def _start_training(args):
     from deepnog.learning import fit
     from deepnog.utils.io_utils import logging
 
+    if args.n_epochs <= 0:
+        raise ValueError(f'Number of epochs must be greater than or equal '
+                         f'one. Got n_epochs = {args.n_epochs} instead.')
+    out_dir = Path(args.out)
+    logging.info(f'Output directory: {out_dir} (creating, if necessary)')
+    out_dir.mkdir(parents=True, exist_ok=True)
+    # Add random letters to files to avoid name collisions
+    while True:
+        random_letters = ''.join(random.sample(string.ascii_letters, 4))
+        if not any([random_letters in str(f) for f in out_dir.iterdir()]):
+            break  # if these letters were not used previously
+    experiment_name = f'deepnog_custom_model_{args.database}_{args.tax}_{random_letters}'
+    model_file = out_dir/f'{experiment_name}_model.pt'
+    eval_file = out_dir/f'{experiment_name}_eval.csv'
+    classes_file = out_dir/f'{experiment_name}_labels.npz'
+
     results = fit(architecture=args.architecture,
                   training_sequences=args.training_sequences,
                   validation_sequences=args.validation_sequences,
@@ -371,21 +359,17 @@ def _start_training(args):
                   shuffle=args.shuffle,
                   # TODO add the rest of the parameters to the client
                   )
-    random_letters = ''.join(random.sample(string.ascii_letters, 4))
-    experiment_name = f'deepnog_custom_model_{args.database}_{args.tax}_{random_letters}'
+
     # Save model to output dir
-    model_file = Path(args.out)/f'{experiment_name}_model.pt'
     logging.info(f'Saving model to {model_file}...')
     torch.save({'classes': results.training_dataset.label_encoder.classes_,
                 'model_state_dict': results.model.state_dict()},
                model_file)
     # Save a dataframe of several training/validation statistics
-    eval_file = Path(args.out)/f'{experiment_name}_eval.csv'
     logging.info(f'Saving evaluation statistics to {eval_file}... '
                  f'Load with pandas.read_csv().')
     DataFrame(results.evaluation).to_csv(eval_file)
     # Save ground-truth and predicted classes for further performance analysis
-    classes_file = Path(args.out)/f'{experiment_name}_labels.npz'
     logging.info(f'Saving ground truth (y_true) and predicted (y_pred) '
                  f'labels (from training/validation) to {classes_file}... '
                  f'Load with numpy.load().')
