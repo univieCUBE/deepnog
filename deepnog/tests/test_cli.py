@@ -8,15 +8,26 @@ import argparse
 from copy import deepcopy
 from pathlib import Path
 import pytest
+import shutil
 import subprocess
 import tempfile
 from unittest import mock
+
+import numpy as np
+import pandas as pd
+import torch
 
 from deepnog.client import main
 from deepnog.client.client import _start_prediction_or_training  # noqa
 from deepnog import __version__
 
-test_file = Path(__file__).parent.absolute() / "data/test_deepencoding.faa"
+TEST_FILE = Path(__file__).parent.absolute() / "data/test_deepencoding.faa"
+TRAINING_FASTA = Path(__file__).parent.absolute()/"data/test_training_dummy.faa"
+TRAINING_CSV = Path(__file__).parent.absolute()/"data/test_training_dummy.faa.csv"
+Y_TRUE = np.array([[0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2,
+                    1, 1, 1, 1, 1, 1, 1, 1],
+                   [0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2,
+                    1, 1, 1, 1, 1, 1, 1, 1]])
 
 
 def test_entrypoint():
@@ -29,11 +40,11 @@ def test_entrypoint():
 
 
 @pytest.mark.parametrize('tax', [1, 2, ])
-def test_cmd_line_invocation(tax):
+def test_inference_cmd_line_invocation(tax):
     # Using out file
     outfile = f'out{tax}.csv'
     proc = subprocess.run(['deepnog', 'infer',
-                           f'{test_file}',
+                           f'{TEST_FILE}',
                            '--tax', f'{tax}',
                            '--out', f'{outfile}',
                            '--verbose', f'{0}',
@@ -47,7 +58,7 @@ def test_cmd_line_invocation(tax):
 
     # Using output to stdout
     proc = subprocess.run(['deepnog', 'infer',
-                           f'{test_file}',
+                           f'{TEST_FILE}',
                            '--tax', f'{tax}',
                            '--verbose', '3',
                            ],
@@ -67,7 +78,7 @@ def test_cmd_line_invocation(tax):
             return_value=argparse.Namespace(phase='infer',
                                             tax='2',
                                             out='out.mock.2',
-                                            file=test_file,
+                                            file=TEST_FILE,
                                             fformat='fasta',
                                             outformat='csv',
                                             database='eggNOG5',
@@ -94,8 +105,8 @@ def test_main_and_argparsing(mock_args):  # noqa
 def test_args_sanity_check():
     _, existing_file = tempfile.mkstemp()
     args = argparse.Namespace(
-        phase='infer', tax='2', out='out.mock.2', file=test_file, fformat='fasta', outformat='csv',
-        database='eggNOG5', verbose=0, device='auto', num_workers=0, confidence_threshold=None,
+        phase='infer', tax='2', out='out.mock.2', file=TEST_FILE, fformat='fasta', outformat='csv',
+        database='eggNOG5', verbose=0, device='auto', num_workers=0, confidence_threshold=0.5,
         architecture='deepencoding', weights=None, batch_size=1,
         # train only
         training_sequences=None, validation_sequences=None, labels=None, n_epochs=None,
@@ -126,3 +137,54 @@ def test_args_sanity_check():
     args_confidence.confidence_threshold = 1.000001
     with pytest.raises(ValueError):
         _start_prediction_or_training(args_confidence)
+
+
+def test_training_cmd_line_invocation():
+    outdir = tempfile.mkdtemp(prefix='deepnog_test_')
+    tax = 2
+    proc = subprocess.run(['deepnog', 'train',
+                           f'{TRAINING_FASTA}', f'{TRAINING_FASTA}', f'{TRAINING_CSV}',
+                           '--tax', f'{tax}', '--out', outdir, '--database', 'dummy_db',
+                           '--n_epochs', f'{2}', '--verbose', '0',
+                           ],
+                          capture_output=True,
+                          )
+    outdir = Path(outdir)
+    assert outdir.is_dir(), (f'Stdout of call:\n{proc.stdout}\n\n'
+                             f'Stderr of call:\n{proc.stderr}')
+    assert len(list(outdir.iterdir())) == 3, 'Training files missing'
+    for f in outdir.iterdir():
+        if str(f).endswith('csv'):
+            df = pd.read_csv(f)
+            for k in ['phase', 'epoch', 'accuracy', 'loss']:
+                assert k in df.columns, f'Column {k} missing in output csv file'
+            np.testing.assert_almost_equal(df.accuracy.iloc[-1], 1.0, decimal=3)
+            np.testing.assert_almost_equal(df.loss.iloc[-1], 0.0, decimal=3)
+            assert df.phase.iloc[-2] == 'train', 'Second last phase was not "train".'
+            assert df.phase.iloc[-1] == 'val', 'Last phase was not "val".'
+            np.testing.assert_equal(df.epoch, np.array([0, 0, 1, 1])),\
+                f'Wrong number of epochs in csv file'
+            f.unlink()
+        elif str(f).endswith('npz'):
+            c = np.load(str(f))
+            # Here we use the same data for training and validation
+            np.testing.assert_equal(c['y_train_true'], Y_TRUE)
+            np.testing.assert_equal(c['y_val_true'], Y_TRUE)
+            np.testing.assert_equal(c['y_val_pred'], Y_TRUE)
+            # Predictions during training epoch 0 may be anything
+            np.testing.assert_equal(c['y_train_pred'][1], Y_TRUE[1])
+            f.unlink()
+        elif str(f).endswith('pt') or str(f).endswith('pth'):
+            model = torch.load(str(f))
+            for k in ['classes', 'model_state_dict', ]:
+                assert k in model
+            np.testing.assert_equal(model['classes'], np.array(['28H52', '99A99', 'ZYX12']))
+            assert model['model_state_dict']['classification1.weight'].shape == (3, 1200)
+            f.unlink()
+        else:
+            assert False, f'Unexpected file in output dir: {f}'
+
+    try:
+        shutil.rmtree(outdir)
+    except OSError:
+        pass

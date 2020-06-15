@@ -284,30 +284,26 @@ class ProteinIterator:
         else:
             _consume(self.iterator, n=self.step)
             self.pos += self.step + 1
-        try:
+
+        next_seq = next(self.iterator)
+        # If sequence has no identifier, skip it.
+        # Also skip sequences that should have labels, but don't.
+        sequence_id: str = f'{next_seq.id}'
+        label = self.label_from_id.get(sequence_id)
+        while sequence_id == '' or (self.has_labels and label is None):
+            self.n_skipped += 1
+            _consume(self.iterator, n=self.step)
+            self.pos += self.step + 1
             next_seq = next(self.iterator)
-            # If sequence has no identifier, skip it.
-            # Also skip sequences that should have labels, but don't.
             sequence_id: str = f'{next_seq.id}'
             label = self.label_from_id.get(sequence_id)
-            while sequence_id == '' or (self.has_labels and label is None):
-                self.n_skipped += 1
-                _consume(self.iterator, n=self.step)
-                self.pos += self.step + 1
-                next_seq = next(self.iterator)
-                sequence_id: str = f'{next_seq.id}'
-                label = self.label_from_id.get(sequence_id)
-            # Generate sequence object from SeqRecord
-            encoded = [self.vocab.get(c, 0) for c in next_seq.seq]
-            sequence = sequence_tuple(index=self.pos,
-                                      id=sequence_id,
-                                      string=str(next_seq.seq),
-                                      encoded=encoded,
-                                      label=label)
-        except StopIteration:
-            # Close the file handle
-            self.iterator.close()
-            raise StopIteration
+        # Generate sequence object from SeqRecord
+        encoded = [self.vocab.get(c, 0) for c in next_seq.seq]
+        sequence = sequence_tuple(index=self.pos,
+                                  id=sequence_id,
+                                  string=str(next_seq.seq),
+                                  encoded=encoded,
+                                  label=label)
 
         return sequence
 

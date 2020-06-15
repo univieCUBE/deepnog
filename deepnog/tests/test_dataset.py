@@ -12,6 +12,14 @@ from deepnog.data import dataset as ds
 
 test_file = Path(__file__).parent.absolute() / "data/GCF_000007025.1.faa"
 test_file_gzip = Path(__file__).parent.absolute()/"data/GCF_000007025.1.faa.gz"
+TRAINING_FASTA = Path(__file__).parent.absolute()/"data/test_training_dummy.faa"
+TRAINING_LABELS = Path(__file__).parent.absolute()/"data/test_training_dummy.faa.csv"
+EXPECTED_IDS_WITH_LABEL = [f'test_all_A{x}' for x in range(11)] \
+                          + [f'test_all_C{x}' for x in range(11)] \
+                          + [f'M{x:02d}' for x in range(1, 9)]
+EXPECTED_IDS = [f'test_all_A{x}' for x in range(12)] \
+               + [f'test_all_C{x}' for x in range(12)] \
+               + [f'M{x:02d}' for x in range(1, 11)]
 
 
 @pytest.mark.parametrize("f", [test_file, test_file_gzip, ])
@@ -78,3 +86,31 @@ def test_correct_encoding():
     test_encoded = [vocab[c] for c in test_string]
     for i, batch in enumerate(test_encoded):
         assert((i+1) == batch)
+
+
+@pytest.mark.parametrize('batch_size', [1, 2, 10])
+@pytest.mark.parametrize('num_workers', [0, 2])
+@pytest.mark.parametrize('buffer_size', [2, 10, 30])
+@pytest.mark.parametrize('labels', [None, TRAINING_LABELS])
+def test_shuffled_dataset(batch_size, num_workers, buffer_size, labels):
+    dataset = ds.ShuffledProteinDataset(TRAINING_FASTA,
+                                        labels_file=labels,
+                                        buffer_size=buffer_size)
+    observed_ids = list()
+    for i, batch in enumerate(DataLoader(dataset,
+                                         batch_size=batch_size,
+                                         num_workers=num_workers,
+                                         collate_fn=ds.collate_sequences)):
+        for id_ in batch.ids:
+            observed_ids.append(id_)
+
+    observed_ids_set = set(observed_ids)
+    assert len(observed_ids) == len(observed_ids_set), 'Sequences lost or duplicated during shuffle'
+
+    if dataset.labels is not None:
+        expected = EXPECTED_IDS_WITH_LABEL
+    else:
+        expected = EXPECTED_IDS
+    intersection = observed_ids_set.intersection(set(expected))
+    assert len(intersection) == len(expected), \
+        'Observed protein IDs do not match the expected ID list'
