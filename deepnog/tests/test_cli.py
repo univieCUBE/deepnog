@@ -163,7 +163,7 @@ def test_training_cmd_line_invocation():
             assert df.phase.iloc[-2] == 'train', 'Second last phase was not "train".'
             assert df.phase.iloc[-1] == 'val', 'Last phase was not "val".'
             np.testing.assert_equal(df.epoch, np.array([0, 0, 1, 1])),\
-                f'Wrong number of epochs in csv file'
+                'Wrong number of epochs in csv file'
             f.unlink()
         elif str(f).endswith('npz'):
             c = np.load(str(f))
