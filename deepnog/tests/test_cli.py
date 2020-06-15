@@ -6,6 +6,7 @@ Description:
 """
 import argparse
 from copy import deepcopy
+import os
 from pathlib import Path
 import pytest
 import shutil
@@ -70,7 +71,8 @@ def test_inference_cmd_line_invocation(tax):
     for log_str in [b'INFO', b'DEBUG']:
         assert log_str in proc.stderr, 'missing log messages in stderr'
     # Check the prediction in stdout (omitting volatile confidence values)
-    correct_out = b'sequence_id,prediction,confidence\n0,COG0443'
+    linesep = os.linesep.encode()
+    correct_out = b'sequence_id,prediction,confidence' + linesep + b'0,COG0443'
     assert correct_out in proc.stdout, f'Incorrect prediction output in stderr: {proc.stderr}'
 
 
