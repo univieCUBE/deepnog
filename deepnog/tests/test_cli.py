@@ -98,8 +98,8 @@ def test_args_sanity_check():
         database='eggNOG5', verbose=0, device='auto', num_workers=0, confidence_threshold=None,
         architecture='deepencoding', weights=None, batch_size=1,
         # train only
-        training_sequences=None, validation_sequences=None, labels=None, n_epochs=None, shuffle=None,
-        learning_rate=None,
+        training_sequences=None, validation_sequences=None, labels=None, n_epochs=None,
+        shuffle=None, learning_rate=None,
     )
     args_bs = deepcopy(args)
     args_bs.batch_size = 0
