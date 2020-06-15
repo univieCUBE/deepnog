@@ -6,6 +6,7 @@ Description:
 """
 import argparse
 from copy import deepcopy
+from io import BytesIO
 from pathlib import Path
 import pytest
 import shutil
@@ -75,13 +76,13 @@ def test_inference_cmd_line_invocation(tax):
         assert log_str in proc.stderr, 'missing log messages in stderr'
     # Check the prediction in stdout (omitting volatile confidence values)
     # Iterating over the lines in order to avoid issues with OS-specific linesep
-    for i, line in enumerate(proc.stdout.decode().splitlines()):
+    for i, line in enumerate(BytesIO(proc.stdout)):
         if i == 0:
-            correct_out = 'sequence_id,prediction,confidence'
+            correct_out = b'sequence_id,prediction,confidence'
         elif i == 1:
-            correct_out = '0,COG0443'
+            correct_out = b'0,COG0443'
         elif i == 2:
-            correct_out = '1,COG1253'
+            correct_out = b'1,COG1253'
         else:
             raise AssertionError(f'Incorrect number of output lines with '
                                  f'i = {i}, and line = {line}.')
@@ -171,10 +172,12 @@ def test_training_cmd_line_invocation():
                           capture_output=True,
                           )
     outdir = Path(outdir)
-    assert outdir.is_dir(), (f'Stdout of call:\n{proc.stdout}\n\n'
-                             f'Stderr of call:\n{proc.stderr}')
+    stdout_and_stderr = (f'Stdout of call:\n{proc.stdout}\n\n'
+                         f'Stderr of call:\n{proc.stderr}')
+    assert outdir.is_dir(), stdout_and_stderr
     out_files = list(outdir.iterdir())
-    assert len(out_files) == 3, f'Training files missing. Dir contains: {out_files}'
+    assert len(out_files) == 3, f'Training files missing. Dir contains: {out_files};' \
+                                f'stdout/stderr:\n\n{stdout_and_stderr}'
     for f in outdir.iterdir():
         if str(f).endswith('csv'):
             df = pd.read_csv(f)
