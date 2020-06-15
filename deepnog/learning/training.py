@@ -187,11 +187,11 @@ def _train_and_validate_model(model: torch.nn.Module, criterion, optimizer,
                     outputs = model(inputs)
                     _, preds = torch.max(outputs, 1)
                     if l2_coeff is not None:
-                        loss_ce = criterion(outputs, labels)
+                        loss_ce = criterion(outputs, labels.long())
                         loss_reg = model.classification1.weight.pow(2).sum()
                         loss = loss_ce + l2_coeff * loss_reg
                     else:
-                        loss = criterion(outputs, labels)
+                        loss = criterion(outputs, labels.long())
                     # backward + optimize only if in training phase
                     if phase == 'train':
                         loss.backward()
