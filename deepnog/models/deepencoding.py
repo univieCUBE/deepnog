@@ -123,7 +123,7 @@ class deepencoding(nn.Module):
             self.pool1 = nn.AdaptiveMaxPool1d(output_size=1)
         else:
             raise ValueError(f'Unknown pooling_layer_type: '
-                             + f'{pooling_layer_type}')
+                             f'{pooling_layer_type}')
 
         # Regularization with dropout
         self.dropout1 = nn.Dropout(p=dropout)

@@ -24,10 +24,7 @@ import numpy as np
 from tqdm.auto import tqdm
 
 import torch
-from torch import nn
-from torch.utils.data.dataloader import default_collate
-from torch.optim import lr_scheduler
-import torch.optim as optim
+from torch.optim import Adam, lr_scheduler
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
@@ -39,7 +36,7 @@ __all__ = ['fit',
            ]
 
 train_val_result = NamedTuple('train_val_result',
-                              [('model', nn.Module),
+                              [('model', torch.nn.Module),
                                ('training_dataset', torch.utils.data.Dataset),
                                ('validation_dataset', torch.utils.data.Dataset),
                                ('evaluation', List[dict]),
@@ -50,7 +47,7 @@ train_val_result = NamedTuple('train_val_result',
                                ])
 
 
-def _train_and_validate_model(model: nn.Module, criterion, optimizer,
+def _train_and_validate_model(model: torch.nn.Module, criterion, optimizer,
                               scheduler, data_loaders: dict, *,
                               num_epochs=2,
                               tensorboard_exp=None,
@@ -66,7 +63,7 @@ def _train_and_validate_model(model: nn.Module, criterion, optimizer,
 
     Parameters
     ----------
-    model : nn.Module
+    model : torch.nn.Module
         Deep network PyTorch module
     criterion
         PyTorch loss function, e.g., CrossEntropyLoss
@@ -115,7 +112,7 @@ def _train_and_validate_model(model: nn.Module, criterion, optimizer,
         logging.info(f'Tensorboard directory: {tensorboard_writer.log_dir}.')
     else:
         tensorboard_writer = None
-        logging.info(f'Tensorboard disabled.')
+        logging.info('Tensorboard disabled.')
 
     since = time.time()
 
@@ -126,7 +123,8 @@ def _train_and_validate_model(model: nn.Module, criterion, optimizer,
     evaluation: list = []
     batch_sizes: Dict[str, int] = {phase: loader.batch_size
                                    for phase, loader in data_loaders.items()}
-    y_true: Dict[str, np.ndarray] = {phase: -np.ones((num_epochs, len(loader.dataset)), dtype=np.int32)
+    y_true: Dict[str, np.ndarray] = {phase: -np.ones((num_epochs, len(loader.dataset)),
+                                                     dtype=np.int32)
                                      for phase, loader in data_loaders.items()}
     y_pred: Dict[str, np.ndarray] = {phase: -np.ones_like(y_true[phase])
                                      for phase, loader in data_loaders.items()}
@@ -142,14 +140,14 @@ def _train_and_validate_model(model: nn.Module, criterion, optimizer,
             dataset = data_loader.dataset
             batch_size = batch_sizes[phase]
             if phase == 'train':
-                logging.debug(f'Setting model.train() mode')
+                logging.debug('Setting model.train() mode')
                 model.train()  # Set model to training mode
                 if validation_only:
                     continue  # skip training
                 else:
                     logging.info(f'Scheduler: learning rate = {scheduler.get_last_lr()}')
             else:
-                logging.debug(f'Setting model.eval() mode')
+                logging.debug('Setting model.eval() mode')
                 model.eval()
 
             running_loss: torch.float32 = 0.
@@ -168,7 +166,7 @@ def _train_and_validate_model(model: nn.Module, criterion, optimizer,
                                                   total=tqdm_total,
                                                   disable=tqdm_disable,
                                                   desc=f'deepnog {phase}',
-                                                  unit=f' minibatches'
+                                                  unit=' minibatches'
                                                   )):
                 sequence = batch.sequences
                 labels = batch.labels
@@ -248,11 +246,11 @@ def _train_and_validate_model(model: nn.Module, criterion, optimizer,
             logging.info(f'{phase} --- loss: {epoch_loss:.4f}  --- acc: {epoch_acc:.4f}\n')
 
             if phase == 'train' and scheduler is not None:
-                logging.debug(f'Learning rate scheduler.step()')
+                logging.debug('Learning rate scheduler.step()')
                 scheduler.step()
 
             # empty cache if possible
-            logging.debug(f'Emptying CUDA cache')
+            logging.debug('Emptying CUDA cache')
             torch.cuda.empty_cache()
 
             # deep copy the model
@@ -307,7 +305,7 @@ def fit(architecture, training_sequences, validation_sequences, labels, *,
         shuffle: bool = False,
         learning_rate: float = 1e-2,
         learning_rate_params: dict = None,
-        optimizer_cls=optim.Adam,
+        optimizer_cls=Adam,
         device: Union[str, torch.device] = 'auto',
         tensorboard_dir: Union[None, str] = 'auto',
         log_interval: int = 100,
@@ -353,7 +351,7 @@ def fit(architecture, training_sequences, validation_sequences, labels, *,
     else:
         dataset['train'] = ProteinDataset(file=validation_sequences,
                                           labels_file=labels)
-        logging.info(f'Using iterable dataset without shuffling.')
+        logging.info('Using iterable dataset without shuffling.')
     dataset['val'] = ProteinDataset(file=validation_sequences,
                                     labels_file=labels)
     data_loader = {phase: DataLoader(d, **data_loader_params)
@@ -382,9 +380,9 @@ def fit(architecture, training_sequences, validation_sequences, labels, *,
         try:
             experiment = Path(tensorboard_dir)
         except TypeError:
-            warnings.warn(f'Invalid value for "tensorboard" argument. '
-                          f'Must be one of: None, "auto", or a valid path. '
-                          f'Continuing without tensorboard report.')
+            warnings.warn('Invalid value for "tensorboard" argument. '
+                          'Must be one of: None, "auto", or a valid path. '
+                          'Continuing without tensorboard report.')
             experiment = None
 
     # Load model, and send to selected device. Set up training.
@@ -392,7 +390,7 @@ def fit(architecture, training_sequences, validation_sequences, labels, *,
                     device=device)
     # NOTE: CrossEntropyLoss is LogSoftmax+NLLoss, that is, no softmax layer
     # should be in the forward pass of the network.
-    criterion = nn.CrossEntropyLoss()
+    criterion = torch.nn.CrossEntropyLoss()
     optimizer = optimizer_cls(model.parameters(),
                               lr=learning_rate)
     scheduler = lr_scheduler.StepLR(optimizer, **learning_rate_params)

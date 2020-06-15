@@ -90,7 +90,7 @@ def predict(model, dataset, device='cpu', batch_size=16, num_workers=4,
             ids.extend(batch.ids)
             indices.extend(batch.indices)
 
-    logging.info(f'Inference complete.')
+    logging.info('Inference complete.')
     # Collect skipped-sequences messages from workers in the case of
     # multi-process data-loading
     n_skipped = dataset.n_skipped
@@ -99,9 +99,9 @@ def predict(model, dataset, device='cpu', batch_size=16, num_workers=4,
         warnings.warn(f'Skipped {n_skipped} sequences as no sequence id '
                       f'could be detected.')
     if len(pred_l) == 0:
-        logging.error(f'Skipped all sequences. No output will be provided. '
-                      f'Sequences might have had no sequence IDs in the '
-                      f'input file.')
+        logging.error('Skipped all sequences. No output will be provided. '
+                      'Sequences might have had no sequence IDs in the '
+                      'input file.')
         return None, None, None, None
     else:
         # Merge individual output tensors

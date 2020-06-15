@@ -109,20 +109,20 @@ def load_nn(architecture: str, model_dict: dict = None, phase: str = 'eval',
     # Set trained parameters of model
     try:
         model.load_state_dict(model_dict['model_state_dict'])
-        logging.debug(f'Loaded trained network weights.')
+        logging.debug('Loaded trained network weights.')
     except KeyError as e:
-        logging.debug(f'Did not load any trained network weights.')
+        logging.debug('Did not load any trained network weights.')
         if not phase.lower().startswith('train'):
-            raise RuntimeError(f'No trained weights available '
-                               f'during inference.') from e
+            raise RuntimeError('No trained weights available '
+                               'during inference.') from e
     # Move to GPU, if selected
     model.to(device)
     # Inform neural network layers to be in evaluation or training mode
     if phase.lower().startswith('train'):
-        logging.debug(f'Setting model.train() mode')
+        logging.debug('Setting model.train() mode')
         model = model.train()
     elif phase.lower().startswith('eval') or phase.lower().startswith('infer'):
-        logging.debug(f'Setting model.eval() mode')
+        logging.debug('Setting model.eval() mode')
         model = model.eval()
     else:
         raise ValueError(f'Unknown phase "{phase}". '

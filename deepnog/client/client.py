@@ -33,7 +33,6 @@ Description:
 # SPDX-License-Identifier: BSD-3-Clause
 
 import argparse
-import os.path
 from pathlib import Path
 import sys
 
@@ -174,9 +173,10 @@ def _get_parser():
                               metavar='FLOAT',
                               type=float,
                               default=None,
-                              help="The confidence value below which predictions are masked by deepnog. "
-                                   "By default, apply the confidence threshold saved in the model if one "
-                                   "exists, and else do not apply a confidence threshold.")
+                              help="The confidence value below which predictions are "
+                                   "masked by deepnog. By default, apply the confidence "
+                                   "threshold saved in the model if one exists, "
+                                   "and else do not apply a confidence threshold.")
 
     # Arguments for TRAINING only
     parser_train.add_argument("training_sequences",
@@ -211,8 +211,8 @@ def _get_parser():
                               metavar='LEARNING_RATE',
                               type=float,
                               default=1e-2,
-                              help=f'Initial learning rate, subject to adaptations by '
-                                   f'chosen optimizer and scheduler.')
+                              help='Initial learning rate, subject to adaptations by '
+                                   'chosen optimizer and scheduler.')
     return parser
 
 
@@ -223,7 +223,7 @@ def _start_prediction_or_training(args):
     init_global_logger('deepnog', verbose=args.verbose)
     from deepnog.utils.io_utils import logging
 
-    logging.info(f'Starting deepnog')
+    logging.info('Starting deepnog')
 
     # Sanity check command line arguments
     if args.batch_size <= 0:
@@ -317,7 +317,7 @@ def _start_inference(args):
     columns = ['sequence_id', 'prediction', 'confidence']
     separator = {'csv': ',', 'tsv': '\t', 'legacy': ';'}.get(args.outformat)
     df.to_csv(save_file, sep=separator, index=False, columns=columns)
-    logging.info(f'All done.')
+    logging.info('All done.')
     return
 
 
@@ -379,7 +379,7 @@ def _start_training(args):
              y_val_true=results.y_val_true,
              y_val_pred=results.y_val_pred)
 
-    logging.info(f'All done.')
+    logging.info('All done.')
     return
 
 
