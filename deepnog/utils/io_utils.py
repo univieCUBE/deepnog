@@ -12,6 +12,7 @@ import logging as log
 from os import environ
 from pathlib import Path
 import shutil
+import sys
 from typing import List
 from urllib.request import urlopen
 from urllib.parse import urljoin
@@ -64,7 +65,7 @@ def get_logger(initname: str = 'deepnog', verbose: int = 0) -> log.Logger:
         logger.setLevel(log.INFO if verbose else log.WARNING)
     else:
         logger.setLevel(verbose)
-    ch = log.StreamHandler()
+    ch = log.StreamHandler(stream=sys.stderr)
     if verbose <= 0:
         ch.setLevel(log.ERROR)
     elif verbose == 1:
