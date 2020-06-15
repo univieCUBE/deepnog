@@ -43,7 +43,7 @@ def test_entrypoint():
 @pytest.mark.parametrize('tax', [1, 2, ])
 def test_inference_cmd_line_invocation(tax):
     # Using out file
-    outfile = f'out{tax}.csv'
+    _, outfile = tempfile.mkstemp(prefix='deepnog_test_')
     proc = subprocess.run(['deepnog', 'infer',
                            f'{TEST_FILE_SHORT}',
                            '--tax', f'{tax}',
@@ -55,7 +55,10 @@ def test_inference_cmd_line_invocation(tax):
     outfile = Path(outfile)
     assert outfile.is_file(), (f'Stdout of call:\n{proc.stdout}\n\n'
                                f'Stderr of call:\n{proc.stderr}')
-    outfile.unlink()
+    try:
+        outfile.unlink()
+    except PermissionError:
+        pass
 
     # Using output to stdout
     proc = subprocess.run(['deepnog', 'infer',
@@ -111,7 +114,10 @@ def test_inference_cmd_line_invocation(tax):
                                             ))
 def test_main_and_argparsing(mock_args):  # noqa
     main()
-    Path('out.mock.2').unlink()
+    try:
+        Path('out.mock.2').unlink()
+    except PermissionError:
+        pass
 
 
 def test_args_sanity_check():
@@ -141,7 +147,10 @@ def test_args_sanity_check():
     args_train.n_epochs = 0
     with pytest.raises(ValueError):
         _start_prediction_or_training(args_train)
-    Path(existing_file).unlink()
+    try:
+        Path(existing_file).unlink()
+    except PermissionError:
+        pass
     args_confidence = deepcopy(args)
     args_confidence.confidence_threshold = 0
     with pytest.raises(ValueError):
@@ -157,14 +166,15 @@ def test_training_cmd_line_invocation():
     proc = subprocess.run(['deepnog', 'train',
                            f'{TRAINING_FASTA}', f'{TRAINING_FASTA}', f'{TRAINING_CSV}',
                            '--tax', f'{tax}', '--out', outdir, '--database', 'dummy_db',
-                           '--n_epochs', f'{2}', '--verbose', '0',
+                           '--n_epochs', '2', '--verbose', '0',
                            ],
                           capture_output=True,
                           )
     outdir = Path(outdir)
     assert outdir.is_dir(), (f'Stdout of call:\n{proc.stdout}\n\n'
                              f'Stderr of call:\n{proc.stderr}')
-    assert len(list(outdir.iterdir())) == 3, 'Training files missing'
+    out_files = list(outdir.iterdir())
+    assert len(out_files) == 3, f'Training files missing. Dir contains: {out_files}'
     for f in outdir.iterdir():
         if str(f).endswith('csv'):
             df = pd.read_csv(f)
@@ -176,7 +186,10 @@ def test_training_cmd_line_invocation():
             assert df.phase.iloc[-1] == 'val', 'Last phase was not "val".'
             np.testing.assert_equal(df.epoch, np.array([0, 0, 1, 1])),\
                 'Wrong number of epochs in csv file'
-            f.unlink()
+            try:
+                f.unlink()
+            except PermissionError:
+                pass
         elif str(f).endswith('npz'):
             c = np.load(str(f))
             # Here we use the same data for training and validation
@@ -185,18 +198,24 @@ def test_training_cmd_line_invocation():
             np.testing.assert_equal(c['y_val_pred'], Y_TRUE)
             # Predictions during training epoch 0 may be anything
             np.testing.assert_equal(c['y_train_pred'][1], Y_TRUE[1])
-            f.unlink()
+            try:
+                f.unlink()
+            except PermissionError:
+                pass
         elif str(f).endswith('pt') or str(f).endswith('pth'):
             model = torch.load(str(f))
             for k in ['classes', 'model_state_dict', ]:
                 assert k in model
             np.testing.assert_equal(model['classes'], np.array(['28H52', '99A99', 'ZYX12']))
             assert model['model_state_dict']['classification1.weight'].shape == (3, 1200)
-            f.unlink()
+            try:
+                f.unlink()
+            except PermissionError:
+                pass
         else:
             assert False, f'Unexpected file in output dir: {f}'
 
     try:
         shutil.rmtree(outdir)
-    except OSError:
+    except (OSError, PermissionError):
         pass
