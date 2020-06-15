@@ -6,7 +6,6 @@ Description:
 """
 import argparse
 from copy import deepcopy
-import os
 from pathlib import Path
 import pytest
 import shutil
@@ -23,6 +22,7 @@ from deepnog.client.client import _start_prediction_or_training  # noqa
 from deepnog import __version__
 
 TEST_FILE = Path(__file__).parent.absolute() / "data/test_deepencoding.faa"
+TEST_FILE_SHORT = Path(__file__).parent.absolute() / "data/test_inference_short.faa"
 TRAINING_FASTA = Path(__file__).parent.absolute()/"data/test_training_dummy.faa"
 TRAINING_CSV = Path(__file__).parent.absolute()/"data/test_training_dummy.faa.csv"
 Y_TRUE = np.array([[0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2,
@@ -45,7 +45,7 @@ def test_inference_cmd_line_invocation(tax):
     # Using out file
     outfile = f'out{tax}.csv'
     proc = subprocess.run(['deepnog', 'infer',
-                           f'{TEST_FILE}',
+                           f'{TEST_FILE_SHORT}',
                            '--tax', f'{tax}',
                            '--out', f'{outfile}',
                            '--verbose', f'{0}',
@@ -59,7 +59,7 @@ def test_inference_cmd_line_invocation(tax):
 
     # Using output to stdout
     proc = subprocess.run(['deepnog', 'infer',
-                           f'{TEST_FILE}',
+                           f'{TEST_FILE_SHORT}',
                            '--tax', f'{tax}',
                            '--verbose', '3',
                            ],
@@ -71,16 +71,26 @@ def test_inference_cmd_line_invocation(tax):
     for log_str in [b'INFO', b'DEBUG']:
         assert log_str in proc.stderr, 'missing log messages in stderr'
     # Check the prediction in stdout (omitting volatile confidence values)
-    linesep = os.linesep.encode()
-    correct_out = b'sequence_id,prediction,confidence' + linesep + b'0,COG0443'
-    assert correct_out in proc.stdout, f'Incorrect prediction output in stderr: {proc.stderr}'
+    # Iterating over the lines in order to avoid issues with OS-specific linesep
+    for i, line in enumerate(proc.stdout.decode().splitlines()):
+        if i == 0:
+            correct_out = 'sequence_id,prediction,confidence'
+        elif i == 1:
+            correct_out = '0,COG0443'
+        elif i == 2:
+            correct_out = '1,COG1253'
+        else:
+            raise AssertionError(f'Incorrect number of output lines with '
+                                 f'i = {i}, and line = {line}.')
+        assert correct_out in line, \
+            f'Incorrect prediction output: expected {correct_out}, got line: {line}'
 
 
 @mock.patch('argparse.ArgumentParser.parse_args',
             return_value=argparse.Namespace(phase='infer',
                                             tax='2',
                                             out='out.mock.2',
-                                            file=TEST_FILE,
+                                            file=TEST_FILE_SHORT,
                                             fformat='fasta',
                                             outformat='csv',
                                             database='eggNOG5',
