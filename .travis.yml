@@ -40,10 +40,10 @@ before_install:
   - bash build_tools/install-requirements.sh
 
 install:
-  - python setup.py build
-  - python setup.py install
+  - pip install -e .
 
 before_script:
+  - which deepnog
   - flake8
 
 script:
