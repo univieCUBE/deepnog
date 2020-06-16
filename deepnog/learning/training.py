@@ -29,8 +29,7 @@ from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
 from ..data import ProteinDataset, collate_sequences, ShuffledProteinDataset
-from ..utils import set_device, load_nn, count_parameters
-from ..utils.io_utils import logging
+from ..utils import count_parameters, get_logger, load_nn, set_device
 
 __all__ = ['fit',
            ]
@@ -105,14 +104,16 @@ def _train_and_validate_model(model: torch.nn.Module, criterion, optimizer,
          * the ground truth labels (y_true)
          * the predicted labels (y_pred).
     """
+    logger = get_logger(__name__, verbose=verbose)
+
     # Set up tensorboard
     if tensorboard_exp is not None:
         tensorboard_exp = Path(tensorboard_exp)
         tensorboard_writer = SummaryWriter(str(tensorboard_exp))
-        logging.info(f'Tensorboard directory: {tensorboard_writer.log_dir}.')
+        logger.info(f'Tensorboard directory: {tensorboard_writer.log_dir}.')
     else:
         tensorboard_writer = None
-        logging.info('Tensorboard disabled.')
+        logger.info('Tensorboard disabled.')
 
     since = time.time()
 
@@ -131,8 +132,8 @@ def _train_and_validate_model(model: torch.nn.Module, criterion, optimizer,
     tqdm_disable: bool = True if verbose < 3 else False
 
     for epoch in range(num_epochs):
-        logging.info(f'Epoch {epoch}/{num_epochs - 1}')
-        logging.info('-' * 10)
+        logger.info(f'Epoch {epoch}/{num_epochs - 1}')
+        logger.info('-' * 10)
 
         # Each epoch has a training and validation phase
         for phase in ['train', 'val']:
@@ -140,14 +141,14 @@ def _train_and_validate_model(model: torch.nn.Module, criterion, optimizer,
             dataset = data_loader.dataset
             batch_size = batch_sizes[phase]
             if phase == 'train':
-                logging.debug('Setting model.train() mode')
+                logger.debug('Setting model.train() mode')
                 model.train()  # Set model to training mode
                 if validation_only:
                     continue  # skip training
                 else:
-                    logging.info(f'Scheduler: learning rate = {scheduler.get_last_lr()}')
+                    logger.info(f'Scheduler: learning rate = {scheduler.get_last_lr()}')
             else:
-                logging.debug('Setting model.eval() mode')
+                logger.debug('Setting model.eval() mode')
                 model.eval()
 
             running_loss: torch.float32 = 0.
@@ -227,8 +228,8 @@ def _train_and_validate_model(model: torch.nn.Module, criterion, optimizer,
                 running_corrects += batch_corrects
 
                 if stop_after and n_processed_sequences >= stop_after:
-                    logging.info(f'Stopping after {n_processed_sequences} as '
-                                 f'requested (stop_after = {stop_after}).')
+                    logger.info(f'Stopping after {n_processed_sequences} as '
+                                f'requested (stop_after = {stop_after}).')
                     break
 
             # Finishing train or val phase
@@ -239,25 +240,25 @@ def _train_and_validate_model(model: torch.nn.Module, criterion, optimizer,
                                'accuracy': float(epoch_acc),
                                'loss': epoch_loss})
             if n_processed_sequences < len(data_loader):
-                logging.warning(f'Not all sequences were processed in epoch {epoch}: '
-                                f'n_processed = {n_processed_sequences} < '
-                                f'n_total = {len(data_loader)}.')
+                logger.warning(f'Not all sequences were processed in epoch {epoch}: '
+                               f'n_processed = {n_processed_sequences} < '
+                               f'n_total = {len(data_loader)}.')
 
-            logging.info(f'{phase} --- loss: {epoch_loss:.4f}  --- acc: {epoch_acc:.4f}\n')
+            logger.info(f'{phase} --- loss: {epoch_loss:.4f}  --- acc: {epoch_acc:.4f}\n')
 
             if phase == 'train' and scheduler is not None:
-                logging.debug('Learning rate scheduler.step()')
+                logger.debug('Learning rate scheduler.step()')
                 scheduler.step()
 
             # empty cache if possible
-            logging.debug('Emptying CUDA cache')
+            logger.debug('Emptying CUDA cache')
             torch.cuda.empty_cache()
 
             # deep copy the model
             if phase == 'val' and epoch_acc > best_acc:
-                logging.debug(f'Validation performance improved in current '
-                              f'epoch with accuracy {epoch_acc:.3f} > '
-                              f'{best_acc:.3f} (previous best).')
+                logger.debug(f'Validation performance improved in current '
+                             f'epoch with accuracy {epoch_acc:.3f} > '
+                             f'{best_acc:.3f} (previous best).')
                 best_acc = epoch_acc
                 best_model_wts = copy.deepcopy(model.state_dict())
                 best_epoch = epoch
@@ -265,7 +266,7 @@ def _train_and_validate_model(model: torch.nn.Module, criterion, optimizer,
         # temporarily save network
         if save_each_epoch:
             save_file = tensorboard_exp/f'_epoch{epoch:02d}.pt'
-            logging.debug(f'Saving current epoch {epoch} model to {save_file}')
+            logger.debug(f'Saving current epoch {epoch} model to {save_file}')
             torch.save({'classes': dataset.label_encoder.classes_,
                         'model_state_dict': model.state_dict(),
                         'optimizer_state_dict': optimizer.state_dict(),
@@ -276,15 +277,15 @@ def _train_and_validate_model(model: torch.nn.Module, criterion, optimizer,
         # early stopping (regularization)
         if early_stopping and epoch - early_stopping >= best_epoch:
             if epoch_acc < best_acc:
-                logging.info(f'Early stopping due to decreasing scores for '
-                             f'{early_stopping} epochs after best epoch.')
+                logger.info(f'Early stopping due to decreasing scores for '
+                            f'{early_stopping} epochs after best epoch.')
                 break
 
     time_elapsed = time.time() - since
     minutes = time_elapsed // 60
     seconds = time_elapsed % 60
-    logging.info(f'Training complete in {minutes:.0f}m {seconds:.0f}s')
-    logging.info(f'Best val acc: {best_acc:4f} in epoch {best_epoch}')
+    logger.info(f'Training complete in {minutes:.0f}m {seconds:.0f}s')
+    logger.info(f'Best val acc: {best_acc:4f} in epoch {best_epoch}')
 
     # load best model weights
     model.load_state_dict(best_model_wts)
@@ -309,16 +310,23 @@ def fit(architecture, training_sequences, validation_sequences, labels, *,
         device: Union[str, torch.device] = 'auto',
         tensorboard_dir: Union[None, str] = 'auto',
         log_interval: int = 100,
-        random_state_numpy: int = 0,
-        random_state_torch: int = 1,
+        random_seed: int = None,
         save_each_epoch: bool = True,
         verbose: int = 2,
         ):
+    logger = get_logger(__name__, verbose=verbose)
+
     device = set_device(device)
-    logging.info(f'Training device: {device}')
-    np.random.seed(random_state_numpy)
-    torch.manual_seed(random_state_torch)
-    torch.cuda.manual_seed(random_state_torch)
+    logger.info(f'Training device: {device}')
+    if random_seed is None:
+        logger.info('Non-deterministic training mode (no random seed given).')
+    else:
+        logger.info(f'Deterministic training with seed = {random_seed}')
+        # See https://pytorch.org/docs/stable/notes/randomness.html
+        np.random.seed(random_seed)
+        torch.manual_seed(random_seed)
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
 
     # PyTorch DataLoader default arguments
     default_data_loader_params = {'batch_size': 32,
@@ -331,13 +339,13 @@ def fit(architecture, training_sequences, validation_sequences, labels, *,
     if data_loader_params is not None:
         default_data_loader_params.update(data_loader_params)
     data_loader_params = default_data_loader_params
-    logging.debug(f'Data loader parameters: {data_loader_params}')
+    logger.debug(f'Data loader parameters: {data_loader_params}')
     if learning_rate_params is None:
         learning_rate_params = {'step_size': 1,
                                 'gamma': 0.75,
                                 'last_epoch': -1,
                                 }
-    logging.debug(f'Scheduler parameters: {learning_rate_params}')
+    logger.debug(f'Scheduler parameters: {learning_rate_params}')
 
     # Set up training and validation data set with sequences and labels
     dataset: dict = {}
@@ -346,12 +354,12 @@ def fit(architecture, training_sequences, validation_sequences, labels, *,
         dataset['train'] = ShuffledProteinDataset(file=training_sequences,
                                                   labels_file=labels,
                                                   buffer_size=buffer_size)
-        logging.info(f'Using iterable dataset with shuffle buffer, '
-                     f'and buffer size = {buffer_size}.')
+        logger.info(f'Using iterable dataset with shuffle buffer, '
+                    f'and buffer size = {buffer_size}.')
     else:
         dataset['train'] = ProteinDataset(file=validation_sequences,
                                           labels_file=labels)
-        logging.info('Using iterable dataset without shuffling.')
+        logger.info('Using iterable dataset without shuffling.')
     dataset['val'] = ProteinDataset(file=validation_sequences,
                                     labels_file=labels)
     data_loader = {phase: DataLoader(d, **data_loader_params)
@@ -396,12 +404,12 @@ def fit(architecture, training_sequences, validation_sequences, labels, *,
     scheduler = lr_scheduler.StepLR(optimizer, **learning_rate_params)
 
     # Trainable parameters
-    logging.info(f'Network architecture: {architecture}')
-    logging.info(f'Learning criterion: {criterion}')
-    logging.info(f'Optimizer: {optimizer}')
-    logging.info(f'Learning rate scheduler: {scheduler}')
-    logging.info(f'Number of classes: {model.n_classes}')
-    logging.info(f'Tunable parameters: {count_parameters(model)}')
+    logger.info(f'Network architecture: {architecture}')
+    logger.info(f'Learning criterion: {criterion}')
+    logger.info(f'Optimizer: {optimizer}')
+    logger.info(f'Learning rate scheduler: {scheduler}')
+    logger.info(f'Number of classes: {model.n_classes}')
+    logger.info(f'Tunable parameters: {count_parameters(model)}')
 
     result = _train_and_validate_model(model=model,
                                        criterion=criterion,

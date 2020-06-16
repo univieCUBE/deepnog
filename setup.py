@@ -35,16 +35,18 @@ install_requires = ['numpy',
                     'torch >= 1.2',
                     'Biopython',
                     'tqdm',
+                    'tensorboard',
                     ]
 
 setuptools.setup(
     name='deepnog',
     version=find_version('deepnog', '__init__.py'),
-    author='Lukas Gosch',
-    author_email='gosch.lukas@gmail.com',
+    author='Roman Feldbauer',
+    author_email='roman.feldbauer@univie.ac.at',
     description='Deep learning tool for protein orthologous group predictions',
-    keywords=('deep-learning bioinformatics neural-networks protein-families'
-              'orthologous-groups eggnog'),
+    keywords=('deep-learning neural-networks '
+              'bioinformatics computational-biology '
+              'protein-families orthologous-groups orthology eggnog'),
     long_description=long_description,
     long_description_content_type='text/markdown',
     install_requires=install_requires,

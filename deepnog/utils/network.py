@@ -13,10 +13,7 @@ from typing import Union
 
 import torch
 
-try:
-    from .io_utils import logging
-except ImportError:
-    import logging
+from . import get_logger
 
 __all__ = ['set_device',
            'count_parameters',
@@ -80,7 +77,7 @@ def set_device(device: Union[str, torch.device]) -> torch.device:
 
 
 def load_nn(architecture: str, model_dict: dict = None, phase: str = 'eval',
-            device: Union[torch.device, str] = 'cpu'):
+            device: Union[torch.device, str] = 'cpu', verbose: int = 0):
     """ Import NN architecture and set loaded parameters.
 
     Parameters
@@ -95,6 +92,8 @@ def load_nn(architecture: str, model_dict: dict = None, phase: str = 'eval',
         storing gradients, dropout, etc.
     device : [str, torch.device]
         Device to load the model into.
+    verbose : int
+        Increasingly verbose logging
 
     Returns
     -------
@@ -102,6 +101,8 @@ def load_nn(architecture: str, model_dict: dict = None, phase: str = 'eval',
         Neural network object of type architecture with parameters
         loaded from model_dict and moved to device.
     """
+    logger = get_logger(__name__, verbose=verbose)
+
     # Import and instantiate neural network class
     model_module = import_module(f'.models.{architecture}', 'deepnog')
     model_class = getattr(model_module, architecture)
@@ -109,9 +110,9 @@ def load_nn(architecture: str, model_dict: dict = None, phase: str = 'eval',
     # Set trained parameters of model
     try:
         model.load_state_dict(model_dict['model_state_dict'])
-        logging.debug('Loaded trained network weights.')
+        logger.debug('Loaded trained network weights.')
     except KeyError as e:
-        logging.debug('Did not load any trained network weights.')
+        logger.debug('Did not load any trained network weights.')
         if not phase.lower().startswith('train'):
             raise RuntimeError('No trained weights available '
                                'during inference.') from e
@@ -119,10 +120,10 @@ def load_nn(architecture: str, model_dict: dict = None, phase: str = 'eval',
     model.to(device)
     # Inform neural network layers to be in evaluation or training mode
     if phase.lower().startswith('train'):
-        logging.debug('Setting model.train() mode')
+        logger.debug('Setting model.train() mode')
         model = model.train()
     elif phase.lower().startswith('eval') or phase.lower().startswith('infer'):
-        logging.debug('Setting model.eval() mode')
+        logger.debug('Setting model.eval() mode')
         model = model.eval()
     else:
         raise ValueError(f'Unknown phase "{phase}". '

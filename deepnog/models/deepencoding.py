@@ -21,7 +21,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 
-from ..data.dataset import gen_amino_acid_vocab
+from ..data import gen_amino_acid_vocab
 
 
 __all__ = ['AminoAcidWordEmbedding',

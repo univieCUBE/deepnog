@@ -15,7 +15,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from ..data.dataset import collate_sequences
-from ..utils.io_utils import logging
+from ..utils import get_logger
 
 __all__ = ['predict', ]
 
@@ -55,7 +55,9 @@ def predict(model, dataset, device='cpu', batch_size=16, num_workers=4,
         Stores the unique indices of sequences mapping to their position
         in the file
     """
-    logging.info(f'Inference device: {device}')
+    logger = get_logger(__name__, verbose=verbose)
+
+    logger.info(f'Inference device: {device}')
 
     pred_l = []
     conf_l = []
@@ -90,7 +92,7 @@ def predict(model, dataset, device='cpu', batch_size=16, num_workers=4,
             ids.extend(batch.ids)
             indices.extend(batch.indices)
 
-    logging.info('Inference complete.')
+    logger.info('Inference complete.')
     # Collect skipped-sequences messages from workers in the case of
     # multi-process data-loading
     n_skipped = dataset.n_skipped
@@ -99,7 +101,7 @@ def predict(model, dataset, device='cpu', batch_size=16, num_workers=4,
         warnings.warn(f'Skipped {n_skipped} sequences as no sequence id '
                       f'could be detected.')
     if len(pred_l) == 0:
-        logging.error('Skipped all sequences. No output will be provided. '
+        logger.error('Skipped all sequences. No output will be provided. '
                       'Sequences might have had no sequence IDs in the '
                       'input file.')
         return None, None, None, None

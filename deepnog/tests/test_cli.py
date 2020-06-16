@@ -32,6 +32,13 @@ Y_TRUE = np.array([[0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 
                     1, 1, 1, 1, 1, 1, 1, 1]])
 
 
+def try_to_unlink(f: Path):
+    try:
+        f.unlink()
+    except PermissionError:
+        pass
+
+
 def test_entrypoint():
     process = subprocess.run(['deepnog', '--version'], capture_output=True)
     assert process.returncode == 0, (f'Could not invoke deepnog on the '
@@ -56,10 +63,7 @@ def test_inference_cmd_line_invocation(tax):
     outfile = Path(outfile)
     assert outfile.is_file(), (f'Stdout of call:\n{proc.stdout}\n\n'
                                f'Stderr of call:\n{proc.stderr}')
-    try:
-        outfile.unlink()
-    except PermissionError:
-        pass
+    try_to_unlink(outfile)
 
     # Using output to stdout
     proc = subprocess.run(['deepnog', 'infer',
@@ -76,18 +80,16 @@ def test_inference_cmd_line_invocation(tax):
         assert log_str in proc.stderr, 'missing log messages in stderr'
     # Check the prediction in stdout (omitting volatile confidence values)
     # Iterating over the lines in order to avoid issues with OS-specific linesep
+    correct_out = b'sequence_id,prediction,confidence'
+    i, out = (-1, '(no output lines)')
     for i, line in enumerate(BytesIO(proc.stdout)):
-        if i == 0:
-            correct_out = b'sequence_id,prediction,confidence'
-        elif i == 1:
+        if i == 1:
             correct_out = b'0,COG0443'
         elif i == 2:
-            correct_out = b'1,COG1253'
-        else:
-            raise AssertionError(f'Incorrect number of output lines with '
-                                 f'i = {i}, and line = {line}.')
+            correct_out = b'1,COG0443'
         assert correct_out in line, \
             f'Incorrect prediction output: expected {correct_out}, got line: {line}'
+    assert i == 2, f'Incorrect number of output lines with i = {i}, and line = {line}.'
 
 
 @mock.patch('argparse.ArgumentParser.parse_args',
@@ -112,13 +114,11 @@ def test_inference_cmd_line_invocation(tax):
                                             n_epochs=None,
                                             shuffle=None,
                                             learning_rate=None,
+                                            random_seed=None,
                                             ))
 def test_main_and_argparsing(mock_args):  # noqa
     main()
-    try:
-        Path('out.mock.2').unlink()
-    except PermissionError:
-        pass
+    try_to_unlink(Path('out.mock.2'))
 
 
 def test_args_sanity_check():
@@ -129,7 +129,7 @@ def test_args_sanity_check():
         architecture='deepencoding', weights=None, batch_size=1,
         # train only
         training_sequences=None, validation_sequences=None, labels=None, n_epochs=None,
-        shuffle=None, learning_rate=None,
+        shuffle=None, learning_rate=None, random_seed=None,
     )
     args_bs = deepcopy(args)
     args_bs.batch_size = 0
@@ -148,10 +148,7 @@ def test_args_sanity_check():
     args_train.n_epochs = 0
     with pytest.raises(ValueError):
         _start_prediction_or_training(args_train)
-    try:
-        Path(existing_file).unlink()
-    except PermissionError:
-        pass
+    try_to_unlink(Path(existing_file))
     args_confidence = deepcopy(args)
     args_confidence.confidence_threshold = 0
     with pytest.raises(ValueError):
@@ -167,7 +164,7 @@ def test_training_cmd_line_invocation():
     proc = subprocess.run(['deepnog', 'train',
                            f'{TRAINING_FASTA}', f'{TRAINING_FASTA}', f'{TRAINING_CSV}',
                            '--tax', f'{tax}', '--out', outdir, '--database', 'dummy_db',
-                           '--n_epochs', '2', '--verbose', '0',
+                           '--n-epochs', '2', '--verbose', '0', '--random-seed', '42'
                            ],
                           capture_output=True,
                           )
@@ -189,10 +186,7 @@ def test_training_cmd_line_invocation():
             assert df.phase.iloc[-1] == 'val', 'Last phase was not "val".'
             np.testing.assert_equal(df.epoch, np.array([0, 0, 1, 1])),\
                 'Wrong number of epochs in csv file'
-            try:
-                f.unlink()
-            except PermissionError:
-                pass
+            try_to_unlink(f)
         elif str(f).endswith('npz'):
             c = np.load(str(f))
             # Here we use the same data for training and validation
@@ -201,20 +195,14 @@ def test_training_cmd_line_invocation():
             np.testing.assert_equal(c['y_val_pred'], Y_TRUE)
             # Predictions during training epoch 0 may be anything
             np.testing.assert_equal(c['y_train_pred'][1], Y_TRUE[1])
-            try:
-                f.unlink()
-            except PermissionError:
-                pass
+            try_to_unlink(f)
         elif str(f).endswith('pt') or str(f).endswith('pth'):
             model = torch.load(str(f))
             for k in ['classes', 'model_state_dict', ]:
                 assert k in model
             np.testing.assert_equal(model['classes'], np.array(['28H52', '99A99', 'ZYX12']))
             assert model['model_state_dict']['classification1.weight'].shape == (3, 1200)
-            try:
-                f.unlink()
-            except PermissionError:
-                pass
+            try_to_unlink(f)
         else:
             assert False, f'Unexpected file in output dir: {f}'
 

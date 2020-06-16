@@ -108,7 +108,7 @@ def _get_parser():
         p.add_argument("-w", "--weights",
                        metavar='FILE',
                        help="Custom weights file path (optional)")
-        p.add_argument("-bs", "--batch_size",
+        p.add_argument("-bs", "--batch-size",
                        type=int,
                        metavar='INT',
                        default=64,
@@ -193,7 +193,7 @@ def _get_parser():
                                    "must be a numerical index. The other columns should "
                                    "be named 'protein_id' and 'eggnog_id', or be in order "
                                    "sequence_identifier first, label_identifier second.")
-    parser_train.add_argument("-e", "--n_epochs",
+    parser_train.add_argument("-e", "--n-epochs",
                               metavar='N_EPOCHS',
                               type=int,
                               default=15,
@@ -213,17 +213,22 @@ def _get_parser():
                               default=1e-2,
                               help='Initial learning rate, subject to adaptations by '
                                    'chosen optimizer and scheduler.')
+    parser_train.add_argument("-r", "--random-seed",
+                              metavar='RANDOM_SEED',
+                              type=int,
+                              default=None,
+                              help='Seed the random number generators of numpy and PyTorch '
+                                   'during training for reproducibility. Also affects cuDNN '
+                                   'determinism. Default: None (disables reproducibility)')
     return parser
 
 
 def _start_prediction_or_training(args):
     # Importing here makes CLI more snappy
-    from deepnog.utils import init_global_logger, set_device
+    from deepnog.utils import get_logger, set_device
 
-    init_global_logger('deepnog', verbose=args.verbose)
-    from deepnog.utils.io_utils import logging
-
-    logging.info('Starting deepnog')
+    logger = get_logger(__name__, verbose=args.verbose)
+    logger.info('Starting deepnog')
 
     # Sanity check command line arguments
     if args.batch_size <= 0:
@@ -247,9 +252,9 @@ def _start_inference(args):
     import torch
     from deepnog.data import ProteinDataset
     from deepnog.learning import predict
-    from deepnog.utils import create_df, get_weights_path, load_nn
-    from deepnog.utils.io_utils import logging
+    from deepnog.utils import create_df, get_logger, get_weights_path, load_nn
 
+    logger = get_logger(__name__, verbose=args.verbose)
     # Set number of threads to 1, b/c automatic (internal) parallelization is
     # quite inefficient
     torch.set_num_threads(1)
@@ -261,13 +266,14 @@ def _start_inference(args):
         weights_path = get_weights_path(database=args.database,
                                         level=str(args.tax),
                                         architecture=args.architecture,
+                                        verbose=args.verbose,
                                         )
     # Load neural network parameters
-    logging.info(f'Loading NN-parameters from {weights_path} ...')
+    logger.info(f'Loading NN-parameters from {weights_path} ...')
     model_dict = torch.load(weights_path, map_location=args.device)
 
     # Load dataset
-    logging.info(f'Accessing dataset from {args.file} ...')
+    logger.info(f'Accessing dataset from {args.file} ...')
     dataset = ProteinDataset(args.file, f_format=args.fformat)
 
     # Load class names
@@ -292,13 +298,13 @@ def _start_inference(args):
                              f'(0, 1].')
     elif hasattr(model, 'threshold'):
         threshold = float(model.threshold)
-        logging.info(f'Applying confidence threshold from model: {threshold}')
+        logger.info(f'Applying confidence threshold from model: {threshold}')
     else:
         threshold = None
 
     # Predict labels of given data
-    logging.info('Starting protein sequence group/family inference ...')
-    logging.debug(f'Processing {args.batch_size} sequences per iteration (minibatch)')
+    logger.info('Starting protein sequence group/family inference ...')
+    logger.debug(f'Processing {args.batch_size} sequences per iteration (minibatch)')
     preds, confs, ids, indices = predict(model, dataset, args.device,
                                          batch_size=args.batch_size,
                                          num_workers=args.num_workers,
@@ -309,15 +315,15 @@ def _start_inference(args):
 
     if args.out is not None:
         save_file = args.out
-        logging.info(f'Writing prediction to {save_file}')
+        logger.info(f'Writing prediction to {save_file}')
     else:
         save_file = sys.stdout
-        logging.info('Writing predictions to stdout')
+        logger.info('Writing predictions to stdout')
 
     columns = ['sequence_id', 'prediction', 'confidence']
     separator = {'csv': ',', 'tsv': '\t', 'legacy': ';'}.get(args.outformat)
     df.to_csv(save_file, sep=separator, index=False, columns=columns)
-    logging.info('All done.')
+    logger.info('All done.')
     return
 
 
@@ -328,13 +334,15 @@ def _start_training(args):
     from pandas import DataFrame
     import torch
     from deepnog.learning import fit
-    from deepnog.utils.io_utils import logging
+    from deepnog.utils import get_logger
+
+    logger = get_logger(__name__, verbose=args.verbose)
 
     if args.n_epochs <= 0:
         raise ValueError(f'Number of epochs must be greater than or equal '
                          f'one. Got n_epochs = {args.n_epochs} instead.')
     out_dir = Path(args.out)
-    logging.info(f'Output directory: {out_dir} (creating, if necessary)')
+    logger.info(f'Output directory: {out_dir} (creating, if necessary)')
     out_dir.mkdir(parents=True, exist_ok=True)
     # Add random letters to files to avoid name collisions
     while True:
@@ -357,29 +365,30 @@ def _start_training(args):
                   verbose=args.verbose,
                   n_epochs=args.n_epochs,
                   shuffle=args.shuffle,
+                  random_seed=args.random_seed,
                   # TODO add the rest of the parameters to the client
                   )
 
     # Save model to output dir
-    logging.info(f'Saving model to {model_file}...')
+    logger.info(f'Saving model to {model_file}...')
     torch.save({'classes': results.training_dataset.label_encoder.classes_,
                 'model_state_dict': results.model.state_dict()},
                model_file)
     # Save a dataframe of several training/validation statistics
-    logging.info(f'Saving evaluation statistics to {eval_file}... '
-                 f'Load with pandas.read_csv().')
+    logger.info(f'Saving evaluation statistics to {eval_file}... '
+                f'Load with pandas.read_csv().')
     DataFrame(results.evaluation).to_csv(eval_file)
     # Save ground-truth and predicted classes for further performance analysis
-    logging.info(f'Saving ground truth (y_true) and predicted (y_pred) '
-                 f'labels (from training/validation) to {classes_file}... '
-                 f'Load with numpy.load().')
+    logger.info(f'Saving ground truth (y_true) and predicted (y_pred) '
+                f'labels (from training/validation) to {classes_file}... '
+                f'Load with numpy.load().')
     np.savez(classes_file,
              y_train_true=results.y_train_true,
              y_train_pred=results.y_train_pred,
              y_val_true=results.y_val_true,
              y_val_pred=results.y_val_pred)
 
-    logging.info('All done.')
+    logger.info('All done.')
     return
 
 

@@ -27,7 +27,7 @@ class SynchronizedCounter:
         self.val = Value('i', init)
 
     def __add__(self, other):
-        return self.increment_and_get_value(n=other)
+        return self.value + other
 
     def __iadd__(self, other):
         self.increment(n=other)

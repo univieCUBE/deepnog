@@ -2,12 +2,12 @@
 DeepNOG
 -------
 
-DeepNOG is a deep learning based command line tool which predicts the
-protein families of given protein sequences based on pretrained neural
-networks.
+DeepNOG is a deep learning based command line tool to infer
+orthologous groups of given protein sequences.
+It provides a number of models for eggNOG orthologous groups,
+and allows to train additional models for eggNOG or other databases.
 
 """
-
 # PEP0440 compatible formatted version, see:
 # https://www.python.org/dev/peps/pep-0440/
 #

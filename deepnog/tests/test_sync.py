@@ -32,7 +32,10 @@ def test_sync_counter_of_many_empty_sequences():
 def test_sync_counter():
     cnt = SynchronizedCounter(init=0)
     cnt.increment(1)
-    val = cnt.increment_and_get_value(4)
+    other = cnt + 9
+    assert other == 10
+    cnt += 1
+    val = cnt.increment_and_get_value(3)
     assert val == 5
 
     assert cnt < 6
