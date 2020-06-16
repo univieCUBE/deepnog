@@ -14,6 +14,7 @@ from pathlib import Path
 import shutil
 import sys
 from typing import List
+from urllib.error import URLError
 from urllib.request import urlopen
 from urllib.parse import urljoin
 import warnings
@@ -219,9 +220,13 @@ def get_weights_path(database: str, level: str, architecture: str,
             environ.get('DEEPNOG_REMOTE', DEEPNOG_REMOTE_DEFAULT),
             f"{database}/{level}/{architecture}.pth")
         logger.info(f"Downloading {remote_url}")
-        with urlopen(remote_url) as response, weights_file.open('wb') as f:
-            logger.info(f'Saving to {weights_file}')
-            shutil.copyfileobj(response, f)
+        try:
+            with urlopen(remote_url) as response, weights_file.open('wb') as f:
+                logger.info(f'Saving to {weights_file}')
+                shutil.copyfileobj(response, f)
+        except URLError as e:
+            logger.error(f'Download failed. Try downloading {remote_url} and '
+                         f'saving to {weights_file} manually.\nGot error: {e}')
     elif not available and not download_if_missing:
         raise IOError("Data not found and `download_if_missing` is False")
 

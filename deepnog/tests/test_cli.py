@@ -106,14 +106,7 @@ def test_inference_cmd_line_invocation(tax):
                                             architecture='deepencoding',
                                             weights=None,
                                             batch_size=1,
-                                            # train only
-                                            training_sequences=None,
-                                            validation_sequences=None,
-                                            labels=None,
-                                            n_epochs=None,
-                                            shuffle=None,
-                                            learning_rate=None,
-                                            random_seed=None,
+                                            # Not necessary to have train args here
                                             ))
 def test_main_and_argparsing(mock_args):  # noqa
     main()
@@ -128,7 +121,7 @@ def test_args_sanity_check():
         architecture='deepencoding', weights=None, batch_size=1,
         # train only
         training_sequences=None, validation_sequences=None, labels=None, n_epochs=None,
-        shuffle=None, learning_rate=None, random_seed=None,
+        shuffle=None, learning_rate=None, random_seed=None, save_each_epoch=None,
     )
     args_bs = deepcopy(args)
     args_bs.batch_size = 0
@@ -164,7 +157,6 @@ def test_training_cmd_line_invocation():
                            f'{TRAINING_FASTA}', f'{TRAINING_FASTA}', f'{TRAINING_CSV}',
                            '--tax', f'{tax}', '--out', outdir, '--database', 'dummy_db',
                            '--n-epochs', '2', '--verbose', '0', '--random-seed', '42',
-                           '--save-every-epoch',
                            ],
                           capture_output=True,
                           )
