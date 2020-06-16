@@ -1,4 +1,5 @@
 from pathlib import Path
+import tempfile
 import pytest
 import numpy as np
 from deepnog.learning import fit
@@ -27,6 +28,9 @@ def test_shuffled_training(batch_size, num_workers):
                   shuffle=True,
                   random_seed=1,
                   tensorboard_dir=None,
+                  save_each_epoch=True,
+                  out_dir=Path(tempfile.mkdtemp()),
+                  experiment_name='deepnog_test_epoch_save'
                   )
     for attr in ['model', 'training_dataset', 'validation_dataset', 'evaluation',
                  'y_train_true', 'y_train_pred', 'y_val_true', 'y_val_pred']:

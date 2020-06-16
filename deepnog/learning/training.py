@@ -270,15 +270,20 @@ def _train_and_validate_model(model: torch.nn.Module, criterion, optimizer,
                 best_epoch = epoch
 
         # temporarily save network
-        if save_each_epoch and out_dir is not None and experiment_name is not None:
-            save_file = out_dir/f'{experiment_name}_epoch{epoch:02d}.pth'
-            logger.debug(f'Saving current epoch {epoch} model to {save_file}')
-            torch.save({'classes': dataset.label_encoder.classes_,
-                        'model_state_dict': model.state_dict(),
-                        'optimizer_state_dict': optimizer.state_dict(),
-                        'scheduler_state_dict': scheduler.state_dict(),
-                        'l2_coeff': l2_coeff, },
-                       save_file)
+        if save_each_epoch:
+            if out_dir is None or experiment_name is None:
+                logger.warning(f'Cannot save model after each epoch. '
+                               f'Please specify "experiment_name" '
+                               f'and "out_dir" as well.')
+            else:
+                save_file = out_dir/f'{experiment_name}_epoch{epoch:02d}.pth'
+                logger.debug(f'Saving current epoch {epoch} model to {save_file}')
+                torch.save({'classes': dataset.label_encoder.classes_,
+                            'model_state_dict': model.state_dict(),
+                            'optimizer_state_dict': optimizer.state_dict(),
+                            'scheduler_state_dict': scheduler.state_dict(),
+                            'l2_coeff': l2_coeff, },
+                           save_file)
 
         # early stopping (regularization)
         if early_stopping and epoch - early_stopping >= best_epoch:
@@ -318,7 +323,7 @@ def fit(architecture, training_sequences, validation_sequences, labels, *,
         log_interval: int = 100,
         random_seed: int = None,
         save_each_epoch: bool = True,
-        out_dir: str = None,
+        out_dir: Path = None,
         experiment_name: str = None,
         verbose: int = 2,
         ):
