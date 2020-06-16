@@ -35,4 +35,3 @@ def test_shuffled_training(batch_size, num_workers):
         assert x.shape == (2, 30)
     np.testing.assert_equal(results.y_train_true.sum(), Y_TRUE.sum())  # order should be different
     np.testing.assert_equal(results.y_val_pred.sum(), Y_TRUE.sum())
-

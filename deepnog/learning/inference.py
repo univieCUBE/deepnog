@@ -102,8 +102,8 @@ def predict(model, dataset, device='cpu', batch_size=16, num_workers=4,
                       f'could be detected.')
     if len(pred_l) == 0:
         logger.error('Skipped all sequences. No output will be provided. '
-                      'Sequences might have had no sequence IDs in the '
-                      'input file.')
+                     'Sequences might have had no sequence IDs in the '
+                     'input file.')
         return None, None, None, None
     else:
         # Merge individual output tensors

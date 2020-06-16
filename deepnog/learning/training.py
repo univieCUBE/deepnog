@@ -57,6 +57,8 @@ def _train_and_validate_model(model: torch.nn.Module, criterion, optimizer,
                               validation_only: bool = False,
                               early_stopping: int = 0,
                               save_each_epoch: bool = True,
+                              out_dir: Path = None,
+                              experiment_name: str = None,
                               verbose: int = 2) -> train_val_result:
     """ Perform training and validation of a given model, data, and hyperparameters.
 
@@ -91,6 +93,10 @@ def _train_and_validate_model(model: torch.nn.Module, criterion, optimizer,
         ``early_stopping`` epochs, end the training.
     save_each_epoch : bool
         Save the network after each training epoch
+    out_dir : Path
+        Path to the output directory used to save models during training
+    experiment_name : str
+        Prefix of model files saved during training
     verbose : int
         Increasing levels of messages
 
@@ -264,8 +270,8 @@ def _train_and_validate_model(model: torch.nn.Module, criterion, optimizer,
                 best_epoch = epoch
 
         # temporarily save network
-        if save_each_epoch:
-            save_file = tensorboard_exp/f'_epoch{epoch:02d}.pt'
+        if save_each_epoch and out_dir is not None and experiment_name is not None:
+            save_file = out_dir/f'{experiment_name}_epoch{epoch:02d}.pth'
             logger.debug(f'Saving current epoch {epoch} model to {save_file}')
             torch.save({'classes': dataset.label_encoder.classes_,
                         'model_state_dict': model.state_dict(),
@@ -312,8 +318,65 @@ def fit(architecture, training_sequences, validation_sequences, labels, *,
         log_interval: int = 100,
         random_seed: int = None,
         save_each_epoch: bool = True,
+        out_dir: str = None,
+        experiment_name: str = None,
         verbose: int = 2,
         ):
+    """ Perform training and validation of a given model, data, and hyperparameters.
+
+        Parameters
+        ----------
+        architecture : str
+            Network architecture, must be available in deepnog/models
+        training_sequences : str
+            File with training set sequences
+        validation_sequences : str
+            File with validation set sequences
+        labels : str
+            File with class labels (orthologous groups)
+        data_loader_params : dict
+            Parameters passed to PyTorch DataLoader construction
+        n_epochs : int
+            Number of training passes over the complete training set
+        shuffle : bool
+            Shuffle the training data. This does NOT shuffle the complete data
+            set, which requires having all sequences in memory, but uses a
+            shuffle buffer (default size: 2**16), from which sequences are drawn.
+        learning_rate : float
+            Learning rate, the central hyperparameter of deep network training.
+            Too high values may lead to diverging solutions, while too low
+            values result in slow learning.
+        learning_rate_params : dict
+            Parameters passed to the learning rate Scheduler.
+        optimizer_cls
+            Class of PyTorch optimizer
+        device : torch.device
+            Use either 'cpu' or 'cuda' (GPU) for training/validation.
+        tensorboard_dir : str
+            Save online learning statistics for tensorboard in this directory.
+        log_interval : int, optional
+            Print intermediary results after ``log_interval`` minibatches
+        random_seed : int
+            Set a random seed for numpy/pytorch for reproducible results.
+        save_each_epoch : bool
+            Save the network after each training epoch
+        out_dir : Path
+            Path to the output directory used to save models during training
+        experiment_name : str
+            Prefix of model files saved during training
+        verbose : int
+            Increasing levels of messages
+
+        Returns
+        -------
+        results : namedtuple
+            A namedtuple containing:
+             * the trained deep network model
+             * training dataset
+             * evaluation statistics
+             * the ground truth labels (y_true)
+             * the predicted labels (y_pred).
+        """
     logger = get_logger(__name__, verbose=verbose)
 
     device = set_device(device)
@@ -421,6 +484,8 @@ def fit(architecture, training_sequences, validation_sequences, labels, *,
                                        log_interval=log_interval,
                                        device=device,
                                        save_each_epoch=save_each_epoch,
+                                       out_dir=out_dir,
+                                       experiment_name=experiment_name,
                                        verbose=verbose,
                                        )
     return result

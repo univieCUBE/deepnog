@@ -220,6 +220,10 @@ def _get_parser():
                               help='Seed the random number generators of numpy and PyTorch '
                                    'during training for reproducibility. Also affects cuDNN '
                                    'determinism. Default: None (disables reproducibility)')
+    parser_train.add_argument("--save_each_epoch",
+                              action='store',
+                              default=False,
+                              help='Save the model after each epoch.')
     return parser
 
 
@@ -366,6 +370,9 @@ def _start_training(args):
                   n_epochs=args.n_epochs,
                   shuffle=args.shuffle,
                   random_seed=args.random_seed,
+                  out_dir=out_dir,
+                  experiment_name=experiment_name,
+                  save_each_epoch=args.save_each_epoch,
                   # TODO add the rest of the parameters to the client
                   )
 

@@ -81,7 +81,6 @@ def test_inference_cmd_line_invocation(tax):
     # Check the prediction in stdout (omitting volatile confidence values)
     # Iterating over the lines in order to avoid issues with OS-specific linesep
     correct_out = b'sequence_id,prediction,confidence'
-    i, out = (-1, '(no output lines)')
     for i, line in enumerate(BytesIO(proc.stdout)):
         if i == 1:
             correct_out = b'0,COG0443'
@@ -164,7 +163,8 @@ def test_training_cmd_line_invocation():
     proc = subprocess.run(['deepnog', 'train',
                            f'{TRAINING_FASTA}', f'{TRAINING_FASTA}', f'{TRAINING_CSV}',
                            '--tax', f'{tax}', '--out', outdir, '--database', 'dummy_db',
-                           '--n-epochs', '2', '--verbose', '0', '--random-seed', '42'
+                           '--n-epochs', '2', '--verbose', '0', '--random-seed', '42',
+                           '--save-every-epoch',
                            ],
                           capture_output=True,
                           )
