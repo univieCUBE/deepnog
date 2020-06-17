@@ -113,7 +113,8 @@ def test_create_df_with_duplicates():
     confs = torch.tensor([0.8, 0.3, 0.1, 0.6, 0.8])
     ids = ['sequence2', 'sequence1', 'sequence2', 'sequence3', 'sequence1']
     indices = [1, 2, 3, 4, 5]
-    df = create_df(class_labels, preds, confs, ids, indices)
+    with pytest.warns(UserWarning, match='Detected 2 duplicate sequences'):
+        df = create_df(class_labels, preds, confs, ids, indices)
     assert(df.shape == (3, 4))
     assert(sum(df['index'] == [1, 2, 4]) == 3)
     assert(sum(df['sequence_id'] == ['sequence2', 'sequence1', 'sequence3'])
