@@ -53,12 +53,8 @@ setuptools.setup(
     url='',
     packages=setuptools.find_packages(),
     package_data={
-        'deepnog': ['parameters/*/*.pth',    # Include parameters of NNs
-                                             # trained on a whole database
-                                             # (currently not supported).
-                    'parameters/*/*/*.pth',  # Include parameters of NNs
-                                             # trained on specific levels/
-                                             # parts of a db
+        'deepnog': ['utils/certifi',   # Work-around: include certificate chain
+                                       # for fileshare.csb.univie.ac.at
                     ],
         'tests': ['data/*.faa',        # Include data and parameters for tests,
                   'parameters/*.pth',  # edit if necessary!

@@ -12,6 +12,7 @@ import logging
 from os import environ
 from pathlib import Path
 import shutil
+import ssl
 import sys
 from typing import List
 from urllib.error import URLError
@@ -30,6 +31,7 @@ __all__ = ['create_df',
 
 DEEPNOG_REMOTE_DEFAULT = ('https://fileshare.csb.univie.ac.at/'
                           'deepnog/parameters/')
+CERTIFICATE_CHAIN = Path(__file__).parent.absolute() / "certifi/csb-univie-ac-at-chain.pem"
 
 logging.addLevelName(logging.DEBUG,
                      "\033[1;32m%s\033[1;0m" % logging.getLevelName(logging.DEBUG))
@@ -224,9 +226,17 @@ def get_weights_path(database: str, level: str, architecture: str,
             with urlopen(remote_url) as response, weights_file.open('wb') as f:
                 logger.info(f'Saving to {weights_file}')
                 shutil.copyfileobj(response, f)
-        except URLError as e:
-            logger.error(f'Download failed. Try downloading {remote_url} and '
-                         f'saving to {weights_file} manually.\nGot error: {e}')
+        except URLError:
+            try:  # work-around for missing intermediate certificate
+                ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS, )
+                ssl_context.load_verify_locations(CERTIFICATE_CHAIN)
+                with urlopen(remote_url, context=ssl_context) as response, \
+                        weights_file.open('wb') as f:
+                    logger.info(f'Saving to {weights_file}')
+                    shutil.copyfileobj(response, f)
+            except URLError as e:
+                logger.error(f'Download failed. Try downloading {remote_url} and '
+                             f'saving to {weights_file} manually.\nGot error: {e}')
     elif not available and not download_if_missing:
         raise IOError("Data not found and `download_if_missing` is False")
 
