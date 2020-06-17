@@ -228,7 +228,7 @@ def get_weights_path(database: str, level: str, architecture: str,
                 shutil.copyfileobj(response, f)
         except URLError:
             try:  # work-around for missing intermediate certificate
-                ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS, )
+                ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2, )
                 ssl_context.load_verify_locations(CERTIFICATE_CHAIN)
                 with urlopen(remote_url, context=ssl_context) as response, \
                         weights_file.open('wb') as f:
