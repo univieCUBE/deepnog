@@ -55,6 +55,7 @@ setuptools.setup(
     package_data={
         'deepnog': ['utils/certifi',   # Work-around: include certificate chain
                                        # for fileshare.csb.univie.ac.at
+                    'config/*.yml',    # DeepNOG configuration
                     ],
         'tests': ['data/*.faa',        # Include data and parameters for tests,
                   'parameters/*.pth',  # edit if necessary!
