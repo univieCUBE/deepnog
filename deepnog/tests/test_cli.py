@@ -51,7 +51,8 @@ def test_entrypoint():
 @pytest.mark.parametrize('tax', [1, 2, ])
 def test_inference_cmd_line_invocation(tax):
     # Using out file
-    _, outfile = tempfile.mkstemp(prefix='deepnog_test_')
+    outdir = tempfile.mkdtemp(prefix='deepnog_test_')
+    outfile = Path(outdir)/'pred.out'
     proc = subprocess.run(['deepnog', 'infer',
                            f'{TEST_FILE_SHORT}',
                            '--tax', f'{tax}',
@@ -69,7 +70,7 @@ def test_inference_cmd_line_invocation(tax):
     proc = subprocess.run(['deepnog', 'infer',
                            f'{TEST_FILE_SHORT}',
                            '--tax', f'{tax}',
-                           '--verbose', '3',
+                           '--verbose', '4',
                            ],
                           capture_output=True,
                           )
@@ -154,7 +155,8 @@ def test_training_cmd_line_invocation():
     outdir = tempfile.mkdtemp(prefix='deepnog_test_')
     tax = 2
     proc = subprocess.run(['deepnog', 'train',
-                           f'{TRAINING_FASTA}', f'{TRAINING_FASTA}', f'{TRAINING_CSV}',
+                           f'{TRAINING_FASTA}', f'{TRAINING_FASTA}',
+                           f'{TRAINING_CSV}', f'{TRAINING_CSV}',
                            '--tax', f'{tax}', '--out', outdir, '--database', 'dummy_db',
                            '--n-epochs', '2', '--verbose', '0', '--random-seed', '42',
                            ],
