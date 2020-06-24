@@ -36,6 +36,8 @@ import argparse
 from pathlib import Path
 import sys
 
+from deepnog.utils import get_config
+
 __all__ = ['main',
            ]
 
@@ -52,9 +54,14 @@ def _get_parser():
     parser = argparse.ArgumentParser(
         description=('Assign protein sequences to orthologous groups'
                      'with deep learning.'))
-    parser.add_argument('--version',
+    parser.add_argument('-v', '--version',
                         action='version',
                         version=f'%(prog)s {__version__}')
+
+    # Obtain a list of available models (databases)
+    config = get_config()
+    available_databases = list(config['database'].keys())
+    available_architectures = list(config['architecture'].keys())
 
     subparsers = parser.add_subparsers(dest='phase', required=True)
     parser_train = subparsers.add_parser(
@@ -66,13 +73,13 @@ def _get_parser():
     for p in [parser_train, parser_infer]:
         p.add_argument("-ff", "--fformat",
                        type=str,
-                       metavar='STR',
+                       metavar='FILEFORMAT',
                        default='fasta',
                        help=("File format of protein sequences. Must be "
                              "supported by Biopythons Bio.SeqIO class."))
-        p.add_argument("--verbose",
+        p.add_argument("-V", "--verbose",
                        type=int,
-                       metavar='INT',
+                       metavar='VERBOSE',
                        default=3,
                        help=("Define verbosity of DeepNOGs output written to "
                              "stdout or stderr. 0 only writes errors to "
@@ -80,9 +87,10 @@ def _get_parser():
                              "1 also writes warnings to stderr if e.g. a "
                              "protein without an ID was found and skipped. "
                              "2 additionally writes general progress "
-                             "messages to stdout."
+                             "messages to stdout. "
                              "3 includes a dynamic progress bar of the "
-                             "prediction stage using tqdm."))
+                             "prediction stage using tqdm."
+                             ))
         p.add_argument("-d", "--device",
                        type=str,
                        default='auto',
@@ -92,7 +100,7 @@ def _get_parser():
                              "otherwise CPU."))
         p.add_argument("-nw", "--num-workers",
                        type=int,
-                       metavar='INT',
+                       metavar='NUM_WORKERS',
                        default=0,
                        help=('Number of subprocesses (workers) to use for '
                              'data loading. '
@@ -103,61 +111,57 @@ def _get_parser():
                              '(otherwise inefficient)!'))
         p.add_argument("-a", "--architecture",
                        default='deepencoding',
-                       choices=['deepencoding', ],
+                       choices=available_architectures,
                        help="Network architecture to use for classification.")
         p.add_argument("-w", "--weights",
-                       metavar='FILE',
+                       metavar='WEIGHTS_FILE',
                        help="Custom weights file path (optional)")
         p.add_argument("-bs", "--batch-size",
                        type=int,
-                       metavar='INT',
+                       metavar='BATCH_SIZE',
                        default=64,
-                       help=('Batch size used for prediction or training.'
-                             'Defines how many sequences should be '
-                             'processed in the network at once. '
-                             'With a batch size of one, the protein '
-                             'sequences are sequentially processed by '
-                             'the network without leveraging parallelism. '
-                             'Higher batch-sizes than the default can '
-                             'speed up the inference and training '
-                             'significantly, especially if on a gpu. '
-                             'On a cpu, however, they can be slower than '
-                             'smaller ones due to the increased average '
-                             'sequence length in the convolution step due to '
-                             'zero-padding every sequence in each batch.'))
+                       help=('The batch size determines how many sequences are '
+                             'processed by the network at once. '
+                             'If 1, process the protein sequences sequentially '
+                             '(recommended on CPUs). '
+                             'Larger batch sizes speed up the inference '
+                             'and training on GPUs. '
+                             'Batch size can influence the learning process.'))
 
     # Arguments with different help for training vs. inference
     parser_infer.add_argument("-o", "--out",
-                              metavar='FILE',
+                              metavar='OUT_FILE',
                               default=None,
                               help=("Store orthologous group predictions to output"
                                     "file. Per default, write predictions to stdout."))
     parser_train.add_argument("-o", "--out",
-                              metavar='DIR',
+                              metavar='OUT_DIR',
                               required=True,
                               help=("Store training results to files in the given "
                                     "directory. Results include the trained model,"
                                     "training/validation loss and accuracy values,"
                                     "and the ground truth plus predicted classes "
-                                    "per training epoch."))
+                                    "per training epoch, if requested."))
     parser_infer.add_argument("-db", "--database",
                               type=str,
-                              choices=['eggNOG5', ],
+                              choices=available_databases,
                               default='eggNOG5',
                               help="Orthologous group/family database to use.")
     parser_train.add_argument("-db", "--database",
                               type=str,
                               required=True,
+                              metavar='DATABASE_NAME',
                               help="Orthologous group database name")
     parser_infer.add_argument("-t", "--tax",
-                              type=int,
-                              choices=[1, 2, ],
-                              default=2,
-                              help="Taxonomic level to use in specified database "
-                                   "(1 = root, 2 = bacteria)")
+                              type=str,
+                              default='2',
+                              metavar='TAXONOMIC_LEVEL',
+                              help="Taxonomic level to use in specified database, "
+                                   "e.g. 1 = root, 2 = bacteria")
     parser_train.add_argument("-t", "--tax",
-                              type=int,
+                              type=str,
                               required=True,
+                              metavar='TAXONOMIC_LEVEL',
                               help="Taxonomic level in specified database")
 
     # Arguments for INFERENCE only
@@ -168,15 +172,14 @@ def _get_parser():
     parser_infer.add_argument("-of", "--outformat",
                               default="csv",
                               choices=["csv", "tsv", "legacy"],
-                              help="The file format of the output file produced by deepnog.")
+                              help="Output file format")
     parser_infer.add_argument("-c", "--confidence-threshold",
-                              metavar='FLOAT',
+                              metavar='CONFIDENCE',
                               type=float,
                               default=None,
-                              help="The confidence value below which predictions are "
-                                   "masked by deepnog. By default, apply the confidence "
-                                   "threshold saved in the model if one exists, "
-                                   "and else do not apply a confidence threshold.")
+                              help="If provided, predictions below the threshold are discarded."
+                                   "By default, any confidence threshold stored in the model is "
+                                   "applied, if present.")
 
     # Arguments for TRAINING only
     parser_train.add_argument("training_sequences",
@@ -185,10 +188,14 @@ def _get_parser():
     parser_train.add_argument("validation_sequences",
                               metavar='VAL_SEQUENCE_FILE',
                               help="File containing protein sequences validation set.")
-    parser_train.add_argument("labels",
-                              metavar='LABELS_FILE',
+    parser_train.add_argument("training_labels",
+                              metavar='TRAIN_LABELS_FILE',
+                              help="Orthologous group labels for training set protein sequences.")
+    parser_train.add_argument("validation_labels",
+                              metavar='VAL_LABELS_FILE',
                               help="Orthologous group labels for training and validation set "
-                                   "protein sequences. Must be a CSV file and parseable "
+                                   "protein sequences. Both training and validation labels "
+                                   "Must be in CSV files that are parseable "
                                    "by pandas.read_csv(..., index_col=1). The first column "
                                    "must be a numerical index. The other columns should "
                                    "be named 'protein_id' and 'eggnog_id', or be in order "
@@ -254,7 +261,7 @@ def _start_prediction_or_training(args):
 
 def _start_inference(args):
     import torch
-    from deepnog.data import ProteinDataset
+    from deepnog.data import ProteinIterableDataset
     from deepnog.learning import predict
     from deepnog.utils import create_df, get_logger, get_weights_path, load_nn
 
@@ -278,7 +285,7 @@ def _start_inference(args):
 
     # Load dataset
     logger.info(f'Accessing dataset from {args.file} ...')
-    dataset = ProteinDataset(args.file, f_format=args.fformat)
+    dataset = ProteinIterableDataset(args.file, f_format=args.fformat)
 
     # Load class names
     try:
@@ -354,17 +361,18 @@ def _start_training(args):
         if not any([random_letters in str(f) for f in out_dir.iterdir()]):
             break  # if these letters were not used previously
     experiment_name = f'deepnog_custom_model_{args.database}_{args.tax}_{random_letters}'
-    model_file = out_dir/f'{experiment_name}_model.pt'
+    model_file = out_dir/f'{experiment_name}_model.pth'
     eval_file = out_dir/f'{experiment_name}_eval.csv'
     classes_file = out_dir/f'{experiment_name}_labels.npz'
 
     results = fit(architecture=args.architecture,
                   training_sequences=args.training_sequences,
                   validation_sequences=args.validation_sequences,
+                  training_labels=args.training_labels,
+                  validation_labels=args.validation_labels,
                   data_loader_params={'batch_size': args.batch_size,
                                       'num_workers': args.num_workers},
                   learning_rate=args.learning_rate,
-                  labels=args.labels,
                   device=args.device,
                   verbose=args.verbose,
                   n_epochs=args.n_epochs,

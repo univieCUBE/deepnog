@@ -14,16 +14,18 @@ from pathlib import Path
 import shutil
 import ssl
 import sys
-from typing import List
+from typing import List, Dict
 from urllib.error import URLError
 from urllib.request import urlopen
 from urllib.parse import urljoin
 import warnings
+import yaml
 
 import pandas as pd
 from torch import Tensor
 
 __all__ = ['create_df',
+           'get_config',
            'get_data_home',
            'get_logger',
            'get_weights_path',
@@ -31,6 +33,7 @@ __all__ = ['create_df',
 
 DEEPNOG_REMOTE_DEFAULT = ('https://fileshare.csb.univie.ac.at/'
                           'deepnog/parameters/')
+DEEPNOG_CONFIG_PATH = Path(__file__).parent.parent.absolute()/"config/"
 CERTIFICATE_CHAIN = Path(__file__).parent.absolute() / "certifi/csb-univie-ac-at-chain.pem"
 
 logging.addLevelName(logging.DEBUG,
@@ -41,6 +44,26 @@ logging.addLevelName(logging.WARNING,
                      "\033[1;33m%s\033[1;0m" % logging.getLevelName(logging.WARNING))
 logging.addLevelName(logging.ERROR,
                      "\033[1;41m%s\033[1;0m" % logging.getLevelName(logging.ERROR))
+
+
+def get_config() -> Dict:
+    """ Get a config dictionary.
+
+    This contains the available models (databases, levels).
+    Additional config may be added in future releases.
+    """
+    config_path = environ.get('DEEPNOG_CONFIG', default=DEEPNOG_CONFIG_PATH)
+    config_file = Path(config_path)/'deepnog_config.yml'
+    try:
+        config = yaml.safe_load(config_file.open())
+    except yaml.YAMLError as e:
+        logger = get_logger(verbose=1)
+        logger.warning(f'Could not read config file. Will use default config '
+                       f'file (custom models will not be available).\n'
+                       f'Error message:\n{e}')
+        config_file = DEEPNOG_CONFIG_PATH/"deepnog_default_config.yml"
+        config = yaml.safe_load(config_file.open())
+    return config
 
 
 def get_logger(initname: str = 'deepnog', verbose: int = 0) -> logging.Logger:
@@ -68,7 +91,7 @@ def get_logger(initname: str = 'deepnog', verbose: int = 0) -> logging.Logger:
         ch.setLevel(logging.ERROR)
     elif verbose == 1:
         ch.setLevel(logging.WARNING)
-    elif verbose == 2:
+    elif verbose <= 3:
         ch.setLevel(logging.INFO)
     else:
         ch.setLevel(logging.DEBUG)
