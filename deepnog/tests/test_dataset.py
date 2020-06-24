@@ -28,7 +28,7 @@ def test_multiprocess_data_loading(f, num_workers, f_format='fasta'):
     """ Test if different workers produce different sequences and process
         whole sequence file.
     """
-    dataset = ds.ProteinDataset(f, f_format=f_format)
+    dataset = ds.ProteinIterableDataset(f, f_format=f_format)
     data_loader = DataLoader(dataset,
                              num_workers=num_workers,
                              batch_size=1,
@@ -48,7 +48,7 @@ def test_multiprocess_data_loading(f, num_workers, f_format='fasta'):
 @pytest.mark.parametrize("batch_size", [None, 1, 16, 32])
 def test_correct_collating_sequences(batch_size, f_format='fasta'):
     """ Test if a batch of correct size is produced. """
-    dataset = ds.ProteinDataset(test_file, f_format=f_format)
+    dataset = ds.ProteinIterableDataset(test_file, f_format=f_format)
     for i, batch in enumerate(DataLoader(dataset,
                                          batch_size=batch_size,
                                          num_workers=4,
@@ -67,7 +67,7 @@ def test_correct_collating_sequences(batch_size, f_format='fasta'):
 def test_zero_padding(f_format='fasta'):
     """ Test correct zeroPadding. """
     pad_file = Path(__file__).parent.absolute()/"data/test_zeroPadding.faa"
-    dataset = ds.ProteinDataset(pad_file, f_format=f_format)
+    dataset = ds.ProteinIterableDataset(pad_file, f_format=f_format)
     for i, batch in enumerate(DataLoader(dataset,
                                          batch_size=2,
                                          num_workers=0,
@@ -93,9 +93,9 @@ def test_correct_encoding():
 @pytest.mark.parametrize('buffer_size', [2, 10, 30])
 @pytest.mark.parametrize('labels', [None, TRAINING_LABELS])
 def test_shuffled_dataset(batch_size, num_workers, buffer_size, labels):
-    dataset = ds.ShuffledProteinDataset(TRAINING_FASTA,
-                                        labels_file=labels,
-                                        buffer_size=buffer_size)
+    dataset = ds.ShuffledProteinIterableDataset(TRAINING_FASTA,
+                                                labels_file=labels,
+                                                buffer_size=buffer_size)
     observed_ids = list()
     for i, batch in enumerate(DataLoader(dataset,
                                          batch_size=batch_size,

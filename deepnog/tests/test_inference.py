@@ -10,7 +10,7 @@ import pytest
 import torch.nn as nn
 import torch
 
-from deepnog.data.dataset import ProteinDataset
+from deepnog.data.dataset import ProteinIterableDataset
 from deepnog.learning import predict
 from deepnog.utils import create_df, load_nn
 
@@ -55,7 +55,7 @@ def test_predict(architecture, weights, data, fformat, tolerance):
     # Start test
     model_dict = torch.load(weights, map_location=device)
     model = load_nn(architecture, model_dict, phase='infer', device=device)
-    dataset = ProteinDataset(data, f_format=fformat)
+    dataset = ProteinIterableDataset(data, f_format=fformat)
     preds, confs, ids, indices = predict(model, dataset, device)
     # Test correct output shape
     assert(preds.shape[0] == confs.shape[0])
@@ -80,7 +80,7 @@ def test_skip_empty_sequences(architecture, weights, data, fformat):
     # Start test
     model_dict = torch.load(weights, map_location=device)
     model = load_nn(architecture, model_dict, phase='infer', device=device)
-    dataset = ProteinDataset(data, f_format=fformat)
+    dataset = ProteinIterableDataset(data, f_format=fformat)
     with pytest.warns(UserWarning, match='no sequence id could be detected'):
         preds, confs, ids, indices = predict(model, dataset, device)
     # Test correct output shape

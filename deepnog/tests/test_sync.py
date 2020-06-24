@@ -3,7 +3,7 @@ import pytest
 
 import torch
 
-from deepnog.data.dataset import ProteinDataset
+from deepnog.data.dataset import ProteinIterableDataset
 from deepnog.learning.inference import predict
 from deepnog.utils import load_nn, SynchronizedCounter
 
@@ -21,7 +21,7 @@ def test_sync_counter_of_many_empty_sequences():
     # Start test
     model_dict = torch.load(weights_path, map_location=device)
     model = load_nn('deepencoding', model_dict, phase='infer', device=device)
-    dataset = ProteinDataset(data_skip_path, f_format='fasta')
+    dataset = ProteinIterableDataset(data_skip_path, f_format='fasta')
     with pytest.warns(UserWarning, match='no sequence id could be detected'):
         _ = predict(model, dataset, device)
 
