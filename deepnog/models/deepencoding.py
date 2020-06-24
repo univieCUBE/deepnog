@@ -95,12 +95,24 @@ class deepencoding(nn.Module):
         super(deepencoding, self).__init__()
 
         # Read hyperparameter dictionary
-        self.n_classes = model_dict['n_classes'][0]
-        encoding_dim = model_dict['encoding_dim']
-        kernel_sizes = model_dict['kernel_size']
-        n_filters = model_dict['n_filters']
-        dropout = model_dict['dropout']
-        pooling_layer_type = model_dict['pooling_layer_type']
+        try:  # for inference these values are already available in the model
+            state = model_dict['model_state_dict']
+            self.n_classes = state['classification1.weight'].shape[0]
+            encoding_dim = state['encoding.embedding.weight'].shape[1]
+            kernel_sizes = [v.shape[-1] for k, v in state.items() if 'conv' in k and 'weight' in k]
+            n_filters = state['conv1.weight'].shape[0]
+            dropout = model_dict.get('dropout', 0.3)
+            pooling_layer_type = model_dict.get('pooling_layer_type', 'max')
+        except KeyError:  # set up the model for training
+            try:  # legacy format, that allowed for multitask learning
+                self.n_classes = model_dict['n_classes'][0]
+            except TypeError:  # single task
+                self.n_classes = model_dict['n_classes']
+            encoding_dim = model_dict['encoding_dim']
+            kernel_sizes = model_dict['kernel_size']
+            n_filters = model_dict['n_filters']
+            dropout = model_dict['dropout']
+            pooling_layer_type = model_dict['pooling_layer_type']
 
         # Encoding of amino acid sequence to vector space
         self.encoding = AminoAcidWordEmbedding(embedding_dim=encoding_dim)

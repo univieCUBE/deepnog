@@ -31,7 +31,7 @@ def predict(model, dataset, device='cpu', batch_size=16, num_workers=4,
     ----------
     model : nn.Module
         Trained neural network model.
-    dataset : ProteinDataset
+    dataset : ProteinIterableDataset
         Data to predict protein families for.
     device : [str, torch.device]
         Device of model.
@@ -78,6 +78,7 @@ def predict(model, dataset, device='cpu', batch_size=16, num_workers=4,
         disable_tqdm = verbose < 3
         for i, batch in enumerate(tqdm(data_loader,
                                        disable=disable_tqdm,
+                                       unit=' minibatches',
                                        desc="deepnog inference")):
             # Push sequences on correct device
             sequences = batch.sequences.to(device)

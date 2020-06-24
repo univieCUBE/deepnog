@@ -12,23 +12,25 @@ from collections import deque
 import gzip
 from itertools import islice
 from pathlib import Path
-from typing import List, Union, NamedTuple
+from typing import List, Union, NamedTuple, Sequence
 
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import LabelEncoder
 import torch
-from torch.utils.data import IterableDataset
+from torch.utils.data import Dataset, IterableDataset
 from torch.utils.data.dataloader import default_collate
+from Bio.SeqRecord import SeqRecord
 
-from ..utils import SynchronizedCounter
-from ..utils import EXTENDED_IUPAC_PROTEIN_ALPHABET, SeqIO
+from ..utils import get_logger, SynchronizedCounter
+from ..utils import EXTENDED_IUPAC_PROTEIN_ALPHABET, parse, SeqIO
 
 __all__ = ['collate_sequences',
            'gen_amino_acid_vocab',
            'ProteinDataset',
+           'ProteinIterableDataset',
            'ProteinIterator',
-           'ShuffledProteinDataset',
+           'ShuffledProteinIterableDataset',
            ]
 
 # Make Dataset return namedtuple
@@ -308,7 +310,7 @@ class ProteinIterator:
         return sequence
 
 
-class ProteinDataset(IterableDataset):
+class ProteinIterableDataset(IterableDataset):
     """ Protein dataset holding the proteins to classify.
 
     Does not load and store all proteins from a given sequence file but only
@@ -394,18 +396,31 @@ class ProteinDataset(IterableDataset):
         try:
             return self.labels.label_num.size
         except AttributeError:
-            raise TypeError("object of type 'ProteinDataset' has no len(), "
-                            "unless a label file is provided during its "
-                            "construction.") from None
+            raise TypeError(f"object of type {type(self)} has no len(), "
+                            f"unless a label file is provided during its "
+                            f"construction.") from None
 
 
-class ShuffledProteinDataset(ProteinDataset):
+class ShuffledProteinIterableDataset(ProteinIterableDataset):
     """ Shuffle an iterable ProteinDataset by introducing a shuffle buffer.
 
     Parameters
     ----------
-    dataset : ProteinDataset
-        The PyTorch dataset for protein sequences
+    file : str
+        Path to file storing the protein sequences.
+    labels_file : str, optional
+        Path to file storing labels associated to the sequences.
+        This is required for training, and ignored during inference.
+        Must be in CSV format with header line and index column, that is,
+        compatible to be read by pandas.read_csv(..., index_col=0).
+        The labels are expected in a column named "eggnog_id" or
+        in the last column.
+    f_format : str
+        File format in which to expect the protein sequences.
+        Must be supported by Biopython's Bio.SeqIO class.
+    label_encoder : LabelEncoder, optional
+        The label encoder maps str class names to numerical labels.
+        Provide a label encoder during validation.
     buffer_size : int
         How many objects will be buffered, i.e. are available to choose from.
 
@@ -451,3 +466,148 @@ class ShuffledProteinDataset(ProteinDataset):
                 yield shufbuf.pop()
         except GeneratorExit:
             pass
+
+
+def _rename_labels_columns(df):
+    """ Sequence IDs and labels are assumed in named columns,
+    but if not, let's try a specific order and hope for the best
+    """
+    try:
+        df.eggnog_id
+    except AttributeError:
+        df = df.rename(columns={df.columns[-1]: 'eggnog_id'})
+    try:
+        df.protein_id
+    except AttributeError:
+        df = df.rename(columns={df.columns[0]: 'protein_id'})
+    return df
+
+
+class ProteinDataset(Dataset):
+    """ Protein dataset with sequences and labels for training.
+
+    If sequences and labels are provided as files rather than objects,
+    loads and stores all proteins from input files during construction.
+    While this comes at the price of some delay, it allows to truly shuffle
+    the complete dataset during training.
+
+    Parameters
+    ----------
+    sequences : list, str, Path
+        Protein sequences as list of Biopython Seq, or path to fasta file
+        containing the sequences.
+    labels : DataFrame, str, Path, optional
+        Protein orthologous group labels as DataFrame,
+        or str to CSV file containing such a dataframe.
+        This is required for training, and ignored during inference.
+        Must be in CSV format with header line and index column, that is,
+        compatible to be read by pandas.read_csv(..., index_col=0).
+        The labels are expected in a column named "eggnog_id" or
+        in the last column, and sequence IDs in a column "protein_id".
+    f_format : str, optional
+        File format in which to expect the protein sequences.
+        Must be supported by Biopython's Bio.SeqIO class.
+    label_encoder : LabelEncoder, optional
+        The label encoder maps str class names to numerical labels.
+        Provide a label encoder during validation.
+    verbose: int, optional
+        Control verbosity of logging.
+    """
+    def __init__(self, sequences: Union[Sequence[SeqRecord], str, Path],
+                 labels: Union[pd.DataFrame, str, Path, None] = None,
+                 f_format: str = 'fasta',
+                 label_encoder: Union[LabelEncoder, None] = None,
+                 verbose: int = 0,
+                 ):
+        self.sequences = sequences
+        self.labels = labels
+        self.f_format = f_format
+        self.label_encoder = label_encoder
+        self.verbose = verbose
+        self.logger = get_logger(__name__, verbose=self.verbose)
+
+        # Read labels, if available
+        if self.labels is None:
+            self.logger.info('Not using labels')
+            self.label_from_id = {}
+        else:
+            self.logger.info('Loading labels')
+            try:
+                self.labels = pd.read_csv(self.labels,
+                                          index_col=0,
+                                          compression='infer',
+                                          )
+            except ValueError:
+                pass
+            if not isinstance(self.labels, pd.DataFrame):
+                raise ValueError('Invalid labels, must be .csv file or DataFrame')
+
+            # Try to rename columns, if not already correctly named
+            self.labels = _rename_labels_columns(self.labels)
+
+            # Transform class names to numerical labels
+            if self.label_encoder is None:
+                self.logger.info('Setting up new LabelEncoder')
+                self.label_encoder = LabelEncoder()
+                self.labels['label_num'] = self.label_encoder.fit_transform(
+                    self.labels.eggnog_id)
+            else:
+                self.logger.info('Using provided LabelEncoder')
+                try:
+                    self.labels['label_num'] = self.label_encoder.transform(
+                        self.labels.eggnog_id)
+                except ValueError:
+                    n_before = self.labels.shape[0]
+                    df_available = pd.DataFrame(self.label_encoder.classes_, columns=['eggnog_id'])
+                    self.labels = self.labels.merge(df_available)
+                    self.logger.warning(f'Removed {n_before - self.labels.shape[0]} '
+                                        f'sequences of unknown classes.')
+                    self.labels['label_num'] = self.label_encoder.transform(
+                        self.labels.eggnog_id)
+            self.label_from_id = {row.protein_id: row.label_num
+                                  for row in self.labels.itertuples()}
+
+        self.logger.info('Loading sequences')
+        try:
+            if self.labels is None:
+                self.sequences = list(parse(self.sequences))
+            else:
+                sequences = []
+                n_skipped: int = 0
+                for record in parse(self.sequences):
+                    if self.label_from_id.get(record.id, None) is None:
+                        n_skipped += 1
+                    else:
+                        sequences.append(record)
+                self.sequences = sequences
+                if n_skipped:
+                    self.logger.warning(f'{n_skipped}/{len(sequences) + n_skipped} '
+                                        f'sequences without labels were skipped '
+                                        f'({len(self.label_from_id)} total labels).')
+        except TypeError:
+            pass  # A list of SeqRecords may have been passed
+        if not isinstance(self.sequences[0], SeqRecord):
+            raise ValueError(f'Invalid sequences, must be FASTA file or '
+                             f'a list/tuple of {SeqRecord}')
+
+        # Generate amino-acid vocabulary
+        self.alphabet = EXTENDED_IUPAC_PROTEIN_ALPHABET
+        self.vocab = gen_amino_acid_vocab(self.alphabet)
+
+        self.n_skipped = SynchronizedCounter(init=0)
+        self.logger.debug('Dataset init complete')
+
+    def __len__(self):
+        return len(self.sequences)
+
+    def __getitem__(self, item):
+        seq = self.sequences[item]
+        sequence_id: str = f'{seq.id}'
+        label = self.label_from_id.get(sequence_id, None)
+        encoded = [self.vocab.get(c, 0) for c in seq]
+        sequence = sequence_tuple(index=item,
+                                  id=sequence_id,
+                                  string=str(seq),
+                                  encoded=encoded,
+                                  label=label)
+        return sequence

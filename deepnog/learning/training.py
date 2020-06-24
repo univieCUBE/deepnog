@@ -15,6 +15,7 @@ from functools import partial
 from pathlib import Path
 import random
 import string
+import sys
 import tempfile
 import time
 from typing import Dict, List, Union, NamedTuple
@@ -28,8 +29,9 @@ from torch.optim import Adam, lr_scheduler
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
-from ..data import ProteinDataset, collate_sequences, ShuffledProteinDataset
-from ..utils import count_parameters, get_logger, load_nn, set_device
+from ..data import ProteinDataset, ProteinIterableDataset, ShuffledProteinIterableDataset
+from ..data import collate_sequences
+from ..utils import count_parameters, get_config, get_logger, load_nn, set_device
 
 __all__ = ['fit',
            ]
@@ -239,6 +241,11 @@ def _train_and_validate_model(model: torch.nn.Module, criterion, optimizer,
                     break
 
             # Finishing train or val phase
+            if n_processed_sequences == 0:
+                logger.error(f'Empty dataset. Were labels provided for both '
+                             f'training and validation set?')
+                sys.exit(1)
+
             epoch_loss = running_loss / n_processed_sequences
             epoch_acc = float(running_corrects) / n_processed_sequences
             evaluation.append({'phase': phase,
@@ -311,8 +318,10 @@ def _train_and_validate_model(model: torch.nn.Module, criterion, optimizer,
                             )
 
 
-def fit(architecture, training_sequences, validation_sequences, labels, *,
+def fit(architecture, training_sequences, validation_sequences,
+        training_labels, validation_labels, *,
         data_loader_params: dict = None,
+        iterable_dataset: bool = False,
         n_epochs: int = 15,
         shuffle: bool = False,
         learning_rate: float = 1e-2,
@@ -337,10 +346,16 @@ def fit(architecture, training_sequences, validation_sequences, labels, *,
             File with training set sequences
         validation_sequences : str
             File with validation set sequences
-        labels : str
-            File with class labels (orthologous groups)
+        training_labels : str
+            File with class labels (orthologous groups) of training sequences
+        validation_labels : str
+            File with class labels (orthologous groups) of validation sequences
         data_loader_params : dict
             Parameters passed to PyTorch DataLoader construction
+        iterable_dataset : bool, default False
+            Use an iterable dataset that does not load all sequences in advance.
+            While this saves memory and does not involve the delay at start,
+            random sampling is impaired, and requires a shuffle buffer.
         n_epochs : int
             Number of training passes over the complete training set
         shuffle : bool
@@ -417,31 +432,43 @@ def fit(architecture, training_sequences, validation_sequences, labels, *,
 
     # Set up training and validation data set with sequences and labels
     dataset: dict = {}
-    if shuffle:
-        buffer_size = 2 ** 16
-        dataset['train'] = ShuffledProteinDataset(file=training_sequences,
-                                                  labels_file=labels,
-                                                  buffer_size=buffer_size)
-        logger.info(f'Using iterable dataset with shuffle buffer, '
-                    f'and buffer size = {buffer_size}.')
+    if iterable_dataset:
+        if shuffle:
+            buffer_size = 2 ** 16
+            dataset['train'] = ShuffledProteinIterableDataset(file=training_sequences,
+                                                              labels_file=training_labels,
+                                                              buffer_size=buffer_size)
+            logger.info(f'Using iterable dataset with shuffle buffer, '
+                        f'and buffer size = {buffer_size}.')
+        else:
+            dataset['train'] = ProteinIterableDataset(file=validation_sequences,
+                                                      labels_file=training_labels)
+            logger.info('Using iterable dataset without shuffling.')
+        dataset['val'] = ProteinIterableDataset(file=validation_sequences,
+                                                labels_file=validation_labels,
+                                                label_encoder=dataset['train'].label_encoder,
+                                                )
     else:
-        dataset['train'] = ProteinDataset(file=validation_sequences,
-                                          labels_file=labels)
-        logger.info('Using iterable dataset without shuffling.')
-    dataset['val'] = ProteinDataset(file=validation_sequences,
-                                    labels_file=labels)
+        with_shuffling = 'with shuffling' if shuffle else 'without shuffling'
+        logger.info(f'Using in-memory dataset {with_shuffling}.')
+        logger.info('Loading training dataset')
+        dataset['train'] = ProteinDataset(sequences=training_sequences,
+                                          labels=training_labels,
+                                          verbose=verbose)
+        logger.info('Loading validation dataset')
+        dataset['val'] = ProteinDataset(sequences=validation_sequences,
+                                        labels=validation_labels,
+                                        label_encoder=dataset['train'].label_encoder,
+                                        verbose=verbose)
+        data_loader_params.update({'shuffle': shuffle})
     data_loader = {phase: DataLoader(d, **data_loader_params)
                    for phase, d in dataset.items()}
 
     # Deep network hyperparameter default values
-    # TODO allow user changes in CLI
-    model_dict = {'n_classes': [len(dataset['train'].label_encoder.classes_)],
-                  'encoding_dim': 10,
-                  'kernel_size': [8, 12, 16, 20, 24, 28, 32, 36],
-                  'n_filters': 150,
-                  'dropout': 0.3,
-                  'pooling_layer_type': 'max',
-                  }
+    config = get_config()
+    model_dict = config['architecture'][architecture]
+    model_dict['n_classes'] = len(dataset['train'].label_encoder.classes_)
+    logger.debug(f'Network specs: {model_dict}')
 
     # Tensorboard experiment name (filename)
     if tensorboard_dir is None:

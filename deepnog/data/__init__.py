@@ -1,9 +1,14 @@
 from .dataset import collate_sequences, gen_amino_acid_vocab
-from .dataset import ProteinIterator, ProteinDataset, ShuffledProteinDataset
+from .dataset import ProteinIterator, ProteinIterableDataset, ShuffledProteinIterableDataset
+from .dataset import ProteinDataset
+from .split import group_train_val_test_split, train_val_test_split
 
 __all__ = ['collate_sequences',
            'gen_amino_acid_vocab',
-           'ProteinIterator',
+           'group_train_val_test_split',
+           'train_val_test_split',
            'ProteinDataset',
-           'ShuffledProteinDataset',
+           'ProteinIterator',
+           'ProteinIterableDataset',
+           'ShuffledProteinIterableDataset',
            ]
