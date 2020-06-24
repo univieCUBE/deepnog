@@ -1,21 +1,23 @@
-from typing import NamedTuple, Union
+from dataclasses import dataclass
+from typing import Union
 import pandas as pd
 from sklearn.model_selection import GroupShuffleSplit, train_test_split
 
 from ..utils import get_logger
 
-DataSplit = NamedTuple('DataSplit',
-                       [('X_train', pd.DataFrame),
-                        ('X_val', pd.DataFrame),
-                        ('X_test', pd.DataFrame),
-                        ('y_train', pd.DataFrame),
-                        ('y_val', pd.DataFrame),
-                        ('y_test', pd.DataFrame),
-                        ('uniref_train', Union[pd.DataFrame, None]),
-                        ('uniref_val', Union[pd.DataFrame, None]),
-                        ('uniref_test', Union[pd.DataFrame, None]),
-                        ]
-                       )
+
+@dataclass
+class DataSplit:
+    """ Class for returned data, labels, and groups after train/val/test split. """
+    X_train: pd.DataFrame
+    X_val: pd.DataFrame
+    X_test: pd.DataFrame
+    y_train: pd.DataFrame
+    y_val: pd.DataFrame
+    y_test: pd.DataFrame
+    uniref_train: Union[pd.DataFrame, None]
+    uniref_val: Union[pd.DataFrame, None]
+    uniref_test: Union[pd.DataFrame, None]
 
 
 def train_val_test_split(df: pd.DataFrame,
@@ -52,7 +54,7 @@ def train_val_test_split(df: pd.DataFrame,
 
     Returns
     -------
-    data_split : NamedTuple
+    data_split : DataSplit
         Split X, y, groups
     """
     logger = get_logger(__name__, verbose=verbose)
@@ -72,7 +74,7 @@ def train_val_test_split(df: pd.DataFrame,
                          test_size=test_size,
                          shuffle=shuffle,
                          random_state=random_state,
-                         stratify=df.label if stratify else None,
+                         stratify=df.eggnog_id if stratify else None,
                          )
 
     X_val, X_test, y_val, y_test = \
