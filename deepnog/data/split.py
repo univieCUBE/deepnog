@@ -159,6 +159,7 @@ def group_train_val_test_split(df: pd.DataFrame,
 
     gss = GroupShuffleSplit(n_splits=1,
                             test_size=test_ratio / (test_ratio + validation_ratio),
+                            random_state=random_state,
                             )
     val_ind, test_ind = next(gss.split(X_test, y_test, uniref_test))
     X_val = X_test.iloc[val_ind]
