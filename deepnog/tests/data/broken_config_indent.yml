@@ -1,0 +1,8 @@
+database:
+  eggNOG5:
+    - 1
+    - 2
+   otherdb:
+     - 1
+config:
+  - broken

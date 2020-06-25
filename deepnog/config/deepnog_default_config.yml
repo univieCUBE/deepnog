@@ -20,3 +20,6 @@ architecture:
     n_filters: 150
     dropout: 0.3
     pooling_layer_type: 'max'
+
+config:
+  - default

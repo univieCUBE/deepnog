@@ -242,8 +242,8 @@ def _train_and_validate_model(model: torch.nn.Module, criterion, optimizer,
 
             # Finishing train or val phase
             if n_processed_sequences == 0:
-                logger.error(f'Empty dataset. Were labels provided for both '
-                             f'training and validation set?')
+                logger.error('Empty dataset. Were labels provided for both '
+                             'training and validation set?')
                 sys.exit(1)
 
             epoch_loss = running_loss / n_processed_sequences
@@ -279,9 +279,9 @@ def _train_and_validate_model(model: torch.nn.Module, criterion, optimizer,
         # temporarily save network
         if save_each_epoch:
             if out_dir is None or experiment_name is None:
-                logger.warning(f'Cannot save model after each epoch. '
-                               f'Please specify "experiment_name" '
-                               f'and "out_dir" as well.')
+                logger.warning('Cannot save model after each epoch. '
+                               'Please specify "experiment_name" '
+                               'and "out_dir" as well.')
             else:
                 save_file = out_dir/f'{experiment_name}_epoch{epoch:02d}.pth'
                 logger.debug(f'Saving current epoch {epoch} model to {save_file}')

@@ -14,7 +14,7 @@ from pathlib import Path
 import shutil
 import ssl
 import sys
-from typing import List, Dict
+from typing import List, Dict, Union
 from urllib.error import URLError
 from urllib.request import urlopen
 from urllib.parse import urljoin
@@ -46,14 +46,21 @@ logging.addLevelName(logging.ERROR,
                      "\033[1;41m%s\033[1;0m" % logging.getLevelName(logging.ERROR))
 
 
-def get_config() -> Dict:
-    """ Get a config dictionary.
+def get_config(config_file: Union[Path, str, None] = None) -> Dict:
+    """ Get a config dictionary
+
+    If no file is provided, look in the DEEPNOG_CONFIG env variable for
+    the path. If this fails, load a default config file (lacking any
+    user customization).
 
     This contains the available models (databases, levels).
     Additional config may be added in future releases.
     """
-    config_path = environ.get('DEEPNOG_CONFIG', default=DEEPNOG_CONFIG_PATH)
-    config_file = Path(config_path)/'deepnog_config.yml'
+    if config_file is None:
+        config_path = environ.get('DEEPNOG_CONFIG', default=DEEPNOG_CONFIG_PATH)
+        config_file = Path(config_path)/'deepnog_config.yml'
+    else:
+        config_file = Path(config_file)
     try:
         config = yaml.safe_load(config_file.open())
     except yaml.YAMLError as e:

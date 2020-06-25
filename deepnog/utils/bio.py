@@ -1,3 +1,4 @@
+from functools import partial
 import gzip
 import lzma
 from pathlib import Path
@@ -37,9 +38,9 @@ def parse(p: Path, fformat: str = 'fasta', alphabet=None) -> Iterator:
     """
     p = Path(p)
     if p.suffix in ['.gz', '.gzip']:
-        _open = gzip.open
+        _open = partial(gzip.open, mode='rt')
     elif p.suffix in ['.xz', '.lzma']:
-        _open = lzma.open
+        _open = partial(lzma.open, mode='rt')
     else:
         _open = open
     return SeqIO.parse(_open(str(p)), format=fformat, alphabet=alphabet)
