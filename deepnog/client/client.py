@@ -36,7 +36,7 @@ import argparse
 from pathlib import Path
 import sys
 
-from deepnog.utils import get_config
+from deepnog.utils.config import get_config
 
 __all__ = ['main',
            ]
@@ -166,9 +166,16 @@ def _get_parser():
 
     # Arguments for INFERENCE only
     parser_infer.add_argument("file",
-                              metavar='SEQUENCE_FILE',
+                              metavar="SEQUENCE_FILE",
                               help=("File containing protein sequences for "
-                                    "classification (inference or training)."))
+                                    "orthology inference."))
+    parser_infer.add_argument("--test_labels",
+                              metavar="TEST_LABELS_FILE",
+                              required=False,
+                              default=None,
+                              help="Measure model performance on a test set. If provided, this "
+                                   "file must contain the ground-truth labels for the provided "
+                                   "sequences. Otherwise, only perform inference.")
     parser_infer.add_argument("-of", "--outformat",
                               default="csv",
                               choices=["csv", "tsv", "legacy"],
@@ -260,10 +267,12 @@ def _start_prediction_or_training(args):
 
 
 def _start_inference(args):
+    import pandas as pd
     import torch
     from deepnog.data import ProteinIterableDataset
     from deepnog.learning import predict
     from deepnog.utils import create_df, get_logger, get_weights_path, load_nn
+    from deepnog.utils.metrics import estimate_performance
 
     logger = get_logger(__name__, verbose=args.verbose)
     # Set number of threads to 1, b/c automatic (internal) parallelization is
@@ -294,7 +303,10 @@ def _start_inference(args):
         class_labels = dataset.label_encoder.classes_
 
     # Load neural network model
-    model = load_nn(architecture=args.architecture,
+    config = get_config()
+    module = config['architecture'][args.architecture]['module']
+    cls = config['architecture'][args.architecture]['class']
+    model = load_nn(architecture=(module, cls),
                     model_dict=model_dict,
                     phase=args.phase,
                     device=args.device)
@@ -324,16 +336,31 @@ def _start_inference(args):
     # Construct results dataframe
     df = create_df(class_labels, preds, confs, ids, indices, threshold=threshold)
 
-    if args.out is not None:
-        save_file = args.out
-        logger.info(f'Writing prediction to {save_file}')
-    else:
+    if args.out is None:
         save_file = sys.stdout
         logger.info('Writing predictions to stdout')
+    else:
+        save_file = args.out
+        Path(args.out).parent.mkdir(parents=True, exist_ok=True)
+        logger.info(f'Writing prediction to {save_file}')
 
     columns = ['sequence_id', 'prediction', 'confidence']
     separator = {'csv': ',', 'tsv': '\t', 'legacy': ';'}.get(args.outformat)
     df.to_csv(save_file, sep=separator, index=False, columns=columns)
+
+    # Measure test set performance, if labels were provided
+    if args.test_labels is not None:
+        if args.out is None:
+            perf_file = sys.stderr
+            logger.info(f'Writing test set performance to stderr')
+        else:
+            perf_file = Path(save_file).with_suffix('.performance.csv')
+            logger.info(f'Writing test set performance to {perf_file}')
+        df_true = pd.read_csv(args.test_labels, index_col=0)
+        perf = estimate_performance(df_true=df_true, df_pred=df)
+        df_perf = pd.DataFrame(data=[perf, ])
+        df_perf['experiment'] = args.file
+        df_perf.to_csv(perf_file, )
     logger.info('All done.')
     return
 

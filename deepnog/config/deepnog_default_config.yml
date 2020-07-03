@@ -7,6 +7,8 @@ database:
 
 architecture:
   deepencoding:
+    module: deepencoding
+    class: deepencoding
     encoding_dim: 10
     kernel_size:
       - 8

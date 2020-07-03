@@ -11,13 +11,50 @@ database:
     #- 1239  # Example 1: Uncomment this line, if you created a Firmicutes model
   #OMA:      # Example 2: Uncomment this line and the following, if you
     #- xy    #            created a model for the 'xy' level of OMA.
-             # NOTE: Currently, a levels must be provided, even if the database
+             # NOTE: Currently, a level must be provided, even if the database
              #       does not use levels. Simply use a placeholder 1 or similar.
              # NOTE 2: Indentation matters
 
 architecture:
   # The default DeepNOG network
   deepencoding:
+    module: deepencoding
+    class: deepencoding
+    encoding_dim: 10
+    kernel_size:
+      - 8
+      - 12
+      - 16
+      - 20
+      - 24
+      - 28
+      - 32
+      - 36
+    n_filters: 150
+    dropout: 0.3
+    pooling_layer_type: 'max'
+
+  # Networks for ablation study
+  deepnog_word_relu:
+    module: deepencoding
+    class: DeepNOGWordReLU
+    encoding_dim: 10
+    kernel_size:
+      - 8
+      - 12
+      - 16
+      - 20
+      - 24
+      - 28
+      - 32
+      - 36
+    n_filters: 150
+    dropout: 0.3
+    pooling_layer_type: 'max'
+
+  deepnog_onehot_selu:
+    module: deepencoding
+    class: DeepNOGOneHotSELU
     encoding_dim: 10
     kernel_size:
       - 8
