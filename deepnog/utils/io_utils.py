@@ -8,109 +8,29 @@ Description:
     Input/output helper functions
 """
 # SPDX-License-Identifier: BSD-3-Clause
-import logging
 from os import environ
 from pathlib import Path
 import shutil
 import ssl
-import sys
-from typing import List, Dict, Union
+from typing import List
 from urllib.error import URLError
 from urllib.request import urlopen
 from urllib.parse import urljoin
 import warnings
-import yaml
 
 import pandas as pd
 from torch import Tensor
 
+from deepnog.utils.logger import get_logger
+
 __all__ = ['create_df',
-           'get_config',
            'get_data_home',
-           'get_logger',
            'get_weights_path',
            ]
 
 DEEPNOG_REMOTE_DEFAULT = ('https://fileshare.csb.univie.ac.at/'
                           'deepnog/parameters/')
-DEEPNOG_CONFIG_PATH = Path(__file__).parent.parent.absolute()/"config/"
 CERTIFICATE_CHAIN = Path(__file__).parent.absolute() / "certifi/csb-univie-ac-at-chain.pem"
-
-logging.addLevelName(logging.DEBUG,
-                     "\033[1;32m%s\033[1;0m" % logging.getLevelName(logging.DEBUG))
-logging.addLevelName(logging.INFO,
-                     "\033[1;34m%s\033[1;0m" % logging.getLevelName(logging.INFO))
-logging.addLevelName(logging.WARNING,
-                     "\033[1;33m%s\033[1;0m" % logging.getLevelName(logging.WARNING))
-logging.addLevelName(logging.ERROR,
-                     "\033[1;41m%s\033[1;0m" % logging.getLevelName(logging.ERROR))
-
-
-def get_config(config_file: Union[Path, str, None] = None) -> Dict:
-    """ Get a config dictionary
-
-    If no file is provided, look in the DEEPNOG_CONFIG env variable for
-    the path. If this fails, load a default config file (lacking any
-    user customization).
-
-    This contains the available models (databases, levels).
-    Additional config may be added in future releases.
-    """
-    if config_file is None:
-        config_path = environ.get('DEEPNOG_CONFIG', default=DEEPNOG_CONFIG_PATH)
-        config_file = Path(config_path)/'deepnog_config.yml'
-    else:
-        config_file = Path(config_file)
-    try:
-        config = yaml.safe_load(config_file.open())
-    except yaml.YAMLError as e:
-        logger = get_logger(verbose=1)
-        logger.warning(f'Could not read config file. Will use default config '
-                       f'file (custom models will not be available).\n'
-                       f'Error message:\n{e}')
-        config_file = DEEPNOG_CONFIG_PATH/"deepnog_default_config.yml"
-        config = yaml.safe_load(config_file.open())
-    return config
-
-
-def get_logger(initname: str = 'deepnog', verbose: int = 0) -> logging.Logger:
-    """
-    This function provides a nicely formatted logger.
-
-    Parameters
-    ----------
-    initname : str
-        The name of the logger to show up in log.
-    verbose : int
-        Increasing levels of verbosity
-
-    References
-    ----------
-    Shamelessly stolen from phenotrex
-    """
-    logger = logging.getLogger(initname)
-    if type(verbose) is bool:
-        logger.setLevel(logging.INFO if verbose else logging.WARNING)
-    else:
-        logger.setLevel(verbose)
-    ch = logging.StreamHandler(stream=sys.stderr)
-    if verbose <= 0:
-        ch.setLevel(logging.ERROR)
-    elif verbose == 1:
-        ch.setLevel(logging.WARNING)
-    elif verbose <= 3:
-        ch.setLevel(logging.INFO)
-    else:
-        ch.setLevel(logging.DEBUG)
-    logstring = ('\033[1;32m[%(asctime)s]\033[1;0m \033[1m%(name)s'
-                 '\033[1;0m - %(levelname)s - %(message)s')
-    formatter = logging.Formatter(logstring, '%Y-%m-%d %H:%M:%S')
-    ch.setFormatter(formatter)
-    if logger.hasHandlers():
-        logger.handlers.clear()
-    logger.addHandler(ch)
-    logger.propagate = False
-    return logger
 
 
 def create_df(class_labels: list, preds: Tensor, confs: Tensor, ids: List[str],

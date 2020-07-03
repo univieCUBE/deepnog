@@ -9,7 +9,8 @@ Description:
 """
 # SPDX-License-Identifier: BSD-3-Clause
 from importlib import import_module
-from typing import Union
+from pathlib import Path
+from typing import Sequence, Union
 
 import torch
 
@@ -76,14 +77,17 @@ def set_device(device: Union[str, torch.device]) -> torch.device:
     return device
 
 
-def load_nn(architecture: str, model_dict: dict = None, phase: str = 'eval',
+def load_nn(architecture: Union[str, Sequence[str]], model_dict: dict = None, phase: str = 'eval',
             device: Union[torch.device, str] = 'cpu', verbose: int = 0):
     """ Import NN architecture and set loaded parameters.
 
     Parameters
     ----------
-    architecture : str
-        Name of neural network module and class to import.
+    architecture : str or list-like of two str
+        If single string: name of neural network module and class to import.
+        E.g. 'deepencoding' will load deepnog.models.deepencoding.deepencoding.
+        Otherwise, separate module and class name of deep network to import.
+        E.g. ('deepthought', 'DeepNettigkeit') will load deepnog.models.deepthought.DeepNettigkeit.
     model_dict : dict, optional
         Dictionary holding all parameters and hyper-parameters of the model.
         Required during inference, optional for training.
@@ -103,9 +107,14 @@ def load_nn(architecture: str, model_dict: dict = None, phase: str = 'eval',
     """
     logger = get_logger(__name__, verbose=verbose)
 
+    if isinstance(architecture, (str, Path)):
+        module = str(architecture)
+        cls = str(architecture)
+    else:
+        module, cls = [str(x) for x in architecture]
     # Import and instantiate neural network class
-    model_module = import_module(f'.models.{architecture}', 'deepnog')
-    model_class = getattr(model_module, architecture)
+    model_module = import_module(f'.models.{module}', 'deepnog')
+    model_class = getattr(model_module, cls)
     model = model_class(model_dict)
     # Set trained parameters of model
     try:
