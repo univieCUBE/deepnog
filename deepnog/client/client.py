@@ -352,7 +352,7 @@ def _start_inference(args):
     if args.test_labels is not None:
         if args.out is None:
             perf_file = sys.stderr
-            logger.info(f'Writing test set performance to stderr')
+            logger.info('Writing test set performance to stderr')
         else:
             perf_file = Path(save_file).with_suffix('.performance.csv')
             logger.info(f'Writing test set performance to {perf_file}')

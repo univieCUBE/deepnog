@@ -97,6 +97,7 @@ def test_inference_cmd_line_invocation(tax):
                                             tax='2',
                                             out='out.mock.2',
                                             file=TEST_FILE_SHORT,
+                                            test_labels=None,
                                             fformat='fasta',
                                             outformat='csv',
                                             database='eggNOG5',
