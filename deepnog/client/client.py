@@ -52,7 +52,7 @@ def _get_parser():
     """
     from deepnog import __version__
     parser = argparse.ArgumentParser(
-        description=('Assign protein sequences to orthologous groups'
+        description=('Assign protein sequences to orthologous groups '
                      'with deep learning.'))
     parser.add_argument('-v', '--version',
                         action='version',
@@ -267,7 +267,7 @@ def _start_prediction_or_training(args):
 
 
 def _start_inference(args):
-    import pandas as pd
+    from pandas import read_csv, DataFrame
     import torch
     from deepnog.data import ProteinIterableDataset
     from deepnog.learning import predict
@@ -356,9 +356,9 @@ def _start_inference(args):
         else:
             perf_file = Path(save_file).with_suffix('.performance.csv')
             logger.info(f'Writing test set performance to {perf_file}')
-        df_true = pd.read_csv(args.test_labels, index_col=0)
+        df_true = read_csv(args.test_labels, index_col=0)
         perf = estimate_performance(df_true=df_true, df_pred=df)
-        df_perf = pd.DataFrame(data=[perf, ])
+        df_perf = DataFrame(data=[perf, ])
         df_perf['experiment'] = args.file
         df_perf.to_csv(perf_file, )
     logger.info('All done.')
