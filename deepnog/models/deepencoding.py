@@ -1,31 +1,23 @@
 """
 Author: Lukas Gosch
+        Roman Feldbauer
 Date: 2019-10-09
 Description:
-    Convolutional network for protein orthologous group prediction.
-
-    This networks consists of an embedding layer which learns a D-dimensional
-    embedding for each amino acid. For a sequence of length L, the embedding
-    has dimension DxL. A 1-D convolution with C filters of F different kernel-
-    sizes K_i are performed over the embedding resulting in Cx(L-K_i-1) output
-    dimension for each kernel size. SeLU activation is applied on the output
-    followed by AdaptiveMaxPooling1D Layer reducing the dimension to of the
-    output layer to Cx1 and resulting in the NN being sequence length
-    independent. The max-pooling layer is followed up by a classic dropout
-    Layer and then by a dense layer with as many output nodes as orthologous
-    groups/protein families to classify.
+    Convolutional networks for protein orthologous group inference.
 """
 # SPDX-License-Identifier: BSD-3-Clause
 
 import torch
 import torch.nn as nn
 import numpy as np
+from sklearn.preprocessing import LabelBinarizer
 
 from ..data import gen_amino_acid_vocab
 
 
 __all__ = ['AminoAcidWordEmbedding',
            'deepencoding',
+           'DeepNOG',
            ]
 
 
@@ -66,6 +58,22 @@ class AminoAcidWordEmbedding(nn.Module):
         return x
 
 
+class AminoAcidOneHotEncoding(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.vocab = gen_amino_acid_vocab()
+        self.n_tokens = len(self.vocab) // 2 + 1
+        self.encoding = LabelBinarizer().fit(np.arange(self.n_tokens).reshape(-1, 1))
+
+    def forward(self, sequence):
+        n_sequences, sequence_len = sequence.size
+        x = self.encoding.transform(sequence.numpy().T.ravel())
+        x = x.reshape(n_sequences, sequence_len, self.n_tokens)
+        x = torch.from_numpy(x)
+        x.requires_grad = False
+        return x
+
+
 class deepencoding(nn.Module):
     """ Convolutional network for protein orthologous group prediction.
 
@@ -79,6 +87,17 @@ class deepencoding(nn.Module):
     Note on class name: using function naming style to match file name to
         dynamically load different architectures. Furthermore, NN-model
         is primarily used as a callable.
+
+    This networks consists of an embedding layer which learns a D-dimensional
+    embedding for each amino acid. For a sequence of length L, the embedding
+    has dimension DxL. A 1-D convolution with C filters of F different kernel-
+    sizes K_i are performed over the embedding resulting in Cx(L-K_i-1) output
+    dimension for each kernel size. SeLU activation is applied on the output
+    followed by AdaptiveMaxPooling1D Layer reducing the dimension to of the
+    output layer to Cx1 and resulting in the NN being sequence length
+    independent. The max-pooling layer is followed up by a classic dropout
+    Layer and then by a dense layer with as many output nodes as orthologous
+    groups/protein families to classify.
 
     Parameters
     ----------
@@ -190,3 +209,65 @@ class deepencoding(nn.Module):
         # NOTE: v1.2.0 removed the softmax here. Must now be performed in
         # inference module (otherwise, cross entropy loss requires hacks)
         return x
+
+
+class DeepNOG(deepencoding):
+    """ DeepNOG is identical to deepencoding """
+    pass
+
+
+class DeepNOGWordReLU(deepencoding):
+    """ Ablation study: ReLU instead of SELU """
+
+    def __init__(self, model_dict):
+        super().__init__(model_dict)
+
+        # Read hyperparameter dictionary
+        try:  # for inference these values are already available in the model
+            state = model_dict['model_state_dict']
+            kernel_sizes = [v.shape[-1] for k, v in state.items() if 'conv' in k and 'weight' in k]
+            n_filters = state['conv1.weight'].shape[0]
+        except KeyError:  # set up the model for training
+            kernel_sizes = model_dict['kernel_size']
+            n_filters = model_dict['n_filters']
+
+        # Retain the encoding layer from inherited class
+
+        # Replacing convolutional Layers without SELU-specific init.
+        for i, kernel in enumerate(kernel_sizes):
+            conv_layer = nn.Conv1d(in_channels=self.encoding.num_embeddings,
+                                   out_channels=n_filters,
+                                   kernel_size=kernel)
+            self.add_module(f'conv{i+1}', conv_layer)
+
+        # USE RELU
+        self.activation1 = nn.ReLU()
+
+
+class DeepNOGOneHotSELU(deepencoding):
+    """ Ablation study: Onehot encoding instead of WordEmbedding """
+
+    def __init__(self, model_dict):
+        super().__init__(model_dict)
+
+        # Read hyperparameter dictionary
+        try:  # for inference these values are already available in the model
+            state = model_dict['model_state_dict']
+            kernel_sizes = [v.shape[-1] for k, v in state.items() if 'conv' in k and 'weight' in k]
+            n_filters = state['conv1.weight'].shape[0]
+        except KeyError:  # set up the model for training
+            kernel_sizes = model_dict['kernel_size']
+            n_filters = model_dict['n_filters']
+
+        # ONEHOT ENCODING instead of WordEmbedding
+        self.encoding = AminoAcidOneHotEncoding()
+
+        # Replacing convolutional layers due to changed in_channels
+        for i, kernel in enumerate(kernel_sizes):
+            conv_layer = nn.Conv1d(in_channels=self.encoding.n_tokens,
+                                   out_channels=n_filters,
+                                   kernel_size=kernel)
+            # Initialize Convolution Layers for SELU activation
+            conv_layer.weight.data.normal_(
+                0.0, np.sqrt(1. / np.prod(conv_layer.kernel_size)))
+            self.add_module(f'conv{i+1}', conv_layer)
