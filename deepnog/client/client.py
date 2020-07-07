@@ -227,6 +227,13 @@ def _get_parser():
                               default=1e-2,
                               help='Initial learning rate, subject to adaptations by '
                                    'chosen optimizer and scheduler.')
+    parser_train.add_argument("-l2", "--l2-coeff",
+                              metavar="\u03BB",  # lower-case lambda
+                              type=float,
+                              default=None,
+                              help="Regularization coefficient \u03BB for "
+                                   "L2 regularization. If None, L2 regularization "
+                                   "is disabled.")
     parser_train.add_argument("-r", "--random-seed",
                               metavar='RANDOM_SEED',
                               type=int,
@@ -250,23 +257,35 @@ def _start_prediction_or_training(args):
 
     # Sanity check command line arguments
     if args.batch_size <= 0:
-        raise ValueError(f'Batch size must be at least one. '
-                         f'Got batch size = {args.batch_size} instead.')
+        logger.error(f'Batch size must be at least one. '
+                     f'Got batch size = {args.batch_size} instead.')
+        sys.exit(1)
 
     # Better safe than sorry -- don't overwrite existing files
-    if args.out is not None and Path(args.out).is_file():
-        raise FileExistsError(f'Output file {args.out} already exists.')
+    if args.out is not None:
+        if Path(args.out).is_file():
+            logger.error(f'Output file {args.out} already exists.')
+            sys.exit(1)
+        elif args.phase == 'infer' and (Path(args.out).is_dir() or args.out.endswith('/')):
+            logger.error(f'Output path must be a file during inference, '
+                         f'but got a directory instead: {args.out}')
+            sys.exit(1)
 
     # Set up device
     args.device = set_device(args.device)
 
+    # Get path to deep network architecture
+    config = get_config()
+    module = config['architecture'][args.architecture]['module']
+    cls = config['architecture'][args.architecture]['class']
+
     if args.phase == 'infer':
-        return _start_inference(args=args)
+        return _start_inference(args=args, arch_module=module, arch_cls=cls)
     elif args.phase == 'train':
-        return _start_training(args=args)
+        return _start_training(args=args, arch_module=module, arch_cls=cls)
 
 
-def _start_inference(args):
+def _start_inference(args, arch_module, arch_cls):
     from pandas import read_csv, DataFrame
     import torch
     from deepnog.data import ProteinIterableDataset
@@ -275,8 +294,8 @@ def _start_inference(args):
     from deepnog.utils.metrics import estimate_performance
 
     logger = get_logger(__name__, verbose=args.verbose)
-    # Set number of threads to 1, b/c automatic (internal) parallelization is
-    # quite inefficient
+    # Intra-op parallelization appears rather inefficient.
+    # Users may override with environmental variable: export OMP_NUM_THREADS=8
     torch.set_num_threads(1)
 
     # Construct path to saved parameters of NN
@@ -303,10 +322,7 @@ def _start_inference(args):
         class_labels = dataset.label_encoder.classes_
 
     # Load neural network model
-    config = get_config()
-    module = config['architecture'][args.architecture]['module']
-    cls = config['architecture'][args.architecture]['class']
-    model = load_nn(architecture=(module, cls),
+    model = load_nn(architecture=(arch_module, arch_cls),
                     model_dict=model_dict,
                     phase=args.phase,
                     device=args.device)
@@ -316,9 +332,9 @@ def _start_inference(args):
         if 0.0 < args.confidence_threshold <= 1.0:
             threshold = float(args.confidence_threshold)
         else:
-            raise ValueError(f'Invalid confidence threshold specified: '
-                             f'{args.confidence_threshold} not in range '
-                             f'(0, 1].')
+            logger.error(f'Invalid confidence threshold specified: '
+                         f'{args.confidence_threshold} not in range (0, 1].')
+            sys.exit(1)
     elif hasattr(model, 'threshold'):
         threshold = float(model.threshold)
         logger.info(f'Applying confidence threshold from model: {threshold}')
@@ -365,7 +381,7 @@ def _start_inference(args):
     return
 
 
-def _start_training(args):
+def _start_training(args, arch_module, arch_cls):
     import random
     import string
     import numpy as np
@@ -377,8 +393,9 @@ def _start_training(args):
     logger = get_logger(__name__, verbose=args.verbose)
 
     if args.n_epochs <= 0:
-        raise ValueError(f'Number of epochs must be greater than or equal '
-                         f'one. Got n_epochs = {args.n_epochs} instead.')
+        logger.error(f'Number of epochs must be greater than or equal '
+                     f'one. Got n_epochs = {args.n_epochs} instead.')
+        sys.exit(1)
     out_dir = Path(args.out)
     logger.info(f'Output directory: {out_dir} (creating, if necessary)')
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -393,6 +410,8 @@ def _start_training(args):
     classes_file = out_dir/f'{experiment_name}_labels.npz'
 
     results = fit(architecture=args.architecture,
+                  module=arch_module,
+                  cls=arch_cls,
                   training_sequences=args.training_sequences,
                   validation_sequences=args.validation_sequences,
                   training_labels=args.training_labels,
@@ -400,6 +419,7 @@ def _start_training(args):
                   data_loader_params={'batch_size': args.batch_size,
                                       'num_workers': args.num_workers},
                   learning_rate=args.learning_rate,
+                  l2_coeff=args.l2_coeff,
                   device=args.device,
                   verbose=args.verbose,
                   n_epochs=args.n_epochs,
