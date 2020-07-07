@@ -4,6 +4,7 @@ database:
   eggNOG5:
     - 1
     - 2
+    - 1236
 
 architecture:
   deepencoding:

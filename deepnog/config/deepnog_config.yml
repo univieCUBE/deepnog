@@ -69,5 +69,37 @@ architecture:
     dropout: 0.3
     pooling_layer_type: 'max'
 
+  deepfam:
+    module: deepfam
+    class: DeepFam
+    kernel_size:
+      - 8
+      - 12
+      - 16
+      - 20
+      - 24
+      - 28
+      - 32
+      - 36
+    n_filters: 250
+    dropout: 0.3
+    hidden_units: 2000
+
+  deepfam_light:
+    module: deepfam
+    class: DeepFam
+    kernel_size:
+      - 8
+      - 12
+      - 16
+      - 20
+      - 24
+      - 28
+      - 32
+      - 36
+    n_filters: 150
+    dropout: 0.3
+    hidden_units: 1500
+
 config:
   - custom
