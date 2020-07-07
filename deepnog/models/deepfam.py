@@ -64,7 +64,10 @@ class PseudoOneHotEncoding(nn.Module):
             The sequence (densely) embedded in a space of dimension
             embedding_dim.
         """
-        x = one_hot(sequence, num_classes=self.num_classes)
+        # Fix type mismatch on Windows
+        x = sequence.long()
+
+        x = one_hot(x, num_classes=self.num_classes)
         # Cut away one-hot encoding for zero padding as well as O & U
         x = x[:, :, 1:25].float()
         # Indices for b, z, j arrays below:

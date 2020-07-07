@@ -10,7 +10,6 @@ Description:
 import torch
 import torch.nn as nn
 import numpy as np
-from sklearn.preprocessing import LabelBinarizer
 
 from ..data import gen_amino_acid_vocab
 
@@ -53,23 +52,10 @@ class AminoAcidWordEmbedding(nn.Module):
             The sequence (densely) embedded in a space of dimension
             embedding_dim.
         """
-        x = self.embedding(sequence)
-        return x
+        # Fix type mismatch on Windows
+        x = sequence.long()
 
-
-class AminoAcidOneHotEncoding(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.vocab = gen_amino_acid_vocab()
-        self.n_tokens = len(self.vocab) // 2 + 1
-        self.encoding = LabelBinarizer().fit(np.arange(self.n_tokens).reshape(-1, 1))
-
-    def forward(self, sequence):
-        n_sequences, sequence_len = sequence.size
-        x = self.encoding.transform(sequence.numpy().T.ravel())
-        x = x.reshape(n_sequences, sequence_len, self.n_tokens)
-        x = torch.from_numpy(x)
-        x.requires_grad = False
+        x = self.embedding(x)
         return x
 
 
@@ -184,9 +170,6 @@ class DeepNOG(nn.Module):
         out : Tensor, shape (batch_size, n_classes)
             Confidence of sequence(s) being in one of the n_classes.
         """
-        # Fix type mismatch on Windows
-        x = x.long()
-
         # Amino acid embedding
         x = self.encoding(x).permute(0, 2, 1).contiguous()
 

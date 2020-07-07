@@ -6,10 +6,6 @@ import pandas as pd
 
 from deepnog.data import ProteinIterableDataset
 from deepnog.learning import fit, predict
-from deepnog.models.deepfam import DeepFam,\
-    DeepFamAblation1, DeepFamAblation2, DeepFamAblation3,\
-    DeepFamAblation12, DeepFamAblation13, DeepFamAblation23,\
-    DeepFamAblation123
 from deepnog.utils import create_df, get_config
 
 DEEPFAM_ABLATION_STR = ('DeepFamAblation1', 'DeepFamAblation2', 'DeepFamAblation3',
