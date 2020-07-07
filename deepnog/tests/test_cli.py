@@ -116,6 +116,12 @@ def test_main_and_argparsing(mock_args):  # noqa
 
 
 def test_args_sanity_check():
+    def _assert_exits(func, arguments):
+        with pytest.raises(SystemExit) as e:
+            func(arguments)
+            assert e.type == SystemExit
+            assert e.value.code == 1
+
     _, existing_file = tempfile.mkstemp()
     args = argparse.Namespace(
         phase='infer', tax='2', out='out.mock.2', file=TEST_FILE, fformat='fasta', outformat='csv',
@@ -127,29 +133,29 @@ def test_args_sanity_check():
     )
     args_bs = deepcopy(args)
     args_bs.batch_size = 0
-    with pytest.raises(ValueError):
-        _start_prediction_or_training(args_bs)
+    _assert_exits(_start_prediction_or_training, args_bs)
+
     args_out = deepcopy(args)
     args_out.out = existing_file
-    with pytest.raises(FileExistsError):
-        _start_prediction_or_training(args_out)
+    _assert_exits(_start_prediction_or_training, args_out)
+
     args_device = deepcopy(args)
     args_device.device = None
     with pytest.raises(ValueError):
         _start_prediction_or_training(args_device)
+
     args_train = deepcopy(args)
     args_train.phase = 'train'
     args_train.n_epochs = 0
-    with pytest.raises(ValueError):
-        _start_prediction_or_training(args_train)
+    _assert_exits(_start_prediction_or_training, args_train)
+
     try_to_unlink(Path(existing_file))
     args_confidence = deepcopy(args)
     args_confidence.confidence_threshold = 0
-    with pytest.raises(ValueError):
-        _start_prediction_or_training(args_confidence)
+    _assert_exits(_start_prediction_or_training, args_confidence)
+
     args_confidence.confidence_threshold = 1.000001
-    with pytest.raises(ValueError):
-        _start_prediction_or_training(args_confidence)
+    _assert_exits(_start_prediction_or_training, args_confidence)
 
 
 def test_training_cmd_line_invocation():

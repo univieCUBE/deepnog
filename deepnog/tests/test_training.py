@@ -15,7 +15,9 @@ Y_TRUE = np.array([[0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 
 @pytest.mark.parametrize('batch_size', [4, ])
 @pytest.mark.parametrize('num_workers', [0, 2])
 def test_shuffled_training(batch_size, num_workers):
-    results = fit(architecture='deepencoding',
+    results = fit(architecture='deepnog',
+                  module='deepnog',
+                  cls='DeepNOG',
                   training_sequences=TRAINING_FASTA,
                   validation_sequences=TRAINING_FASTA,
                   training_labels=TRAINING_CSV,

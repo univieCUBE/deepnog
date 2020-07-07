@@ -2,7 +2,6 @@
 doc/latex
 out.csv
 new_pypi_release.bash
-deepnog/config/deepnog_custom_config.yml
 
 # For certain test scenarios during development only
 deepnog/models/deepencoding_15.py
