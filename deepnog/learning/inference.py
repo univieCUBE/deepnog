@@ -9,6 +9,7 @@ Description:
 """
 # SPDX-License-Identifier: BSD-3-Clause
 from os import environ
+from typing import List
 import warnings
 
 import torch
@@ -22,7 +23,7 @@ __all__ = ['predict', ]
 
 
 def predict(model, dataset, device='cpu', batch_size=16, num_workers=4,
-            verbose=3):
+            verbose=3) -> (torch.Tensor, torch.Tensor, List[str], List[str]):
     """ Use model to predict zero-indexed labels of dataset.
 
     Also handles communication with ProteinIterators used to load data to

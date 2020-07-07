@@ -344,8 +344,9 @@ def fit(architecture, module, cls,
         save_each_epoch: bool = True,
         out_dir: Path = None,
         experiment_name: str = None,
+        config_file: str = None,
         verbose: int = 2,
-        ):
+        ) -> train_val_result:
     """ Perform training and validation of a given model, data, and hyperparameters.
 
         Parameters
@@ -401,6 +402,8 @@ def fit(architecture, module, cls,
             Path to the output directory used to save models during training
         experiment_name : str
             Prefix of model files saved during training
+        config_file : str
+            Override path to config file, e.g. for custom models in unit tests
         verbose : int
             Increasing levels of messages
 
@@ -482,7 +485,7 @@ def fit(architecture, module, cls,
                    for phase, d in dataset.items()}
 
     # Deep network hyperparameter default values
-    config = get_config()
+    config = get_config(config_file)
     model_dict = config['architecture'][architecture]
     model_dict['n_classes'] = len(dataset['train'].label_encoder.classes_)
     logger.debug(f'Network specs: {model_dict}')
