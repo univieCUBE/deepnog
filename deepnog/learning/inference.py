@@ -8,6 +8,7 @@ Description:
     Predict orthologous groups of protein sequences.
 """
 # SPDX-License-Identifier: BSD-3-Clause
+from os import environ
 import warnings
 
 import torch
@@ -58,6 +59,11 @@ def predict(model, dataset, device='cpu', batch_size=16, num_workers=4,
     logger = get_logger(__name__, verbose=verbose)
 
     logger.info(f'Inference device: {device}')
+
+    debug_force_mode = environ.get("DEEPNOG_FORCE_MODE", default=None)
+    if debug_force_mode is not None and debug_force_mode.lower() == 'train':
+        logger.warning('forcing model.train(), with possible effects on dropout and batchnorm')
+        model.train()
 
     pred_l = []
     conf_l = []

@@ -5,13 +5,14 @@ Date: 2020-06-03
 
 Description:
 
-    Traing deep networks for protein orthologous group prediction.
+    Training deep networks for protein orthologous group prediction.
 """
 # SPDX-License-Identifier: BSD-3-Clause
 
 import copy
 from datetime import datetime
 from functools import partial
+from os import environ
 from pathlib import Path
 import random
 import string
@@ -113,7 +114,7 @@ def _train_and_validate_model(model: torch.nn.Module, criterion, optimizer,
          * the predicted labels (y_pred).
     """
     logger = get_logger(__name__, verbose=verbose)
-
+    debug_force_mode = environ.get("DEEPNOG_FORCE_MODE", default=None)
     # Set up tensorboard
     if tensorboard_exp is not None:
         tensorboard_exp = Path(tensorboard_exp)
@@ -158,6 +159,13 @@ def _train_and_validate_model(model: torch.nn.Module, criterion, optimizer,
             else:
                 logger.debug('Setting model.eval() mode')
                 model.eval()
+            if debug_force_mode is not None:
+                if debug_force_mode.lower() == 'train':
+                    logger.warning('DEBUG forcing model.train()')
+                    model.train()
+                elif debug_force_mode.lower() == 'eval':
+                    logger.warning('DEBUG forcing model.eval()')
+                    model.eval()
 
             running_loss: torch.float32 = 0.
             running_corrects: torch.int = 0
@@ -318,7 +326,8 @@ def _train_and_validate_model(model: torch.nn.Module, criterion, optimizer,
                             )
 
 
-def fit(architecture, training_sequences, validation_sequences,
+def fit(architecture, module, cls,
+        training_sequences, validation_sequences,
         training_labels, validation_labels, *,
         data_loader_params: dict = None,
         iterable_dataset: bool = False,
@@ -326,6 +335,7 @@ def fit(architecture, training_sequences, validation_sequences,
         shuffle: bool = False,
         learning_rate: float = 1e-2,
         learning_rate_params: dict = None,
+        l2_coeff: float = None,
         optimizer_cls=Adam,
         device: Union[str, torch.device] = 'auto',
         tensorboard_dir: Union[None, str] = 'auto',
@@ -342,6 +352,11 @@ def fit(architecture, training_sequences, validation_sequences,
         ----------
         architecture : str
             Network architecture, must be available in deepnog/models
+        module : str
+            Python module containing the network definition
+            (inside deepnog/models/).
+        cls : str
+            Python class name of the network (inside deepnog/models/{module}.py).
         training_sequences : str
             File with training set sequences
         validation_sequences : str
@@ -368,6 +383,8 @@ def fit(architecture, training_sequences, validation_sequences,
             values result in slow learning.
         learning_rate_params : dict
             Parameters passed to the learning rate Scheduler.
+        l2_coeff : float
+            If not None, regularize training by L2 norm of network weights
         optimizer_cls
             Class of PyTorch optimizer
         device : torch.device
@@ -489,7 +506,9 @@ def fit(architecture, training_sequences, validation_sequences,
             experiment = None
 
     # Load model, and send to selected device. Set up training.
-    model = load_nn(architecture=architecture, model_dict=model_dict, phase='train',
+    model = load_nn(architecture=(module, cls),
+                    model_dict=model_dict,
+                    phase='train',
                     device=device)
     # NOTE: CrossEntropyLoss is LogSoftmax+NLLoss, that is, no softmax layer
     # should be in the forward pass of the network.
@@ -513,6 +532,7 @@ def fit(architecture, training_sequences, validation_sequences,
                                        data_loaders=data_loader,
                                        num_epochs=n_epochs,
                                        tensorboard_exp=experiment,
+                                       l2_coeff=l2_coeff,
                                        log_interval=log_interval,
                                        device=device,
                                        save_each_epoch=save_each_epoch,

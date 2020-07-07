@@ -5,8 +5,7 @@ Author: Lukas Gosch
 # SPDX-License-Identifier: BSD-3-Clause
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-from Bio.Alphabet import ProteinAlphabet
+from torch.nn.functional import one_hot
 
 __all__ = ['DeepFam',
            ]
@@ -21,9 +20,8 @@ class PseudoOneHotEncoding(nn.Module):
 
     Parameters
     ----------
-    embedding_dim: int
-        Embedding dimensionality.
-    alphabet:
+    device : 'cpu', 'cuda'
+        Run on CPU or GPU
 
     See Also
     --------
@@ -31,10 +29,11 @@ class PseudoOneHotEncoding(nn.Module):
     `<https://academic.oup.com/bioinformatics/article/34/13/i254/5045722#118270045>`_.
     """
 
-    def __init__(self, alphabet=None, device='cpu'):
+    def __init__(self, device='cpu'):
         super().__init__()
         self.device = device
         self.num_classes = 27  # i.e. 26 letters ExtendedIUPAC plus zero-padding
+        self.alphabet_size = 21  # after encoding
 
     def forward(self, sequence):
         """ Embedd a given sequence.
@@ -44,7 +43,10 @@ class PseudoOneHotEncoding(nn.Module):
         sequence : Tensor
             The sequence or a batch of sequences to embed. They are assumed to
             be translated to numerical values given a generated vocabulary
-            (see gen_amino_acid_vocab in dataset.py)
+            (see gen_amino_acid_vocab in dataset.py).
+            Must correspond to the following alphabet:
+            Index    0  3  6  9 12 15 18 21 24 27
+            Letter   _ACDEFGHIKLMNPQRSTVWYXBZJUO
 
         Returns
         -------
@@ -52,28 +54,33 @@ class PseudoOneHotEncoding(nn.Module):
             The sequence (densely) embedded in a space of dimension
             embedding_dim.
         """
-        x = F.one_hot(sequence, num_classes=self.num_classes)
+        x = one_hot(sequence, num_classes=self.num_classes)
         # Cut away one-hot encoding for zero padding as well as O & U
         x = x[:, :, 1:25].float()
+        # Indices for b, z, j arrays below:
+        # Index    0  3  6  9 12 15 18 21 24
+        # Letter   ACDEFGHIKLMNPQRSTVWYXBZJ
         # Treat B: D or N
-        B = torch.zeros((1, 24), device=self.device)
-        B[0, 2] = 0.5
-        B[0, 11] = 0.5
+        b = torch.zeros((1, 24), device=self.device)
+        b[0, 2] = 0.5
+        b[0, 11] = 0.5
         b_found = (x[:, :, 21] == 1).nonzero()
-        x[b_found[:, 0], b_found[:, 1]] = B
+        x[b_found[:, 0], b_found[:, 1]] = b
         # Treat Z: E or Q
-        Z = torch.zeros((1, 24), device=self.device)
-        Z[0, 3] = 0.5
-        Z[0, 13] = 0.5
+        z = torch.zeros((1, 24), device=self.device)
+        z[0, 3] = 0.5
+        z[0, 13] = 0.5
         z_found = (x[:, :, 22] == 1).nonzero()
-        x[z_found[:, 0], z_found[:, 1]] = Z
+        x[z_found[:, 0], z_found[:, 1]] = z
         # Treat J: I or L
-        J = torch.zeros((1, 24), device=self.device)
-        J[0, 7] = 0.5
-        J[0, 9] = 0.5
+        j = torch.zeros((1, 24), device=self.device)
+        j[0, 7] = 0.5
+        j[0, 9] = 0.5
         j_found = (x[:, :, 23] == 1).nonzero()
-        x[j_found[:, 0], j_found[:, 1]] = J
-        # Cut away B, Z & J
+        x[j_found[:, 0], j_found[:, 1]] = j
+        # Cut away B, Z, J to obtain
+        # Index    0  3  6  9 12 15 18 21
+        # Letter   ACDEFGHIKLMNPQRSTVWYX
         x = x[:, :, :21]
 
         return x
@@ -94,25 +101,26 @@ class DeepFam(nn.Module):
     def __init__(self, model_dict, device='cpu'):
         super().__init__()
 
-        # Read hyperparameter dictionary
-        n_classes = model_dict['n_classes']
-        kernel_sizes = model_dict['kernel_size']
-        n_filters = model_dict['n_filters']
-        dropout = model_dict['dropout']
-        hidden_units = model_dict['hidden_units']
-
-        """ Alphabet used in DeepFam-Paper. """
-        self.alphabet = ProteinAlphabet()
-        self.alphabet.letters = 'ACDEFGHIKLMNPQRSTVWYXBZJUO'
-        self.alphabet.size = 21
+        try:  # for inference these values are already available in the model
+            state = model_dict['model_state_dict']
+            self.n_classes = state['classification1.weight'].shape[0]
+            kernel_sizes = [v.shape[-1] for k, v in state.items() if 'conv' in k and 'weight' in k]
+            n_filters = state['conv1.weight'].shape[0]
+            dropout = model_dict.get('dropout', 0.3)
+            hidden_units = state['linear1.weight'].shape[0]
+        except KeyError:  # set up the model for training
+            self.n_classes = model_dict['n_classes']
+            kernel_sizes = model_dict['kernel_size']
+            n_filters = model_dict['n_filters']
+            dropout = model_dict['dropout']
+            hidden_units = model_dict['hidden_units']
 
         # One-Hot-Encoding Layer
         self.device = device
-        self.encoding = PseudoOneHotEncoding(alphabet=self.alphabet,
-                                             device=self.device)
+        self.encoding = PseudoOneHotEncoding(device=self.device)
         # Convolutional Layers
         for i, kernel in enumerate(kernel_sizes):
-            conv_layer = nn.Conv1d(in_channels=self.alphabet.size,
+            conv_layer = nn.Conv1d(in_channels=self.encoding.alphabet_size,
                                    out_channels=n_filters,
                                    kernel_size=kernel)
             # Initialize Convolution Layer, gain = 1.0 to match tensorflow implementation
@@ -127,7 +135,7 @@ class DeepFam(nn.Module):
             # tensorflow implementation only updates bias term not gamma
             batch_layer.weight.requires_grad = False
             self.add_module(f'batch{i + 1}', batch_layer)
-        self.n_conv_layers = i + 1
+        self.n_conv_layers = len(kernel_sizes)
 
         # Max-Pooling Layer, yields same output as MaxPooling Layer for sequences of size 1000
         # as used in DeepFam but makes the NN applicable to arbitrary sequence lengths
@@ -150,7 +158,7 @@ class DeepFam(nn.Module):
         self.batch_linear.weight.requires_grad = False
         # Classifcation layer
         self.classification1 = nn.Linear(in_features=hidden_units,
-                                         out_features=n_classes)
+                                         out_features=self.n_classes)
 
         # Initialize linear layers
         nn.init.xavier_uniform_(self.linear1.weight, gain=1.0)
@@ -193,5 +201,5 @@ class DeepFam(nn.Module):
         x = self.batch_linear(x)
         x = self.activation1(x)
         x = self.classification1(x)
-        out = self.softmax(x)
-        return out
+        # no softmax here
+        return x
