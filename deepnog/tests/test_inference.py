@@ -12,7 +12,7 @@ import torch
 
 from deepnog.data.dataset import ProteinIterableDataset
 from deepnog.learning import predict
-from deepnog.utils import create_df, load_nn
+from deepnog.utils import create_df, load_nn, get_config
 
 
 current_path = Path(__file__).parent.absolute()
@@ -21,21 +21,30 @@ data_path = current_path/'data/test_deepencoding.faa'
 data_skip_path = current_path/'data/test_skip_empty_sequences.faa'
 
 
-@pytest.mark.parametrize("architecture", ['deepencoding', ])
+def _get_module_cls_from_arch(arch):
+    config = get_config()
+    module = config['architecture'][arch]['module']
+    cls = config['architecture'][arch]['class']
+    return module, cls
+
+
+@pytest.mark.parametrize("architecture", ['deepencoding', 'deepnog', ])
 @pytest.mark.parametrize("weights", [weights_path, ])
 def test_load_nn(architecture, weights):
     """ Test loading of neural network model. """
+    module, cls = _get_module_cls_from_arch(architecture)
+
     # Set up device
     cuda = torch.cuda.is_available()
     device = torch.device('cuda' if cuda else 'cpu')
     # Start test
     model_dict = torch.load(weights, map_location=device)
-    model = load_nn(architecture, model_dict, phase='infer', device=device)
+    model = load_nn((module, cls), model_dict, phase='infer', device=device)
     assert(issubclass(type(model), nn.Module))
     assert(isinstance(model, nn.Module))
 
 
-@pytest.mark.parametrize("architecture", ['deepencoding'])
+@pytest.mark.parametrize("architecture", ['deepencoding', 'deepnog'])
 @pytest.mark.parametrize("weights", [weights_path, ])
 @pytest.mark.parametrize("data", [data_path, ])
 @pytest.mark.parametrize("fformat", ['fasta'])
@@ -47,14 +56,16 @@ def test_predict(architecture, weights, data, fformat, tolerance):
         Prediction performance is checked through sequences from SIMAP with
         known class labels. Class labels are stored as the id in the given
         fasta file. Tolerance defines how many sequences the algorithm
-        is allowed to misclassfy before the test fails.
+        is allowed to misclassify before the test fails.
     """
+    module, cls = _get_module_cls_from_arch(architecture)
+
     # Set up device
     cuda = torch.cuda.is_available()
     device = torch.device('cuda' if cuda else 'cpu')
     # Start test
     model_dict = torch.load(weights, map_location=device)
-    model = load_nn(architecture, model_dict, phase='infer', device=device)
+    model = load_nn((module, cls), model_dict, phase='infer', device=device)
     dataset = ProteinIterableDataset(data, f_format=fformat)
     preds, confs, ids, indices = predict(model, dataset, device)
     # Test correct output shape
@@ -67,19 +78,21 @@ def test_predict(architecture, weights, data, fformat, tolerance):
     assert(sum((ids == preds.cpu()).long()) >= n - tolerance)
 
 
-@pytest.mark.parametrize("architecture", ['deepencoding'])
+@pytest.mark.parametrize("architecture", ['deepencoding', 'deepnog'])
 @pytest.mark.parametrize("weights", [weights_path, ])
 @pytest.mark.parametrize("data", [data_skip_path, ])
 @pytest.mark.parametrize("fformat", ['fasta'])
 def test_skip_empty_sequences(architecture, weights, data, fformat):
     """ Test if sequences with empty ids are skipped and counted correctly.
     """
+    module, cls = _get_module_cls_from_arch(architecture)
+
     # Set up device
     cuda = torch.cuda.is_available()
     device = torch.device('cuda' if cuda else 'cpu')
     # Start test
     model_dict = torch.load(weights, map_location=device)
-    model = load_nn(architecture, model_dict, phase='infer', device=device)
+    model = load_nn((module, cls), model_dict, phase='infer', device=device)
     dataset = ProteinIterableDataset(data, f_format=fformat)
     with pytest.warns(UserWarning, match='no sequence id could be detected'):
         preds, confs, ids, indices = predict(model, dataset, device)
@@ -90,7 +103,7 @@ def test_skip_empty_sequences(architecture, weights, data, fformat):
 
 
 def test_create_df():
-    """ Test correct creation of dataframe. """
+    """ Test correct creation of data frame. """
     class_labels = ['class1', 'class2']
     preds = torch.tensor([1, 0])
     confs = torch.tensor([0.8, 0.3])

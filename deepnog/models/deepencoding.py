@@ -60,22 +60,6 @@ class AminoAcidWordEmbedding(nn.Module):
         return x
 
 
-class AminoAcidOneHotEncoding(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.vocab = gen_amino_acid_vocab()
-        self.n_tokens = len(self.vocab) // 2 + 1
-        self.encoding = LabelBinarizer().fit(np.arange(self.n_tokens).reshape(-1, 1))
-
-    def forward(self, sequence):
-        n_sequences, sequence_len = sequence.size
-        x = self.encoding.transform(sequence.numpy().T.ravel())
-        x = x.reshape(n_sequences, sequence_len, self.n_tokens)
-        x = torch.from_numpy(x)
-        x.requires_grad = False
-        return x
-
-
 class deepencoding(nn.Module):
     """ Convolutional network for protein orthologous group prediction.
 

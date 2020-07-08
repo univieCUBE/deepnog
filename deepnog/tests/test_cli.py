@@ -22,9 +22,11 @@ from deepnog.client import main
 from deepnog.client.client import _start_prediction_or_training  # noqa
 from deepnog import __version__
 
-TEST_FILE = Path(__file__).parent.absolute() / "data/test_deepencoding.faa"
-TEST_FILE_SHORT = Path(__file__).parent.absolute() / "data/test_inference_short.faa"
+DEEPNOG_TEST = Path(__file__).parent.absolute()
+TEST_FILE = DEEPNOG_TEST/"data/test_deepencoding.faa"
+TEST_FILE_SHORT = DEEPNOG_TEST/"data/test_inference_short.faa"
 TEST_LABELS_SHORT = TEST_FILE_SHORT.with_suffix('.csv')
+TEST_LABELS_SHORT_COL_RENAME = DEEPNOG_TEST/"data/test_inference_short_wrong_column_names.csv"
 TRAINING_FASTA = Path(__file__).parent.absolute()/"data/test_training_dummy.faa"
 TRAINING_CSV = Path(__file__).parent.absolute()/"data/test_training_dummy.faa.csv"
 Y_TRUE = np.array([[0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2,
@@ -50,13 +52,14 @@ def test_entrypoint():
 
 
 def test_run_inference():
+    """ Also tests column renaming on the fly. """
     with tempfile.TemporaryDirectory(prefix='deepnog_test_') as outdir:
         outfile = Path(outdir)/'pred.out'
         args = argparse.Namespace(phase='infer',
                                   tax='2',
                                   out=str(outfile),
                                   file=TEST_FILE_SHORT,
-                                  test_labels=f'{TEST_LABELS_SHORT}',
+                                  test_labels=f'{TEST_LABELS_SHORT_COL_RENAME}',
                                   fformat='fasta',
                                   outformat='csv',
                                   database='eggNOG5',
@@ -173,8 +176,8 @@ def test_args_sanity_check():
     def _assert_exits(func, arguments):
         with pytest.raises(SystemExit) as e:
             func(arguments)
-            assert e.type == SystemExit
-            assert e.value.code == 1
+        assert e.type == SystemExit
+        assert e.value.code == 1
 
     _, existing_file = tempfile.mkstemp()
     args = argparse.Namespace(
