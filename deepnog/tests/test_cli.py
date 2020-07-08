@@ -13,6 +13,7 @@ import shutil
 import subprocess
 import tempfile
 from unittest import mock
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -71,7 +72,10 @@ def test_run_inference():
                                   weights=None,
                                   batch_size=1,
                                   )
-        _start_prediction_or_training(args)
+        with warnings.catch_warnings():
+            # ignore warning due to zero-div in MCC perf measure
+            warnings.simplefilter('ignore', category=RuntimeWarning)
+            _start_prediction_or_training(args)
 
 
 @pytest.mark.parametrize('tax', [1, 2, ])

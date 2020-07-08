@@ -77,19 +77,19 @@ class PseudoOneHotEncoding(nn.Module):
         b = torch.zeros((1, 24), device=self.device)
         b[0, 2] = 0.5
         b[0, 11] = 0.5
-        b_found = (x[:, :, 21] == 1).nonzero()
+        b_found = (x[:, :, 21] == 1).nonzero(as_tuple=False)
         x[b_found[:, 0], b_found[:, 1]] = b
         # Treat Z: E or Q
         z = torch.zeros((1, 24), device=self.device)
         z[0, 3] = 0.5
         z[0, 13] = 0.5
-        z_found = (x[:, :, 22] == 1).nonzero()
+        z_found = (x[:, :, 22] == 1).nonzero(as_tuple=False)
         x[z_found[:, 0], z_found[:, 1]] = z
         # Treat J: I or L
         j = torch.zeros((1, 24), device=self.device)
         j[0, 7] = 0.5
         j[0, 9] = 0.5
-        j_found = (x[:, :, 23] == 1).nonzero()
+        j_found = (x[:, :, 23] == 1).nonzero(as_tuple=False)
         x[j_found[:, 0], j_found[:, 1]] = j
         # Cut away B, Z, J to obtain
         # Index    0  3  6  9 12 15 18 21

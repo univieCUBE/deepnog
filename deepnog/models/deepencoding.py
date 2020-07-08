@@ -12,7 +12,6 @@ Description:
 import torch
 import torch.nn as nn
 import numpy as np
-from sklearn.preprocessing import LabelBinarizer
 
 from ..data import gen_amino_acid_vocab
 

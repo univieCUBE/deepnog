@@ -1,9 +1,11 @@
 """
 Author: Lukas Gosch
+        Roman Feldbauer
 Date: 2019-10-03
 Description:
     Test dataset module.
 """
+from functools import partial
 from pathlib import Path
 import pytest
 
@@ -64,18 +66,25 @@ def test_correct_collating_sequences(batch_size, f_format='fasta'):
         break
 
 
-def test_zero_padding(f_format='fasta'):
+@pytest.mark.parametrize('random_padding', [False, True])
+def test_zero_padding(random_padding: bool, f_format='fasta'):
     """ Test correct zeroPadding. """
     pad_file = Path(__file__).parent.absolute()/"data/test_zeroPadding.faa"
     dataset = ds.ProteinIterableDataset(pad_file, f_format=f_format)
-    for i, batch in enumerate(DataLoader(dataset,
-                                         batch_size=2,
-                                         num_workers=0,
-                                         collate_fn=ds.collate_sequences)):
-        # Test correct shape
-        assert(batch.sequences.shape[1] == 112)
+    for batch in DataLoader(dataset,
+                            batch_size=2,
+                            num_workers=0,
+                            collate_fn=partial(ds.collate_sequences,
+                                               random_padding=random_padding)):
+        # Test correct shape (seq1: 56aa, seq2: 112aa)
+        assert batch.sequences.shape[1] == 112
         # Test correctly zeros inserted
-        assert(sum(batch.sequences[0, 56:]) == 0)
+        if random_padding:
+            n_zeros = (batch.sequences[0] == 0).sum()
+            assert n_zeros == 56
+        else:
+            assert sum(batch.sequences[0, 56:]) == 0
+        assert sum(batch.sequences[1, :] == 0) == 0
 
 
 def test_correct_encoding():
