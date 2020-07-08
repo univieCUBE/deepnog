@@ -24,6 +24,7 @@ from deepnog import __version__
 
 TEST_FILE = Path(__file__).parent.absolute() / "data/test_deepencoding.faa"
 TEST_FILE_SHORT = Path(__file__).parent.absolute() / "data/test_inference_short.faa"
+TEST_LABELS_SHORT = TEST_FILE_SHORT.with_suffix('.csv')
 TRAINING_FASTA = Path(__file__).parent.absolute()/"data/test_training_dummy.faa"
 TRAINING_CSV = Path(__file__).parent.absolute()/"data/test_training_dummy.faa.csv"
 Y_TRUE = np.array([[0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2,
@@ -48,29 +49,66 @@ def test_entrypoint():
         f'Incorrect version output: {process.stdout}'
 
 
+def test_run_inference():
+    with tempfile.TemporaryDirectory(prefix='deepnog_test_') as outdir:
+        outfile = Path(outdir)/'pred.out'
+        args = argparse.Namespace(phase='infer',
+                                  tax='2',
+                                  out=str(outfile),
+                                  file=TEST_FILE_SHORT,
+                                  test_labels=f'{TEST_LABELS_SHORT}',
+                                  fformat='fasta',
+                                  outformat='csv',
+                                  database='eggNOG5',
+                                  verbose=0,
+                                  device='auto',
+                                  num_workers=0,
+                                  confidence_threshold=None,
+                                  architecture='deepencoding',
+                                  weights=None,
+                                  batch_size=1,
+                                  )
+        _start_prediction_or_training(args)
+
+
 @pytest.mark.parametrize('tax', [1, 2, ])
 def test_inference_cmd_line_invocation(tax):
+    df_true = pd.DataFrame({'sequence_id': [0, 1],
+                            'label': ['COG0443', 'COG0443']})
     # Using out file
-    outdir = tempfile.mkdtemp(prefix='deepnog_test_')
-    outfile = Path(outdir)/'pred.out'
-    proc = subprocess.run(['deepnog', 'infer',
-                           f'{TEST_FILE_SHORT}',
-                           '--tax', f'{tax}',
-                           '--out', f'{outfile}',
-                           '--verbose', f'{0}',
-                           ],
-                          capture_output=True,
-                          )
-    outfile = Path(outfile)
-    assert outfile.is_file(), (f'Stdout of call:\n{proc.stdout}\n\n'
-                               f'Stderr of call:\n{proc.stderr}')
-    try_to_unlink(outfile)
+    with tempfile.TemporaryDirectory(prefix='deepnog_test_') as outdir:
+        outfile = Path(outdir)/'pred.out'
+        proc = subprocess.run(['deepnog', 'infer',
+                               f'{TEST_FILE_SHORT}',
+                               '--tax', f'{tax}',
+                               '--out', f'{outfile}',
+                               '--verbose', f'{0}',
+                               '--test_labels', f'{TEST_LABELS_SHORT}',
+                               ],
+                              capture_output=True,
+                              )
+        outfile = Path(outfile)
+        assert outfile.is_file(), (f'Stdout of call:\n{proc.stdout}\n\n'
+                                   f'Stderr of call:\n{proc.stderr}')
+        df_pred = pd.read_csv(outfile)
+        np.testing.assert_equal(df_pred.sequence_id.values, [0, 1])
+        np.testing.assert_equal(df_pred.prediction.values, df_true.label)
+        np.testing.assert_allclose(df_pred.confidence.values, [1., 1.], atol=0.05)
+
+        perf_file = outfile.with_suffix('.performance.csv')
+        assert perf_file.is_file(), 'No performance.csv file found'
+        df_perf = pd.read_csv(perf_file, index_col=0)
+        for measure in ['macro_precision', 'micro_precision', 'macro_recall',
+                        'micro_recall', 'macro_f1', 'micro_f1', 'accuracy', ]:
+            np.testing.assert_allclose(df_perf[measure].values, 1.)
+        np.testing.assert_allclose(df_perf.mcc, 0.)  # only TP, no TN/FP/FN
 
     # Using output to stdout
     proc = subprocess.run(['deepnog', 'infer',
                            f'{TEST_FILE_SHORT}',
                            '--tax', f'{tax}',
                            '--verbose', '4',
+                           '--test_labels', f'{TEST_LABELS_SHORT}',
                            ],
                           capture_output=True,
                           )
@@ -82,14 +120,30 @@ def test_inference_cmd_line_invocation(tax):
     # Check the prediction in stdout (omitting volatile confidence values)
     # Iterating over the lines in order to avoid issues with OS-specific linesep
     correct_out = b'sequence_id,prediction,confidence'
-    for i, line in enumerate(BytesIO(proc.stdout)):
+    i = 0
+    line = "[nothing]"
+    for line in BytesIO(proc.stdout):
         if i == 1:
             correct_out = b'0,COG0443'
         elif i == 2:
             correct_out = b'1,COG0443'
         assert correct_out in line, \
             f'Incorrect prediction output: expected {correct_out}, got line: {line}'
-    assert i == 2, f'Incorrect number of output lines with i = {i}, and line = {line}.'
+        i += 1
+    assert i == 3, f'Incorrect number of output lines with i = {i}, and line = {line}.'
+
+    # Check that the performance measures are printed to stderr
+    found_header = False
+    found_values = False
+    header = b",macro_precision,macro_recall,macro_f1,micro_precision," \
+             b"micro_recall,micro_f1,accuracy,mcc,experiment"
+    values = b"0,1.0,1.0,1.0,1.0,1.0,1.0,1.0,0.0,"
+    for line in BytesIO(proc.stderr):
+        if header in line:
+            found_header = True
+        elif values in line:
+            found_values = True
+    assert found_header and found_values, "Missing performance measures in stderr"
 
 
 @mock.patch('argparse.ArgumentParser.parse_args',
