@@ -372,7 +372,7 @@ def _start_inference(args, arch_module, arch_cls):
         else:
             perf_file = Path(save_file).with_suffix('.performance.csv')
             logger.info(f'Writing test set performance to {perf_file}')
-        df_true = read_csv(args.test_labels, index_col=0)
+        df_true = read_csv(args.test_labels, dtype=object, index_col=0)
         perf = estimate_performance(df_true=df_true, df_pred=df)
         df_perf = DataFrame(data=[perf, ])
         df_perf['experiment'] = args.file
