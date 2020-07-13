@@ -3,6 +3,8 @@ Author: Lukas Gosch
         Roman Feldbauer
 """
 # SPDX-License-Identifier: BSD-3-Clause
+from typing import Union
+
 import numpy as np
 import torch
 import torch.nn as nn
@@ -222,13 +224,8 @@ class DeepFam(nn.Module):
         return x
 
 
-class DeepFamAblation1(DeepFam):
-    """ Ablation study of DeepFam to DeepNOG transition.
-
-    Change 1: WordEmbedding instead of PseudoOneHot
-    Change 2: SELU instead of BN/ReLU
-    Change 3: Drop the fully connected layer between ConvNet and classification
-    Combinations: 12, 13, 23, 123 (=DeepNOG).
+class DeepFamAblationBase(nn.Module):
+    """ A copy of DeepFam with some flexibility for changed layers.
 
     Parameters
     ----------
@@ -237,72 +234,111 @@ class DeepFamAblation1(DeepFam):
         the model.
     """
 
-    def __init__(self, model_dict, device='cpu'):
-        super().__init__(model_dict)
+    def __init__(self, model_dict, device='cpu',
+                 embedding: str = 'pseudo_one_hot',
+                 embedding_dim: Union[None, int] = None,
+                 activation: str = 'relu',
+                 linear_layer: bool = True,
+                 dropout: Union[float, None] = 0.3,
+                 ):
+        super().__init__()
 
-        # Embedding Layer
+        try:  # for inference these values are already available in the model
+            state = model_dict['model_state_dict']
+            self.n_classes = state['classification1.weight'].shape[0]
+            self.kernel_sizes = [v.shape[-1] for k, v in state.items() if 'conv' in k and 'weight' in k]
+            self.n_filters = state['conv1.weight'].shape[0]
+            if dropout is not None:
+                self.dropout = model_dict.get('dropout', 0.3)
+            if linear_layer:
+                self.hidden_units = state['linear1.weight'].shape[0]
+        except KeyError:  # set up the model for training
+            self.n_classes = model_dict['n_classes']
+            self.kernel_sizes = model_dict['kernel_size']
+            self.n_filters = model_dict['n_filters']
+            if dropout is not None:
+                self.dropout = model_dict['dropout']
+            if linear_layer:
+                self.hidden_units = model_dict['hidden_units']
         self.device = device
-        self.embedding_dim = 10
-        self.encoding = AminoAcidWordEmbedding(embedding_dim=self.embedding_dim)
+        self.embedding = embedding
+        self.embedding_dim = embedding_dim
+        self.activation = activation
+        self.linear_layer = linear_layer
 
-        # Convolutional Layers
-        for i, kernel in enumerate(self.kernel_sizes):
-            conv_layer = nn.Conv1d(in_channels=self.embedding_dim,
-                                   out_channels=self.n_filters,
-                                   kernel_size=kernel)
-            # Initialize Convolution Layer, gain = 1.0 to match tensorflow implementation
-            nn.init.xavier_uniform_(conv_layer.weight, gain=1.0)
-            conv_layer.bias.data.fill_(0.01)
-            self.add_module(f'conv{i + 1}', conv_layer)
-            # momentum=1-decay to port from tensorflow
-            batch_layer = nn.BatchNorm1d(num_features=self.n_filters,
-                                         eps=0.001,
-                                         momentum=0.1,
-                                         affine=True)
-            # tensorflow implementation only updates bias term not gamma
-            batch_layer.weight.requires_grad = False
-            self.add_module(f'batch{i + 1}', batch_layer)
+        if embedding == 'pseudo_one_hot':
+            self.encoding = PseudoOneHotEncoding(device=self.device)
+            self.alphabet_size = self.encoding.alphabet_size
+        elif embedding == 'word_embedding':
+            self.encoding = AminoAcidWordEmbedding(embedding_dim=self.embedding_dim)
+            self.alphabet_size = self.encoding.embedding.weight.shape[1]
 
+        if activation == 'relu':
+            for i, kernel in enumerate(self.kernel_sizes):
+                conv_layer = nn.Conv1d(in_channels=self.alphabet_size,
+                                       out_channels=self.n_filters,
+                                       kernel_size=kernel)
+                # Initialize Convolution Layer, gain = 1.0 to match tensorflow implementation
+                nn.init.xavier_uniform_(conv_layer.weight, gain=1.0)
+                conv_layer.bias.data.fill_(0.01)
+                self.add_module(f'conv{i + 1}', conv_layer)
+                # momentum=1-decay to port from tensorflow
+                batch_layer = nn.BatchNorm1d(num_features=self.n_filters,
+                                             eps=0.001,
+                                             momentum=0.1,
+                                             affine=True)
+                # tensorflow implementation only updates bias term not gamma
+                batch_layer.weight.requires_grad = False
+                self.add_module(f'batch{i + 1}', batch_layer)
+            self.activation1 = nn.ReLU()
+        elif activation == 'selu':
+            for i, kernel in enumerate(self.kernel_sizes):
+                conv_layer = nn.Conv1d(in_channels=self.alphabet_size,
+                                       out_channels=self.n_filters,
+                                       kernel_size=kernel)
+                # Initialize Convolution Layers for SELU activation
+                conv_layer.weight.data.normal_(
+                    0.0, np.sqrt(1. / np.prod(conv_layer.kernel_size)))
+                conv_layer.bias.data.fill_(0.01)
+                self.add_module(f'conv{i + 1}', conv_layer)
+                # No batch-normalization here
+            self.activation1 = nn.SELU()
 
-class DeepFamAblation2(DeepFam):
-    """ Ablation study of DeepFam to DeepNOG transition.
+        self.n_conv_layers = len(self.kernel_sizes)
 
-    Change 1: WordEmbedding instead of PseudoOneHot
-    Change 2: SELU instead of BN/ReLU
-    Change 3: Drop the fully connected layer between ConvNet and classification
-    Combinations: 12, 13, 23, 123 (=DeepNOG).
+        # Max-Pooling Layer, yields same output as MaxPooling Layer for sequences of size 1000
+        # as used in DeepFam but makes the NN applicable to arbitrary sequence lengths
+        self.pooling1 = nn.AdaptiveMaxPool1d(output_size=1)
 
-    Parameters
-    ----------
-    model_dict : dict
-        Dictionary storing the hyperparameters and learned parameters of
-        the model.
-    """
+        if dropout is not None:
+            self.dropout1 = nn.Dropout(p=dropout)
 
-    def __init__(self, model_dict, device='cpu'):
-        super().__init__(model_dict)
+        if linear_layer:
+            self.linear1 = nn.Linear(in_features=self.n_filters * len(self.kernel_sizes),
+                                     out_features=self.hidden_units)
+            self.classification1 = nn.Linear(in_features=self.hidden_units,
+                                             out_features=self.n_classes)
+            if activation == 'relu':
+                self.batch_linear = nn.BatchNorm1d(num_features=self.hidden_units,
+                                                   eps=0.001,
+                                                   momentum=0.1,
+                                                   affine=True)
+                self.batch_linear.weight.requires_grad = False
+                nn.init.xavier_uniform_(self.linear1.weight, gain=1.0)
+                nn.init.xavier_uniform_(self.classification1.weight, gain=1.0)
+                self.linear1.bias.data.fill_(0.01)
+            elif activation == 'selu':
+                self.linear1.weight.data.normal_(
+                    0., np.sqrt(self.linear1.in_features))
+                self.classification1.weight.data.normal_(
+                    0., np.sqrt(self.classification1.in_features))
+        else:
+            self.classification1 = nn.Linear(in_features=self.n_filters * len(self.kernel_sizes),
+                                             out_features=self.n_classes)
+            nn.init.xavier_uniform_(self.classification1.weight, gain=1.0)
+        self.classification1.bias.data.fill_(0.01)
 
-        # One-Hot-Encoding Layer
-        self.device = device
-        self.encoding = PseudoOneHotEncoding(device=self.device)
-        # Convolutional Layers
-        for i, kernel in enumerate(self.kernel_sizes):
-            conv_layer = nn.Conv1d(in_channels=self.encoding.alphabet_size,
-                                   out_channels=self.n_filters,
-                                   kernel_size=kernel)
-            # Initialize Convolution Layers for SELU activation
-            conv_layer.weight.data.normal_(
-                0.0, np.sqrt(1. / np.prod(conv_layer.kernel_size)))
-            conv_layer.bias.data.fill_(0.01)
-            self.add_module(f'conv{i + 1}', conv_layer)
-            # No batch-normalization here
-
-        self.activation1 = nn.SELU()
-        self.activation2 = nn.SELU()
-
-        # Initialize linear layers for SELU
-        self.linear1.weight.data.normal_(0., np.sqrt(self.linear1.in_features))
-        self.classification1.weight.data.normal_(0., np.sqrt(self.classification1.in_features))
+        self.softmax = nn.Softmax(dim=1)
 
     def forward(self, x):
         """ Forward a batch of sequences through network.
@@ -324,6 +360,7 @@ class DeepFamAblation2(DeepFam):
         max_pool_layer = []
         for i in range(self.n_conv_layers):
             x_conv = getattr(self, f'conv{i + 1}')(x)
+            x_conv = getattr(self, f'batch{i + 1}')(x_conv)
             x_conv = self.activation1(x_conv)
             x_conv = self.pooling1(x_conv)
             max_pool_layer.append(x_conv)
@@ -332,13 +369,14 @@ class DeepFamAblation2(DeepFam):
         x = x.view(-1, x.shape[1])
         x = self.dropout1(x)
         x = self.linear1(x)
-        x = self.activation2(x)
+        x = self.batch_linear(x)
+        x = self.activation1(x)
         x = self.classification1(x)
         # no softmax here
         return x
 
 
-class DeepFamAblation3(DeepFam):
+class DeepFamAblation1(DeepFamAblationBase):
     """ Ablation study of DeepFam to DeepNOG transition.
 
     Change 1: WordEmbedding instead of PseudoOneHot
@@ -354,18 +392,33 @@ class DeepFamAblation3(DeepFam):
     """
 
     def __init__(self, model_dict, device='cpu'):
-        super().__init__(model_dict)
+        super().__init__(model_dict,
+                         device=device,
+                         embedding='word_embedding',  # Change 1
+                         embedding_dim=10,
+                         )
 
-        del self.linear1
-        del self.batch_linear
 
-        # Classification layer
-        self.classification1 = nn.Linear(in_features=self.n_filters * len(self.kernel_sizes),
-                                         out_features=self.n_classes)
+class DeepFamAblation2(DeepFamAblationBase):
+    """ Ablation study of DeepFam to DeepNOG transition.
 
-        # Initialize linear layers
-        nn.init.xavier_uniform_(self.classification1.weight, gain=1.0)
-        self.classification1.bias.data.fill_(0.01)
+    Change 1: WordEmbedding instead of PseudoOneHot
+    Change 2: SELU instead of BN/ReLU
+    Change 3: Drop the fully connected layer between ConvNet and classification
+    Combinations: 12, 13, 23, 123 (=DeepNOG).
+
+    Parameters
+    ----------
+    model_dict : dict
+        Dictionary storing the hyperparameters and learned parameters of
+        the model.
+    """
+
+    def __init__(self, model_dict, device='cpu'):
+        super().__init__(model_dict,
+                         device=device,
+                         activation='selu',  # Change 2
+                         )
 
     def forward(self, x):
         """ Forward a batch of sequences through network.
@@ -382,25 +435,23 @@ class DeepFamAblation3(DeepFam):
         out : Tensor, shape (batch_size, n_classes)
             Confidence of sequence(s) being in one of the n_classes.
         """
-        # s.t. sum over filter size is a sum over contiguous memory blocks
         x = self.encoding(x).permute(0, 2, 1).contiguous()
         max_pool_layer = []
         for i in range(self.n_conv_layers):
             x_conv = getattr(self, f'conv{i + 1}')(x)
-            x_conv = getattr(self, f'batch{i + 1}')(x_conv)
             x_conv = self.activation1(x_conv)
             x_conv = self.pooling1(x_conv)
             max_pool_layer.append(x_conv)
-        # Concatenate max_pooling output of different convolutions
         x = torch.cat(max_pool_layer, dim=1)
         x = x.view(-1, x.shape[1])
         x = self.dropout1(x)
+        x = self.linear1(x)
+        x = self.activation1(x)
         x = self.classification1(x)
-        # no softmax here
         return x
 
 
-class DeepFamAblation12(DeepFamAblation2):
+class DeepFamAblation3(DeepFamAblationBase):
     """ Ablation study of DeepFam to DeepNOG transition.
 
     Change 1: WordEmbedding instead of PseudoOneHot
@@ -416,61 +467,10 @@ class DeepFamAblation12(DeepFamAblation2):
     """
 
     def __init__(self, model_dict, device='cpu'):
-        super().__init__(model_dict)
-
-        # Embedding Layer
-        self.device = device
-        self.embedding_dim = 10
-        self.encoding = AminoAcidWordEmbedding(embedding_dim=self.embedding_dim)
-
-        # Convolutional Layers
-        for i, kernel in enumerate(self.kernel_sizes):
-            conv_layer = nn.Conv1d(in_channels=self.embedding_dim,
-                                   out_channels=self.n_filters,
-                                   kernel_size=kernel)
-            # Initialize Convolution Layers for SELU activation
-            conv_layer.weight.data.normal_(
-                0.0, np.sqrt(1. / np.prod(conv_layer.kernel_size)))
-            conv_layer.bias.data.fill_(0.01)
-            self.add_module(f'conv{i + 1}', conv_layer)
-            # No batch-normalization here
-
-        self.activation1 = nn.SELU()
-        self.activation2 = nn.SELU()
-
-        # Initialize linear layers for SELU
-        self.linear1.weight.data.normal_(0., np.sqrt(self.linear1.in_features))
-        self.classification1.weight.data.normal_(0., np.sqrt(self.classification1.in_features))
-
-
-class DeepFamAblation13(DeepFamAblation1):
-    """ Ablation study of DeepFam to DeepNOG transition.
-
-    Change 1: WordEmbedding instead of PseudoOneHot
-    Change 2: SELU instead of BN/ReLU
-    Change 3: Drop the fully connected layer between ConvNet and classification
-    Combinations: 12, 13, 23, 123 (=DeepNOG).
-
-    Parameters
-    ----------
-    model_dict : dict
-        Dictionary storing the hyperparameters and learned parameters of
-        the model.
-    """
-
-    def __init__(self, model_dict, device='cpu'):
-        super().__init__(model_dict)
-
-        del self.linear1
-        del self.batch_linear
-
-        # Classification layer
-        self.classification1 = nn.Linear(in_features=self.n_filters * len(self.kernel_sizes),
-                                         out_features=self.n_classes)
-
-        # Initialize linear layers
-        nn.init.xavier_uniform_(self.classification1.weight, gain=1.0)
-        self.classification1.bias.data.fill_(0.01)
+        super().__init__(model_dict,
+                         device=device,
+                         linear_layer=False,  # Change 3
+                         )
 
     def forward(self, x):
         """ Forward a batch of sequences through network.
@@ -487,7 +487,6 @@ class DeepFamAblation13(DeepFamAblation1):
         out : Tensor, shape (batch_size, n_classes)
             Confidence of sequence(s) being in one of the n_classes.
         """
-        # s.t. sum over filter size is a sum over contiguous memory blocks
         x = self.encoding(x).permute(0, 2, 1).contiguous()
         max_pool_layer = []
         for i in range(self.n_conv_layers):
@@ -496,16 +495,14 @@ class DeepFamAblation13(DeepFamAblation1):
             x_conv = self.activation1(x_conv)
             x_conv = self.pooling1(x_conv)
             max_pool_layer.append(x_conv)
-        # Concatenate max_pooling output of different convolutions
         x = torch.cat(max_pool_layer, dim=1)
         x = x.view(-1, x.shape[1])
         x = self.dropout1(x)
         x = self.classification1(x)
-        # no softmax here
         return x
 
 
-class DeepFamAblation23(DeepFamAblation2):
+class DeepFamAblation12(DeepFamAblationBase):
     """ Ablation study of DeepFam to DeepNOG transition.
 
     Change 1: WordEmbedding instead of PseudoOneHot
@@ -521,18 +518,118 @@ class DeepFamAblation23(DeepFamAblation2):
     """
 
     def __init__(self, model_dict, device='cpu'):
-        super().__init__(model_dict)
+        super().__init__(model_dict,
+                         device=device,
+                         embedding='word_embedding',  # Change 1
+                         embedding_dim=10,
+                         activation='selu',  # Change 2
+                         )
 
-        del self.linear1
-        del self.batch_linear
+    def forward(self, x):
+        """ Forward a batch of sequences through network.
 
-        # Classification layer
-        self.classification1 = nn.Linear(in_features=self.n_filters * len(self.kernel_sizes),
-                                         out_features=self.n_classes)
+        Parameters
+        ----------
+        x : Tensor, shape (batch_size, sequence_len)
+            Sequence or batch of sequences to classify. Assumes they are
+            translated using a vocabulary. (See gen_amino_acid_vocab in
+            dataset.py)
 
-        # Initialize linear layers
-        nn.init.xavier_uniform_(self.classification1.weight, gain=1.0)
-        self.classification1.bias.data.fill_(0.01)
+        Returns
+        -------
+        out : Tensor, shape (batch_size, n_classes)
+            Confidence of sequence(s) being in one of the n_classes.
+        """
+        x = self.encoding(x).permute(0, 2, 1).contiguous()
+        max_pool_layer = []
+        for i in range(self.n_conv_layers):
+            x_conv = getattr(self, f'conv{i + 1}')(x)
+            x_conv = self.activation1(x_conv)
+            x_conv = self.pooling1(x_conv)
+            max_pool_layer.append(x_conv)
+        x = torch.cat(max_pool_layer, dim=1)
+        x = x.view(-1, x.shape[1])
+        x = self.dropout1(x)
+        x = self.linear1(x)
+        x = self.activation1(x)
+        x = self.classification1(x)
+        return x
+
+
+class DeepFamAblation13(DeepFamAblationBase):
+    """ Ablation study of DeepFam to DeepNOG transition.
+
+    Change 1: WordEmbedding instead of PseudoOneHot
+    Change 2: SELU instead of BN/ReLU
+    Change 3: Drop the fully connected layer between ConvNet and classification
+    Combinations: 12, 13, 23, 123 (=DeepNOG).
+
+    Parameters
+    ----------
+    model_dict : dict
+        Dictionary storing the hyperparameters and learned parameters of
+        the model.
+    """
+
+    def __init__(self, model_dict, device='cpu'):
+        super().__init__(model_dict,
+                         device=device,
+                         embedding='word_embedding',  # Change 1
+                         embedding_dim=10,
+                         linear_layer=False,  # Change 3
+                         )
+
+    def forward(self, x):
+        """ Forward a batch of sequences through network.
+
+        Parameters
+        ----------
+        x : Tensor, shape (batch_size, sequence_len)
+            Sequence or batch of sequences to classify. Assumes they are
+            translated using a vocabulary. (See gen_amino_acid_vocab in
+            dataset.py)
+
+        Returns
+        -------
+        out : Tensor, shape (batch_size, n_classes)
+            Confidence of sequence(s) being in one of the n_classes.
+        """
+        x = self.encoding(x).permute(0, 2, 1).contiguous()
+        max_pool_layer = []
+        for i in range(self.n_conv_layers):
+            x_conv = getattr(self, f'conv{i + 1}')(x)
+            x_conv = getattr(self, f'batch{i + 1}')(x_conv)
+            x_conv = self.activation1(x_conv)
+            x_conv = self.pooling1(x_conv)
+            max_pool_layer.append(x_conv)
+        x = torch.cat(max_pool_layer, dim=1)
+        x = x.view(-1, x.shape[1])
+        x = self.dropout1(x)
+        x = self.classification1(x)
+        return x
+
+
+class DeepFamAblation23(DeepFamAblationBase):
+    """ Ablation study of DeepFam to DeepNOG transition.
+
+    Change 1: WordEmbedding instead of PseudoOneHot
+    Change 2: SELU instead of BN/ReLU
+    Change 3: Drop the fully connected layer between ConvNet and classification
+    Combinations: 12, 13, 23, 123 (=DeepNOG).
+
+    Parameters
+    ----------
+    model_dict : dict
+        Dictionary storing the hyperparameters and learned parameters of
+        the model.
+    """
+
+    def __init__(self, model_dict, device='cpu'):
+        super().__init__(model_dict,
+                         device=device,
+                         activation='selu',  # Change 2
+                         linear_layer=False,  # Change 3
+                         )
 
     def forward(self, x):
         """ Forward a batch of sequences through network.
@@ -549,7 +646,6 @@ class DeepFamAblation23(DeepFamAblation2):
         out : Tensor, shape (batch_size, n_classes)
             Confidence of sequence(s) beeing in one of the n_classes.
         """
-        # s.t. sum over filter size is a sum over contiguous memory blocks
         x = self.encoding(x).permute(0, 2, 1).contiguous()
         max_pool_layer = []
         for i in range(self.n_conv_layers):
@@ -557,17 +653,15 @@ class DeepFamAblation23(DeepFamAblation2):
             x_conv = self.activation1(x_conv)
             x_conv = self.pooling1(x_conv)
             max_pool_layer.append(x_conv)
-        # Concatenate max_pooling output of different convolutions
         x = torch.cat(max_pool_layer, dim=1)
         x = x.view(-1, x.shape[1])
         x = self.dropout1(x)
         x = self.activation1(x)
         x = self.classification1(x)
-        # no softmax here
         return x
 
 
-class DeepFamAblation123(DeepFamAblation23):
+class DeepFamAblation123(DeepFamAblationBase):
     """ Ablation study of DeepFam to DeepNOG transition.
 
     Change 1: WordEmbedding instead of PseudoOneHot
@@ -583,21 +677,39 @@ class DeepFamAblation123(DeepFamAblation23):
     """
 
     def __init__(self, model_dict, device='cpu'):
-        super().__init__(model_dict)
+        super().__init__(model_dict,
+                         device=device,
+                         embedding='word_embedding',  # Change 1
+                         embedding_dim=10,
+                         activation='selu',  # Change 2,
+                         linear_layer=False,  # Change 3
+                         )
 
-        # Embedding Layer
-        self.device = device
-        self.embedding_dim = 10
-        self.encoding = AminoAcidWordEmbedding(embedding_dim=self.embedding_dim)
+    def forward(self, x):
+        """ Forward a batch of sequences through network.
 
-        # Convolutional Layers
-        for i, kernel in enumerate(self.kernel_sizes):
-            conv_layer = nn.Conv1d(in_channels=self.embedding_dim,
-                                   out_channels=self.n_filters,
-                                   kernel_size=kernel)
-            # Initialize Convolution Layers for SELU activation
-            conv_layer.weight.data.normal_(
-                0.0, np.sqrt(1. / np.prod(conv_layer.kernel_size)))
-            conv_layer.bias.data.fill_(0.01)
-            self.add_module(f'conv{i + 1}', conv_layer)
-            # No batch-normalization here
+        Parameters
+        ----------
+        x : Tensor, shape (batch_size, sequence_len)
+            Sequence or batch of sequences to classify. Assumes they are
+            translated using a vocabulary. (See gen_amino_acid_vocab in
+            dataset.py)
+
+        Returns
+        -------
+        out : Tensor, shape (batch_size, n_classes)
+            Confidence of sequence(s) beeing in one of the n_classes.
+        """
+        x = self.encoding(x).permute(0, 2, 1).contiguous()
+        max_pool_layer = []
+        for i in range(self.n_conv_layers):
+            x_conv = getattr(self, f'conv{i + 1}')(x)
+            x_conv = self.activation1(x_conv)
+            x_conv = self.pooling1(x_conv)
+            max_pool_layer.append(x_conv)
+        x = torch.cat(max_pool_layer, dim=1)
+        x = x.view(-1, x.shape[1])
+        x = self.dropout1(x)
+        x = self.activation1(x)
+        x = self.classification1(x)
+        return x
