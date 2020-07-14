@@ -49,8 +49,8 @@ def estimate_performance(df_true: pd.DataFrame, df_pred: pd.DataFrame) -> Dict:
     """
     df_true = _fix_column_names(df_true)
     df = df_true.merge(df_pred, on='sequence_id', how='inner')
-    y_true = df['label']
-    y_pred = df['prediction']
+    y_true = df['label'].values.astype(str)
+    y_pred = df['prediction'].values.astype(str)
     perf = dict()
     for average in ['macro', 'micro']:
         p, r, f, _ = precision_recall_fscore_support(y_true=y_true,
