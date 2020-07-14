@@ -246,7 +246,8 @@ class DeepFamAblationBase(nn.Module):
         try:  # for inference these values are already available in the model
             state = model_dict['model_state_dict']
             self.n_classes = state['classification1.weight'].shape[0]
-            self.kernel_sizes = [v.shape[-1] for k, v in state.items() if 'conv' in k and 'weight' in k]
+            self.kernel_sizes = [v.shape[-1] for k, v in state.items()
+                                 if 'conv' in k and 'weight' in k]
             self.n_filters = state['conv1.weight'].shape[0]
             if dropout is not None:
                 self.dropout = model_dict.get('dropout', 0.3)
