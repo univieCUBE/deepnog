@@ -21,19 +21,22 @@ import torch
 
 from deepnog.client import main
 from deepnog.client.client import _start_prediction_or_training  # noqa
+from deepnog.utils.io_utils import get_data_home
 from deepnog import __version__
 
-DEEPNOG_TEST = Path(__file__).parent.absolute()
+DEEPNOG_ROOT = Path(__file__).parent.parent.parent.absolute()
+DEEPNOG_TEST = DEEPNOG_ROOT/"tests"
 TEST_FILE = DEEPNOG_TEST/"data/test_deepencoding.faa"
 TEST_FILE_SHORT = DEEPNOG_TEST/"data/test_inference_short.faa"
 TEST_LABELS_SHORT = TEST_FILE_SHORT.with_suffix('.csv')
 TEST_LABELS_SHORT_COL_RENAME = DEEPNOG_TEST/"data/test_inference_short_wrong_column_names.csv"
-TRAINING_FASTA = Path(__file__).parent.absolute()/"data/test_training_dummy.faa"
-TRAINING_CSV = Path(__file__).parent.absolute()/"data/test_training_dummy.faa.csv"
+TRAINING_FASTA = DEEPNOG_TEST/"data/test_training_dummy.faa"
+TRAINING_CSV = DEEPNOG_TEST/"data/test_training_dummy.faa.csv"
 Y_TRUE = np.array([[0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2,
                     1, 1, 1, 1, 1, 1, 1, 1],
                    [0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2,
                     1, 1, 1, 1, 1, 1, 1, 1]])
+EGGNOG5_BACT_WEIGHTS = get_data_home()/'eggNOG5/2/deepencoding.pth'
 
 
 def try_to_unlink(f: Path):
@@ -52,7 +55,11 @@ def test_entrypoint():
         f'Incorrect version output: {process.stdout}'
 
 
-def test_run_inference():
+@pytest.mark.parametrize('config', [{'weights': None},
+                                    {'weights': str(EGGNOG5_BACT_WEIGHTS)},
+                                    {'confidence_threshold': 0.99},
+                                    ])
+def test_run_inference(config):
     """ Also tests column renaming on the fly. """
     with tempfile.TemporaryDirectory(prefix='deepnog_test_') as outdir:
         outfile = Path(outdir)/'pred.out'
@@ -67,9 +74,9 @@ def test_run_inference():
                                   verbose=0,
                                   device='auto',
                                   num_workers=0,
-                                  confidence_threshold=None,
+                                  confidence_threshold=config.get('confidence_threshold', None),
                                   architecture='deepencoding',
-                                  weights=None,
+                                  weights=config.get('weights', None),
                                   batch_size=1,
                                   )
         with warnings.catch_warnings():
@@ -217,6 +224,10 @@ def test_args_sanity_check():
 
     args_confidence.confidence_threshold = 1.000001
     _assert_exits(_start_prediction_or_training, args_confidence)
+
+    args_out_dir = deepcopy(args)
+    args_out_dir.out = '/tmp/outdir/'
+    _assert_exits(_start_prediction_or_training, args_out_dir)
 
 
 def test_training_cmd_line_invocation():
