@@ -5,23 +5,32 @@ Date: 2019-10-03
 Description:
     Test dataset module.
 """
+from itertools import repeat
 from functools import partial
-from pathlib import Path
 import pytest
 
+import numpy as np
+from pandas import read_csv
+from sklearn.preprocessing import LabelEncoder
 from torch.utils.data import DataLoader
-from deepnog.data import dataset as ds
+from Bio.Seq import Seq
+from Bio.SeqRecord import SeqRecord
 
-test_file = Path(__file__).parent.absolute() / "data/GCF_000007025.1.faa"
-test_file_gzip = Path(__file__).parent.absolute()/"data/GCF_000007025.1.faa.gz"
-TRAINING_FASTA = Path(__file__).parent.absolute()/"data/test_training_dummy.faa"
-TRAINING_LABELS = Path(__file__).parent.absolute()/"data/test_training_dummy.faa.csv"
+from deepnog.data import dataset as ds
+from deepnog.tests.utils import get_deepnog_root
+
+TESTS = get_deepnog_root()/"tests"
+test_file = TESTS/"data/GCF_000007025.1.faa"
+test_file_gzip = TESTS/"data/GCF_000007025.1.faa.gz"
+TRAINING_FASTA = TESTS/"data/test_training_dummy.faa"
+TRAINING_LABELS = TESTS/"data/test_training_dummy.faa.csv"
 EXPECTED_IDS_WITH_LABEL = [f'test_all_A{x}' for x in range(11)] \
                           + [f'test_all_C{x}' for x in range(11)] \
                           + [f'M{x:02d}' for x in range(1, 9)]
 EXPECTED_IDS = [f'test_all_A{x}' for x in range(12)] \
                + [f'test_all_C{x}' for x in range(12)] \
                + [f'M{x:02d}' for x in range(1, 11)]
+LABELS_WRONG_COL_NAMES = TESTS/"data/test_inference_short_wrong_column_names.csv"
 
 
 @pytest.mark.parametrize("f", [test_file, test_file_gzip, ])
@@ -69,7 +78,7 @@ def test_correct_collating_sequences(batch_size, f_format='fasta'):
 @pytest.mark.parametrize('random_padding', [False, True])
 def test_zero_padding(random_padding: bool, f_format='fasta'):
     """ Test correct zeroPadding. """
-    pad_file = Path(__file__).parent.absolute()/"data/test_zeroPadding.faa"
+    pad_file = TESTS/"data/test_zeroPadding.faa"
     dataset = ds.ProteinIterableDataset(pad_file, f_format=f_format)
     for batch in DataLoader(dataset,
                             batch_size=2,
@@ -123,3 +132,49 @@ def test_shuffled_dataset(batch_size, num_workers, buffer_size, labels):
     intersection = observed_ids_set.intersection(set(expected))
     assert len(intersection) == len(expected), \
         'Observed protein IDs do not match the expected ID list'
+
+
+def test_rename_cols_in_iterable_dataset():
+    df = read_csv(LABELS_WRONG_COL_NAMES, index_col=0)
+    assert 'eggnog_id' not in df.columns
+    assert 'protein_id' not in df.columns
+
+    dataset = ds.ProteinIterableDataset(test_file, labels_file=str(LABELS_WRONG_COL_NAMES))
+    assert 'eggnog_id' in dataset.labels.columns
+    assert 'protein_id' in dataset.labels.columns
+
+
+def test_protein_dataset():
+    dataset = ds.ProteinDataset(TRAINING_FASTA, labels=None)
+    assert not dataset.label_from_id
+
+    df = read_csv(TRAINING_LABELS, index_col=0)
+    dataset = ds.ProteinDataset(TRAINING_FASTA, labels=df)
+    assert dataset.labels is df
+
+    wrong_labels = np.random.randint(0, 10, len(df))
+    with pytest.raises(ValueError, match='Invalid labels'):
+        _ = ds.ProteinDataset(TRAINING_FASTA, labels=wrong_labels)
+
+    label_encoder = LabelEncoder()
+    label_encoder.fit_transform(df['eggnog_id'].values[:22])  # omit last class
+    dataset = ds.ProteinDataset(TRAINING_FASTA,
+                                labels=TRAINING_LABELS,
+                                label_encoder=label_encoder)
+    assert dataset.labels.shape[0] == 22
+    assert all(dataset.labels.label_num.value_counts() == [11, 11])
+
+    seq_records = list(repeat(SeqRecord(Seq('MATTAC'), id='seq1', name='seq1'), 22))
+    dataset = ds.ProteinDataset(seq_records, labels=TRAINING_LABELS)
+    for i in range(22):
+        assert dataset[i].id == f'seq1'
+        assert dataset[i].index == i
+        assert dataset[i].string == 'MATTAC'
+        assert dataset[i].label is None
+        assert len(dataset[i].encoded) == 6
+
+    # list(repeat(...)) w/o times: traust di nie
+    sequences = list(repeat(Seq('MATTAC'), times=10))
+    with pytest.raises(ValueError, match="must be FASTA file or a list/tuple "
+                                         "of <class 'Bio.SeqRecord.SeqRecord'>"):
+        _ = ds.ProteinDataset(sequences, labels=TRAINING_LABELS)

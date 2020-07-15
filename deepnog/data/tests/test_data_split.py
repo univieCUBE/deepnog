@@ -1,13 +1,15 @@
-from pathlib import Path
 import pytest
 
 import numpy as np
 import pandas as pd
 
 from deepnog.data import train_val_test_split, group_train_val_test_split
+from deepnog.tests.utils import get_deepnog_root
 
-DATAFRAME_GROUP = Path(__file__).absolute().parent/'data/test_split.csv'
-DATAFRAME_SIMPLE = Path(__file__).absolute().parent/'data/test_simple_split.csv'
+DEEPNOG_ROOT = get_deepnog_root()
+TESTS = DEEPNOG_ROOT/"tests"
+DATAFRAME_GROUP = TESTS/"data/test_split.csv"
+DATAFRAME_SIMPLE = TESTS/"data/test_simple_split.csv"
 
 
 @pytest.mark.parametrize('ratio', [[.4, .3, .3], [4, 3, 3]])

@@ -1,148 +1,27 @@
-import logging
-from pathlib import Path
-import pytest
-from tempfile import TemporaryDirectory
-import torch
-import yaml
-
-from deepnog.utils import count_parameters, load_nn, set_device
-from deepnog.utils import get_logger, get_weights_path, get_config
-from deepnog.utils import parse
-
-GPU_AVAILABLE = torch.cuda.is_available()
-TEST_STR = 'krawutzi'
-PWD = Path(__file__).parent.absolute()
-WEIGHTS_PATH = PWD/'parameters/test_deepencoding.pthsmall'
+from deepnog.tests.utils import get_deepnog_root
 
 
-def test_set_device():
-    device = 'tpu'
-    msg = f'Unknown device "{device}". Try "auto".'
-    with pytest.raises(ValueError, match=msg):
-        set_device(device)
+def test_get_deepnog_root():
+    deepnog_root = get_deepnog_root()
+    subpackages = ['client', 'config', 'data', 'learning',
+                   'models', 'tests', 'utils',
+                   ]
+    for pkg in subpackages:
+        d = deepnog_root/pkg
+        assert d.is_dir()
 
+    some_files = ["tests/data/test_inference_short.csv",
+                  "tests/parameters/test_deepencoding.pthsmall",
+                  "config/deepnog_config.yml",
+                  ]
+    for file_ in some_files:
+        f = deepnog_root/file_
+        assert f.is_file()
 
-def test_auto_device():
-    device = set_device('auto')
-    assert isinstance(device, torch.device)
-    assert str(device) in ['cpu', 'cuda'], f'Unrecognized device: {device}'
-
-
-def test_cpu_device():
-    device = 'cpu'
-    assert isinstance(set_device(device), torch.device)
-
-
-@pytest.mark.skipif(not GPU_AVAILABLE, reason='GPU is not available')
-def test_gpu_device_available():
-    device = 'gpu'
-    assert isinstance(set_device(device), torch.device)
-
-
-@pytest.mark.skipif(GPU_AVAILABLE, reason='GPU is available')
-def test_gpu_device_unavailable():
-    device = 'gpu'
-    msg = 'could not access any CUDA-enabled GPU'
-    with pytest.raises(RuntimeError, match=msg):
-        set_device(device)
-
-
-@pytest.mark.xfail(reason=("BUG: pytest logging capture does not work. "
-                           "Look out for 4 logging lines manually..."))
-def test_logger(caplog):
-    """ Test that only the correct msg levels are logged according to verbose"""
-    with caplog.at_level(logging.DEBUG, logger=__name__):
-        for verbose in [True, False]:
-            logger = get_logger(__name__, verbose=verbose)
-            logger.info(TEST_STR)
-            logger.warning(TEST_STR)
-        logger = get_logger(__name__, verbose=0)
-        logger.error(TEST_STR)
-        logger.warning(TEST_STR)
-        logger = get_logger(__name__, verbose=1)
-        logger.warning(TEST_STR)
-        logger.info(TEST_STR)
-        logger = get_logger(__name__, verbose=2)
-        logger.info(TEST_STR)
-        logger.debug(TEST_STR)
-        logger = get_logger(__name__, verbose=3)
-        logger.debug(TEST_STR)
-        lvls = (logging.INFO, logging.WARNING, logging.INFO,
-                logging.ERROR, logging.WARNING, logging.INFO, logging.DEBUG)
-        assert len(caplog.record_tuples), 'No logging output was captured'
-        for i, record in enumerate(caplog.record_tuples):
-            assert record == (__name__, lvls[i], TEST_STR)
-
-
-def test_get_weights():
-    with TemporaryDirectory(prefix='deepnog_test_data_dir_') as tmpdir:
-        p = get_weights_path(database='testdb',
-                             level='1',
-                             architecture='do_not_delete',
-                             data_home=tmpdir,
-                             download_if_missing=True,
-                             verbose=3)
-        assert Path(p).is_file()
-
-
-def test_get_weights_impossible():
-    with TemporaryDirectory(prefix='deepnog_test_data_dir_') as tmpdir:
-        with pytest.raises(IOError, match='Data not found'):
-            _ = get_weights_path(database='testdb',
-                                 level='1',
-                                 architecture='do_not_delete',
-                                 data_home=tmpdir,
-                                 download_if_missing=False,
-                                 verbose=3)
-
-
-@pytest.mark.parametrize("architecture", ['deepencoding', ])
-@pytest.mark.parametrize("weights", [WEIGHTS_PATH, ])
-def test_count_params(architecture, weights):
-    """ Test loading of neural network model. """
-    cuda = torch.cuda.is_available()
-    device = torch.device('cuda' if cuda else 'cpu')
-    model_dict = torch.load(weights, map_location=device)
-    model = load_nn(architecture, model_dict, phase='infer', device=device)
-    n_params_tuned = count_parameters(model, tunable_only=True)
-    n_params_total = count_parameters(model, tunable_only=False)
-    assert n_params_total == n_params_tuned
-
-
-def test_load_config():
-    # Check that default values are present in default config file
-    default_config = Path(__file__).parent.parent.absolute()/'config/deepnog_default_config.yml'
-    config = yaml.safe_load(default_config.open())
-    assert 'eggNOG5' in config['database'], 'eggNOG5 models missing in config'
-    for i in [1, 2]:
-        assert i in config['database']['eggNOG5']
-    assert 'deepencoding' in config['architecture'], 'Standard arch deepencoding missing in config'
-    for key in ['encoding_dim', 'kernel_size', 'n_filters', 'dropout', 'pooling_layer_type']:
-        assert key in config['architecture']['deepencoding']
-
-    # Check that default config is loaded when faulty yaml is provided
-    broken_config = [PWD/'data/broken_config_indent.yml', ]
-    for bc in broken_config:
-        loaded_config = get_config(bc)
-        assert 'default' in loaded_config['config']
-        assert 'broken' not in loaded_config['config']
-
-    # Check the customizable config
-    config = Path(__file__).parent.parent.absolute() / 'config/deepnog_config.yml'
-    config = get_config(config)
-    assert 'custom' in config['config']
-
-
-def test_parse():
-    f_plain = PWD/'data/GCF_000007025.1.faa'
-    f_gz = PWD/'data/GCF_000007025.1.faa.gz'
-    f_xz = PWD/'data/GCF_000007025.1.faa.xz'
-
-    for rec in parse(f_plain, 'fasta'):
-        assert len(rec) > 0
-        assert str(rec.seq).upper().startswith('M')
-    fasta_set = [set(rec.id for rec in parse(f, 'fasta')) for f in [f_plain, f_gz, f_xz]]
-    n_sequences = len(fasta_set[0])
-    assert n_sequences == 1_289, 'Incorrect number of sequences from plain fasta file'
-    for a, b in [(0, 1), (1, 2), (2, 0)]:
-        assert len(fasta_set[a].intersection(fasta_set[b])) == n_sequences
+    unexpected_files = ["me/no/think.so",
+                        "plagiarism/manuscript.tex",
+                        "bugs",
+                        ]
+    for file_ in unexpected_files:
+        f = deepnog_root/file_
+        assert not f.exists()

@@ -8,11 +8,11 @@ Description:
     Dataset classes and helper functions for usage with deep network models
     written in PyTorch.
 """
-from collections import deque
 import gzip
 from itertools import islice
 from pathlib import Path
 from typing import List, Union, NamedTuple, Sequence
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -64,6 +64,7 @@ def collate_sequences(batch: Union[List[sequence_tuple], sequence_tuple],
     zero_padding : bool
         Zero-pad protein sequences, that is, append zeros until every sequence
         is as long as the longest sequences in batch.
+        NOTE: currently unused. Zero-padding is always performed.
     min_length : int, optional
         Zero-pad sequences to at least ``min_length``.
         By default, this is set to 36, which is the largest kernel size in the
@@ -78,6 +79,9 @@ def collate_sequences(batch: Union[List[sequence_tuple], sequence_tuple],
         Input batch zero-padded and stored in namedtuple
         collated_sequences.
     """
+    if zero_padding:
+        warnings.warn(f"Called collate_sequences(zero_padding={zero_padding}). "
+                      f"However, all sequences will currently be zero-padded.")
     # Check if an individual sample or a batch was given
     if not isinstance(batch, list):
         batch = [batch]
@@ -93,25 +97,21 @@ def collate_sequences(batch: Union[List[sequence_tuple], sequence_tuple],
             max_len = sequence_len
 
     # Collate the sequences
-    if zero_padding:
-        sequences = np.zeros((n_data, max_len,), dtype=np.int)
-        for i, seq in enumerate(batch):
-            sequence = np.array(seq.encoded)
-            # If selected, choose randomly, where to insert zeros
-            if random_padding and len(sequence) < max_len:
-                n_zeros = max_len - len(sequence)
-                start = np.random.choice(n_zeros + 1)
-                end = start + len(sequence)
-            else:
-                start = 0
-                end = len(sequence)
-            # Zero pad
-            sequences[i, start:end] = sequence[:].T
-        # Convert NumPy array to PyTorch Tensor
-        sequences = default_collate(sequences)
-    else:
-        # no zero-padding, must use minibatches of size 1 downstream!
-        raise NotImplementedError('Batching requires zero padding!')
+    sequences = np.zeros((n_data, max_len,), dtype=np.int)
+    for i, seq in enumerate(batch):
+        sequence = np.array(seq.encoded)
+        # If selected, choose randomly, where to insert zeros
+        if random_padding and len(sequence) < max_len:
+            n_zeros = max_len - len(sequence)
+            start = np.random.choice(n_zeros + 1)
+            end = start + len(sequence)
+        else:
+            start = 0
+            end = len(sequence)
+        # Zero pad
+        sequences[i, start:end] = sequence[:].T
+    # Convert NumPy array to PyTorch Tensor
+    sequences = default_collate(sequences)
 
     # Collate the protein ids (str)
     ids = [seq.id for seq in batch]
@@ -167,18 +167,14 @@ def gen_amino_acid_vocab(alphabet=None):
     return vocab
 
 
-def _consume(iterator, n=None):
+def _consume(iterator, n: int):
     """ Advance the iterator n-steps ahead. If n is None, consume entirely.
 
     Function from Itertools Recipes in official Python 3.7.4. docs.
     """
     # Use functions that consume iterators at C speed.
-    if n is None:
-        # feed the entire iterator into a zero-length deque
-        deque(iterator, maxlen=0)
-    else:
-        # advance to the empty slice starting at position n
-        next(islice(iterator, n, n), None)
+    # advance to the empty slice starting at position n
+    next(islice(iterator, n, n), None)
 
 
 class ProteinIterator:
@@ -353,16 +349,7 @@ class ProteinIterableDataset(IterableDataset):
 
             # Sequence IDs and labels are assumed in named columns,
             # but if not, let's try a specific order and hope for the best
-            try:
-                self.labels.eggnog_id
-            except AttributeError:
-                self.labels.rename(columns={self.labels.columns[-1]: 'eggnog_id'},
-                                   inplace=True)
-            try:
-                self.labels.protein_id
-            except AttributeError:
-                self.labels.rename(columns={self.labels.columns[0]: 'protein_id'},
-                                   inplace=True)
+            self.labels = _rename_labels_columns(self.labels)
 
             # Transform class names to numerical labels
             if label_encoder is None:
@@ -607,7 +594,7 @@ class ProteinDataset(Dataset):
         encoded = [self.vocab.get(c, 0) for c in seq]
         sequence = sequence_tuple(index=item,
                                   id=sequence_id,
-                                  string=str(seq),
+                                  string=str(seq.seq),
                                   encoded=encoded,
                                   label=label)
         return sequence

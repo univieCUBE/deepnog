@@ -11,7 +11,6 @@ Description:
 from os import environ
 from pathlib import Path
 import shutil
-import ssl
 from typing import List
 from urllib.error import URLError
 from urllib.request import urlopen
@@ -30,7 +29,6 @@ __all__ = ['create_df',
 
 DEEPNOG_REMOTE_DEFAULT = ('https://fileshare.csb.univie.ac.at/'
                           'deepnog/parameters/')
-CERTIFICATE_CHAIN = Path(__file__).parent.absolute() / "certifi/csb-univie-ac-at-chain.pem"
 
 
 def create_df(class_labels: list, preds: Tensor, confs: Tensor, ids: List[str],
@@ -147,9 +145,9 @@ def get_weights_path(database: str, level: str, architecture: str,
         Network architecture. Example: deepencoding
     data_home : str, optional
         Specify another download and cache folder for the weights.
-        By default all deepnog data is stored in '~/deepnog_data' subfolders.
+        By default all deepnog data is stored in '$HOME/deepnog_data' subfolders.
     download_if_missing : boolean, default=True
-        If False, raise a IOError if the data is not locally available
+        If False, raise an IOError if the data is not locally available
         instead of trying to download the data from the source site.
     verbose : int
         Log or not
@@ -176,17 +174,9 @@ def get_weights_path(database: str, level: str, architecture: str,
             with urlopen(remote_url) as response, weights_file.open('wb') as f:
                 logger.info(f'Saving to {weights_file}')
                 shutil.copyfileobj(response, f)
-        except URLError:
-            try:  # work-around for missing intermediate certificate
-                ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLSv1_2, )
-                ssl_context.load_verify_locations(CERTIFICATE_CHAIN)
-                with urlopen(remote_url, context=ssl_context) as response, \
-                        weights_file.open('wb') as f:
-                    logger.info(f'Saving to {weights_file}')
-                    shutil.copyfileobj(response, f)
-            except URLError as e:
-                logger.error(f'Download failed. Try downloading {remote_url} and '
-                             f'saving to {weights_file} manually.\nGot error: {e}')
+        except URLError as e:
+            logger.error(f'Download failed. Try downloading {remote_url} and '
+                         f'saving to {weights_file} manually.\nGot error:\n{e}')
     elif not available and not download_if_missing:
         raise IOError("Data not found and `download_if_missing` is False")
 
