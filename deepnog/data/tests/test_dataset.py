@@ -167,7 +167,7 @@ def test_protein_dataset():
     seq_records = list(repeat(SeqRecord(Seq('MATTAC'), id='seq1', name='seq1'), 22))
     dataset = ds.ProteinDataset(seq_records, labels=TRAINING_LABELS)
     for i in range(22):
-        assert dataset[i].id == f'seq1'
+        assert dataset[i].id == 'seq1'
         assert dataset[i].index == i
         assert dataset[i].string == 'MATTAC'
         assert dataset[i].label is None

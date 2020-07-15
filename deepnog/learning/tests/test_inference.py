@@ -1,10 +1,10 @@
 """
 Author: Lukas Gosch
+        Roman Feldbauer
 Date: 2019-10-18
 Description:
-    Test deepnog module and pretrained neural network architectures.
+    Test deepnog module and trained networks.
 """
-from pathlib import Path
 import pytest
 
 import torch.nn as nn
@@ -12,13 +12,14 @@ import torch
 
 from deepnog.data.dataset import ProteinIterableDataset
 from deepnog.learning import predict
+from deepnog.tests.utils import get_deepnog_root
 from deepnog.utils import create_df, load_nn, get_config
 
 
-current_path = Path(__file__).parent.absolute()
-weights_path = current_path/'parameters/test_deepencoding.pthsmall'
-data_path = current_path/'data/test_deepencoding.faa'
-data_skip_path = current_path/'data/test_skip_empty_sequences.faa'
+TESTS = get_deepnog_root()/"tests"
+weights_path = TESTS/"parameters/test_deepencoding.pthsmall"
+data_path = TESTS/"data/test_deepencoding.faa"
+data_skip_path = TESTS/"data/test_skip_empty_sequences.faa"
 
 
 def _get_module_cls_from_arch(arch):

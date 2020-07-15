@@ -2,10 +2,13 @@ from pathlib import Path
 import tempfile
 import pytest
 import numpy as np
-from deepnog.learning import fit
 
-TRAINING_FASTA = Path(__file__).parent.absolute()/"data/test_training_dummy.faa"
-TRAINING_CSV = Path(__file__).parent.absolute()/"data/test_training_dummy.faa.csv"
+from deepnog.learning import fit
+from deepnog.tests.utils import get_deepnog_root
+
+DEEPNOG_TESTS = get_deepnog_root()/"tests"
+TRAINING_FASTA = DEEPNOG_TESTS/"data/test_training_dummy.faa"
+TRAINING_CSV = DEEPNOG_TESTS/"data/test_training_dummy.faa.csv"
 Y_TRUE = np.array([[0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2,
                     1, 1, 1, 1, 1, 1, 1, 1],
                    [0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2,

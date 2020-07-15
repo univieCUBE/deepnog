@@ -358,13 +358,13 @@ def fit(architecture, module, cls,
             (inside deepnog/models/).
         cls : str
             Python class name of the network (inside deepnog/models/{module}.py).
-        training_sequences : str
+        training_sequences : str, Path
             File with training set sequences
-        validation_sequences : str
+        validation_sequences : str, Path
             File with validation set sequences
-        training_labels : str
+        training_labels : str, Path
             File with class labels (orthologous groups) of training sequences
-        validation_labels : str
+        validation_labels : str, Path
             File with class labels (orthologous groups) of validation sequences
         data_loader_params : dict
             Parameters passed to PyTorch DataLoader construction
