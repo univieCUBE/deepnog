@@ -83,7 +83,7 @@ def test_zero_padding(random_padding: bool, f_format='fasta'):
     for batch in DataLoader(dataset,
                             batch_size=2,
                             num_workers=0,
-                            collate_fn=partial(ds.collate_sequences,
+                            collate_fn=partial(ds.collate_sequences,  # noqa
                                                random_padding=random_padding)):
         # Test correct shape (seq1: 56aa, seq2: 112aa)
         assert batch.sequences.shape[1] == 112
@@ -94,6 +94,11 @@ def test_zero_padding(random_padding: bool, f_format='fasta'):
         else:
             assert sum(batch.sequences[0, 56:]) == 0
         assert sum(batch.sequences[1, :] == 0) == 0
+
+    with pytest.warns(UserWarning, match="all sequences will currently be zero-padded"):
+        for _ in DataLoader(dataset,  # noqa
+                            collate_fn=partial(ds.collate_sequences, zero_padding=False)):
+            pass
 
 
 def test_correct_encoding():

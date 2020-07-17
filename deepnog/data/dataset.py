@@ -79,7 +79,7 @@ def collate_sequences(batch: Union[List[sequence_tuple], sequence_tuple],
         Input batch zero-padded and stored in namedtuple
         collated_sequences.
     """
-    if zero_padding:
+    if not zero_padding:
         warnings.warn(f"Called collate_sequences(zero_padding={zero_padding}). "
                       f"However, all sequences will currently be zero-padded.")
     # Check if an individual sample or a batch was given
