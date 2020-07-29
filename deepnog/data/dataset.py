@@ -345,7 +345,11 @@ class ProteinIterableDataset(IterableDataset):
         if self.labels_file is None:
             self.labels = None
         else:
-            self.labels = pd.read_csv(labels_file, index_col=0, compression='infer')
+            self.labels = pd.read_csv(labels_file,
+                                      index_col=0,
+                                      compression='infer',
+                                      dtype=str,
+                                      )
 
             # Sequence IDs and labels are assumed in named columns,
             # but if not, let's try a specific order and hope for the best
@@ -523,6 +527,7 @@ class ProteinDataset(Dataset):
                 self.labels = pd.read_csv(self.labels,
                                           index_col=0,
                                           compression='infer',
+                                          dtype=str,
                                           )
             except ValueError:
                 pass
