@@ -30,20 +30,14 @@ class PseudoOneHotEncoding(nn.Module):
     Ambiguous characters interpolate between the possible values,
     e.g. J = 0.5 I + 0.5 L.
 
-    Parameters
-    ----------
-    device : 'cpu', 'cuda'
-        Run on CPU or GPU
-
     See Also
     --------
     See DeepFam paper Section 2.1.1 for details on the encoding scheme at
     `<https://academic.oup.com/bioinformatics/article/34/13/i254/5045722#118270045>`_.
     """
 
-    def __init__(self, device='cpu'):
+    def __init__(self):
         super().__init__()
-        self.device = device
         self.num_classes = 27  # i.e. 26 letters ExtendedIUPAC plus zero-padding
         self.alphabet_size = 21  # after encoding
 
@@ -68,6 +62,7 @@ class PseudoOneHotEncoding(nn.Module):
         """
         # Fix type mismatch on Windows
         x = sequence.long()
+        device = x.device
 
         x = one_hot(x, num_classes=self.num_classes)
         # Cut away one-hot encoding for zero padding as well as O & U
@@ -76,19 +71,19 @@ class PseudoOneHotEncoding(nn.Module):
         # Index    0  3  6  9 12 15 18 21 24
         # Letter   ACDEFGHIKLMNPQRSTVWYXBZJ
         # Treat B: D or N
-        b = torch.zeros((1, 24), device=self.device)
+        b = torch.zeros((1, 24), device=device)
         b[0, 2] = 0.5
         b[0, 11] = 0.5
         b_found = (x[:, :, 21] == 1).nonzero(as_tuple=False)
         x[b_found[:, 0], b_found[:, 1]] = b
         # Treat Z: E or Q
-        z = torch.zeros((1, 24), device=self.device)
+        z = torch.zeros((1, 24), device=device)
         z[0, 3] = 0.5
         z[0, 13] = 0.5
         z_found = (x[:, :, 22] == 1).nonzero(as_tuple=False)
         x[z_found[:, 0], z_found[:, 1]] = z
         # Treat J: I or L
-        j = torch.zeros((1, 24), device=self.device)
+        j = torch.zeros((1, 24), device=device)
         j[0, 7] = 0.5
         j[0, 9] = 0.5
         j_found = (x[:, :, 23] == 1).nonzero(as_tuple=False)
@@ -136,7 +131,7 @@ class DeepFam(nn.Module):
 
         # One-Hot-Encoding Layer
         self.device = device
-        self.encoding = PseudoOneHotEncoding(device=self.device)
+        self.encoding = PseudoOneHotEncoding()
         # Convolutional Layers
         for i, kernel in enumerate(kernel_sizes):
             conv_layer = nn.Conv1d(in_channels=self.encoding.alphabet_size,
@@ -232,9 +227,21 @@ class DeepFamAblationBase(nn.Module):
     model_dict : dict
         Dictionary storing the hyperparameters and learned parameters of
         the model.
+    embedding : str
+        Embedding layer, either 'pseudo_ont_hot' or 'word_embedding'
+    embedding_dim : int, None
+        Embedding dimension for word embedding
+    activation : str
+        Activation function, either
+        - 'relu' (plus batch normalization) or
+        - 'selu' (without batch norm)
+    linear_layer : bool
+        Use a linear (fully-connected) layer before the classification layer
+    dropout : float, None
+        Dropout rate. If None, do not use dropout.
     """
 
-    def __init__(self, model_dict, device='cpu',
+    def __init__(self, model_dict,
                  embedding: str = 'pseudo_one_hot',
                  embedding_dim: Union[None, int] = None,
                  activation: str = 'relu',
@@ -261,14 +268,13 @@ class DeepFamAblationBase(nn.Module):
                 self.dropout = model_dict['dropout']
             if linear_layer:
                 self.hidden_units = model_dict['hidden_units']
-        self.device = device
         self.embedding = embedding
         self.embedding_dim = embedding_dim
         self.activation = activation
         self.linear_layer = linear_layer
 
         if embedding == 'pseudo_one_hot':
-            self.encoding = PseudoOneHotEncoding(device=self.device)
+            self.encoding = PseudoOneHotEncoding()
             self.alphabet_size = self.encoding.alphabet_size
         elif embedding == 'word_embedding':
             self.encoding = AminoAcidWordEmbedding(embedding_dim=self.embedding_dim)
@@ -392,9 +398,8 @@ class DeepFamAblation1(DeepFamAblationBase):
         the model.
     """
 
-    def __init__(self, model_dict, device='cpu'):
+    def __init__(self, model_dict):
         super().__init__(model_dict,
-                         device=device,
                          embedding='word_embedding',  # Change 1
                          embedding_dim=10,
                          )
@@ -415,9 +420,8 @@ class DeepFamAblation2(DeepFamAblationBase):
         the model.
     """
 
-    def __init__(self, model_dict, device='cpu'):
+    def __init__(self, model_dict):
         super().__init__(model_dict,
-                         device=device,
                          activation='selu',  # Change 2
                          )
 
@@ -467,9 +471,8 @@ class DeepFamAblation3(DeepFamAblationBase):
         the model.
     """
 
-    def __init__(self, model_dict, device='cpu'):
+    def __init__(self, model_dict,):
         super().__init__(model_dict,
-                         device=device,
                          linear_layer=False,  # Change 3
                          )
 
@@ -518,9 +521,8 @@ class DeepFamAblation12(DeepFamAblationBase):
         the model.
     """
 
-    def __init__(self, model_dict, device='cpu'):
+    def __init__(self, model_dict):
         super().__init__(model_dict,
-                         device=device,
                          embedding='word_embedding',  # Change 1
                          embedding_dim=10,
                          activation='selu',  # Change 2
@@ -572,9 +574,8 @@ class DeepFamAblation13(DeepFamAblationBase):
         the model.
     """
 
-    def __init__(self, model_dict, device='cpu'):
+    def __init__(self, model_dict):
         super().__init__(model_dict,
-                         device=device,
                          embedding='word_embedding',  # Change 1
                          embedding_dim=10,
                          linear_layer=False,  # Change 3
@@ -625,9 +626,8 @@ class DeepFamAblation23(DeepFamAblationBase):
         the model.
     """
 
-    def __init__(self, model_dict, device='cpu'):
+    def __init__(self, model_dict):
         super().__init__(model_dict,
-                         device=device,
                          activation='selu',  # Change 2
                          linear_layer=False,  # Change 3
                          )
@@ -677,9 +677,8 @@ class DeepFamAblation123(DeepFamAblationBase):
         the model.
     """
 
-    def __init__(self, model_dict, device='cpu'):
+    def __init__(self, model_dict):
         super().__init__(model_dict,
-                         device=device,
                          embedding='word_embedding',  # Change 1
                          embedding_dim=10,
                          activation='selu',  # Change 2,

@@ -89,10 +89,6 @@ class DeepNOG(nn.Module):
     model_dict : dict
         Dictionary storing the hyperparameters and learned parameters of
         the model.
-
-    Notes
-    -----
-    The scientific article refers to this Module as `DeepNOG`.
     """
 
     def __init__(self, model_dict):
