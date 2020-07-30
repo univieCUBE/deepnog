@@ -79,26 +79,35 @@ def predict(model, dataset, device='cpu', batch_size=16, num_workers=4,
                              num_workers=num_workers,
                              collate_fn=collate_sequences,
                              )
-    # Disable tracking of gradients to increase performance
+    try:
+        n_sequences = len(dataset)
+    except TypeError:
+        n_sequences = None
+
     with torch.no_grad():
         # Do prediction calculations
         disable_tqdm = verbose < 3
-        for i, batch in enumerate(tqdm(data_loader,
-                                       disable=disable_tqdm,
-                                       unit=' minibatches',
-                                       desc="deepnog inference")):
-            # Push sequences on correct device
-            sequences = batch.sequences.to(device)
-            # Predict protein families
-            output = model(sequences)
-            output = model.softmax(output)
+        with tqdm(desc='deepnog inference',
+                  total=n_sequences,
+                  mininterval=1.,
+                  disable=disable_tqdm,
+                  unit='seq',
+                  unit_scale=True) as pbar:
+            for i, batch in enumerate(data_loader,):
+                # Push sequences on correct device
+                sequences = batch.sequences.to(device)
+                # Predict protein families
+                output = model(sequences)
+                output = model.softmax(output)
 
-            conf, pred = torch.max(output, 1)
-            # Store predictions
-            pred_l.append(pred)
-            conf_l.append(conf)
-            ids.extend(batch.ids)
-            indices.extend(batch.indices)
+                conf, pred = torch.max(output, 1)
+                # Store predictions
+                pred_l.append(pred)
+                conf_l.append(conf)
+                ids.extend(batch.ids)
+                indices.extend(batch.indices)
+                # Update progress bar by batch size
+                pbar.update(n=len(sequences))
 
     logger.info('Inference complete.')
     # Collect skipped-sequences messages from workers in the case of

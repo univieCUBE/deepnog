@@ -131,14 +131,13 @@ def _train_and_validate_model(model: torch.nn.Module, criterion, optimizer,
     best_acc: float = 0.0
     best_epoch: int = 0
     evaluation: list = []
-    batch_sizes: Dict[str, int] = {phase: loader.batch_size
-                                   for phase, loader in data_loaders.items()}
+
     y_true: Dict[str, np.ndarray] = {phase: -np.ones((num_epochs, len(loader.dataset)),
                                                      dtype=np.int32)
                                      for phase, loader in data_loaders.items()}
     y_pred: Dict[str, np.ndarray] = {phase: -np.ones_like(y_true[phase])
                                      for phase, loader in data_loaders.items()}
-    tqdm_disable: bool = True if verbose < 3 else False
+    tqdm_disable: bool = verbose < 3
 
     for epoch in range(num_epochs):
         logger.info(f'Epoch {epoch}/{num_epochs - 1}')
@@ -148,7 +147,6 @@ def _train_and_validate_model(model: torch.nn.Module, criterion, optimizer,
         for phase in ['train', 'val']:
             data_loader = data_loaders[phase]
             dataset = data_loader.dataset
-            batch_size = batch_sizes[phase]
             if phase == 'train':
                 logger.debug('Setting model.train() mode')
                 model.train()  # Set model to training mode
@@ -176,77 +174,79 @@ def _train_and_validate_model(model: torch.nn.Module, criterion, optimizer,
 
             # Iterate over data.
             n_processed_sequences = 0
-            numerator = stop_after if stop_after else len(dataset)
-            denominator = batch_size if batch_size else None
-            tqdm_total = numerator // denominator + 1 if denominator else None
-            for batch_nr, batch in enumerate(tqdm(data_loader,
-                                                  total=tqdm_total,
-                                                  disable=tqdm_disable,
-                                                  desc=f'deepnog {phase}',
-                                                  unit=' minibatches'
-                                                  )):
-                sequence = batch.sequences
-                labels = batch.labels
+            tqdm_total = stop_after if stop_after else len(dataset)
+            with tqdm(desc=f'deepnog {phase}',
+                      total=tqdm_total,
+                      mininterval=1.,
+                      disable=tqdm_disable,
+                      unit='seq',
+                      unit_scale=True) as pbar:
+                for batch_nr, batch in enumerate(data_loader):
+                    sequence = batch.sequences
+                    labels = batch.labels
 
-                inputs = sequence.to(device)
-                labels = labels.to(device)
+                    inputs = sequence.to(device)
+                    labels = labels.to(device)
 
-                # Update progress for TensorBoard
-                current_batch_size = len(inputs)
-                n_processed_sequences += current_batch_size
+                    # Update progress for TensorBoard
+                    current_batch_size = len(inputs)
+                    n_processed_sequences += current_batch_size
 
-                # Reset gradients
-                optimizer.zero_grad()
+                    # Reset gradients
+                    optimizer.zero_grad()
 
-                # forward pass;
-                # track history only during training
-                with torch.set_grad_enabled(phase == 'train'):
-                    outputs = model(inputs)
-                    _, preds = torch.max(outputs, 1)
-                    if l2_coeff is not None:
-                        loss_ce = criterion(outputs, labels.long())
-                        loss_reg = model.classification1.weight.pow(2).sum()
-                        loss = loss_ce + l2_coeff * loss_reg
-                    else:
-                        loss = criterion(outputs, labels.long())
-                    # backward + optimize only if in training phase
-                    if phase == 'train':
-                        loss.backward()
-                        optimizer.step()
-                    # save to global ground truth and prediction arrays
-                    start = n_processed_sequences - current_batch_size
-                    end = n_processed_sequences
-                    y_true[phase][epoch, start:end] = labels.detach().cpu().numpy()
-                    y_pred[phase][epoch, start:end] = preds.detach().cpu().numpy()
+                    # forward pass;
+                    # track history only during training
+                    with torch.set_grad_enabled(phase == 'train'):
+                        outputs = model(inputs)
+                        _, preds = torch.max(outputs, 1)
+                        if l2_coeff is not None:
+                            loss_ce = criterion(outputs, labels.long())
+                            loss_reg = model.classification1.weight.pow(2).sum()
+                            loss = loss_ce + l2_coeff * loss_reg
+                        else:
+                            loss = criterion(outputs, labels.long())
+                        # backward + optimize only if in training phase
+                        if phase == 'train':
+                            loss.backward()
+                            optimizer.step()
+                        # save to global ground truth and prediction arrays
+                        start = n_processed_sequences - current_batch_size
+                        end = n_processed_sequences
+                        y_true[phase][epoch, start:end] = labels.detach().cpu().numpy()
+                        y_pred[phase][epoch, start:end] = preds.detach().cpu().numpy()
 
-                # statistics
-                batch_loss = loss.item()
-                batch_corrects = torch.sum(preds == labels)
+                    # statistics
+                    batch_loss = loss.item()
+                    batch_corrects = torch.sum(preds == labels)
 
-                log_loss += float(batch_loss)
-                log_corrects += int(batch_corrects)
-                log_n_objects += len(labels)
+                    log_loss += float(batch_loss)
+                    log_corrects += int(batch_corrects)
+                    log_n_objects += len(labels)
 
-                if tensorboard_writer is not None and batch_nr % log_interval == 0:
-                    tensorboard_writer.add_scalar(f'{phase}/loss',
-                                                  log_loss,
-                                                  n_processed_sequences)
-                    tensorboard_writer.add_scalar(f'{phase}/accuracy',
-                                                  log_corrects / log_n_objects,
-                                                  n_processed_sequences)
+                    if tensorboard_writer is not None and batch_nr % log_interval == 0:
+                        tensorboard_writer.add_scalar(f'{phase}/loss',
+                                                      log_loss,
+                                                      n_processed_sequences)
+                        tensorboard_writer.add_scalar(f'{phase}/accuracy',
+                                                      log_corrects / log_n_objects,
+                                                      n_processed_sequences)
 
-                    # Reset the log loss/acc variables
-                    log_loss = 0.
-                    log_corrects = 0
-                    log_n_objects = 0
+                        # Reset the log loss/acc variables
+                        log_loss = 0.
+                        log_corrects = 0
+                        log_n_objects = 0
 
-                running_loss += batch_loss * inputs.size(0)
-                running_corrects += batch_corrects
+                    running_loss += batch_loss * inputs.size(0)
+                    running_corrects += batch_corrects
 
-                if stop_after and n_processed_sequences >= stop_after:
-                    logger.info(f'Stopping after {n_processed_sequences} as '
-                                f'requested (stop_after = {stop_after}).')
-                    break
+                    if stop_after and n_processed_sequences >= stop_after:
+                        logger.info(f'Stopping after {n_processed_sequences} as '
+                                    f'requested (stop_after = {stop_after}).')
+                        break
+
+                    # Update progress bar
+                    pbar.update(n=current_batch_size)
 
             # Finishing train or val phase
             if n_processed_sequences == 0:

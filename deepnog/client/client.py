@@ -313,7 +313,9 @@ def _start_inference(args, arch_module, arch_cls):
 
     # Load dataset
     logger.info(f'Accessing dataset from {args.file} ...')
-    dataset = ProteinIterableDataset(args.file, f_format=args.fformat)
+    dataset = ProteinIterableDataset(args.file,
+                                     labels_file=args.test_labels,
+                                     f_format=args.fformat)
 
     # Load class names
     try:
