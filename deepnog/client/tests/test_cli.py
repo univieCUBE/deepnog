@@ -194,7 +194,7 @@ def test_args_sanity_check():
     args = argparse.Namespace(
         phase='infer', tax='2', out='out.mock.2', file=TEST_FILE, fformat='fasta', outformat='csv',
         database='eggNOG5', verbose=0, device='auto', num_workers=0, confidence_threshold=0.5,
-        architecture='deepencoding', weights=None, batch_size=1,
+        architecture='deepencoding', weights=None, batch_size=1, test_labels=None,
         # train only
         training_sequences=None, validation_sequences=None, labels=None, n_epochs=None,
         shuffle=None, learning_rate=None, random_seed=None, save_each_epoch=None,
