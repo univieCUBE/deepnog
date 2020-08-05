@@ -4,8 +4,6 @@ Author: Lukas Gosch
 Date: 2019-10-09
 Description:
     Convolutional networks for protein orthologous group inference.
-    LEGACY MODULE kept just in case renaming to deepnog.py/DeepNOG
-    causes any unforeseen issues.
 """
 # SPDX-License-Identifier: BSD-3-Clause
 
@@ -17,7 +15,6 @@ from ..data import gen_amino_acid_vocab
 
 
 __all__ = ['AminoAcidWordEmbedding',
-           'deepencoding',
            'DeepNOG',
            ]
 
@@ -55,11 +52,14 @@ class AminoAcidWordEmbedding(nn.Module):
             The sequence (densely) embedded in a space of dimension
             embedding_dim.
         """
-        x = self.embedding(sequence)
+        # Fix type mismatch on Windows
+        x = sequence.long()
+
+        x = self.embedding(x)
         return x
 
 
-class deepencoding(nn.Module):
+class DeepNOG(nn.Module):
     """ Convolutional network for protein orthologous group prediction.
 
     Compared to DeepFam, this architecture provides:
@@ -89,14 +89,10 @@ class deepencoding(nn.Module):
     model_dict : dict
         Dictionary storing the hyperparameters and learned parameters of
         the model.
-
-    Notes
-    -----
-    The scientific article refers to this Module as `DeepNOG`.
     """
 
     def __init__(self, model_dict):
-        super(deepencoding, self).__init__()
+        super().__init__()
 
         # Read hyperparameter dictionary
         try:  # for inference these values are already available in the model
@@ -170,9 +166,6 @@ class deepencoding(nn.Module):
         out : Tensor, shape (batch_size, n_classes)
             Confidence of sequence(s) being in one of the n_classes.
         """
-        # Fix type mismatch on Windows
-        x = x.long()
-
         # Amino acid embedding
         x = self.encoding(x).permute(0, 2, 1).contiguous()
 
@@ -194,8 +187,3 @@ class deepencoding(nn.Module):
         # NOTE: v1.2.0 removed the softmax here. Must now be performed in
         # inference module (otherwise, cross entropy loss requires hacks)
         return x
-
-
-class DeepNOG(deepencoding):
-    """ DeepNOG is identical to deepencoding """
-    pass

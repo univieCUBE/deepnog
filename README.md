@@ -22,7 +22,6 @@ DeepNOG is both faster and more accurate than assigning OGs with HMMER.
 
 The `deepnog` command line tool is written in Python 3.7+. 
 
-Current version: 1.1.0
 
 ## Installation guide
 
@@ -48,12 +47,20 @@ command with a protein sequence file (FASTA).
 
 Example usages: 
 
-*  deepnog proteins.faa 
-    * OGs prediction of proteins in proteins.faa will be written into out.csv
-*  deepnog proteins.faa --out prediction.csv
+*  `deepnog infer proteins.faa`
+    * Predicted groups of proteins in proteins.faa will be written to the console.
+      By default, eggNOG5 bacteria level is used.
+*  `deepnog infer proteins.faa --out prediction.csv`
     * Write into prediction.csv instead
-*  deepnog proteins.faa --tab
-    * Instead of semicolon (;) separated, generate tab separated output-file
+*  `deepnog infer proteins.faa -db eggNOG5 -t 1236 -V 3 -c 0.99`
+    * Predict EggNOG5 Gammaproteobacteria (tax 1236) groups
+    * discard individual predictions below 99 % confidence
+    * Show detailed progress report (-V 3)
+*  `deepnog train train.fa val.fa train.csv val.csv -a deepencoding -e 15 --shuffle
+                 -r 123 -db eggNOG5 -t 3 -o /path/to/outdir`
+    * Train a model for the (hypothetical) tax level 3 of eggNOG5 with a fixed
+      random seed for reproducible results.
+
 
 The individual models for OG predictions are not stored on GitHub or PyPI,
 because they exceed file size limitations (up to 200M).
@@ -62,7 +69,9 @@ cache directory (default `~/deepnog_data/`). You can change this directory
 by setting the `DEEPNOG_DATA` environment variable.
 
 For help and advanced options, call `deepnog --help`,
-or see the [user & developer guide](doc/guide.pdf).
+and `deepnog infer --help` or `deepnog train --help` for specific options
+for inference or training, respectively.
+See also the [user & developer guide](doc/guide.pdf).
 
 ## File formats supported
 
@@ -76,11 +85,13 @@ only.
 
 - eggNOG 5.0, taxonomic level 1 (root level)
 - eggNOG 5.0, taxonomic level 2 (bacteria level)
-- (for additional level, please create an issue)
+- eggNOG 5.0, taxonomic level 1236 (Gammaproteobacteria)
+- (for additional levels, please create an issue on Github, or train a model yourself---new in v1.2)
 
 ## Neural network architectures supported
 
-*  DeepEncoding (=DeepNOG in the research article)
+*  DeepEncoding (=DeepNOG in the research article. Sorry for the name confusion,
+   we are currently phasing out the old name)
 
 
 ## Required packages (and minimum version)
@@ -88,9 +99,16 @@ only.
 *  PyTorch 1.2.0
 *  NumPy 1.16.4
 *  pandas 0.25.1
+*  scikit-learn
+*  tensorboard
+*  pyyml
 *  Biopython 1.74
 *  tqdm 4.35.0
 *  pytest 5.1.2 (for tests only)
+
+See also `requirements/*.txt` for platform-specific recommendations
+(sometimes, specific versions might be required due to platform-specific
+bugs in the deepnog requirements)
 
 ## Acknowledgements
 This research is supported by the Austrian Science Fund (FWF): P27703, P31988,

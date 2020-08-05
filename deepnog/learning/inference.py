@@ -8,51 +8,22 @@ Description:
     Predict orthologous groups of protein sequences.
 """
 # SPDX-License-Identifier: BSD-3-Clause
-from importlib import import_module
+from os import environ
+from typing import List
 import warnings
 
 import torch
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from .dataset import collate_sequences
+from ..data.dataset import collate_sequences
+from ..utils import get_logger
 
-__all__ = ['load_nn', 'predict', ]
-
-
-def load_nn(architecture, model_dict, device='cpu'):
-    """ Import NN architecture and set loaded parameters.
-
-    Parameters
-    ----------
-    architecture : str
-        Name of neural network module and class to import.
-    model_dict : dict
-        Dictionary holding all parameters and hyper-parameters of the model.
-    device : [str, torch.device]
-        Device to load the model into.
-
-    Returns
-    -------
-    model : torch.nn.Module
-        Neural network object of type architecture with parameters
-        loaded from model_dict and moved to device.
-    """
-    # Import and instantiate neural network class
-    model_module = import_module(f'.models.{architecture}', 'deepnog')
-    model_class = getattr(model_module, architecture)
-    model = model_class(model_dict)
-    # Set trained parameters of model
-    model.load_state_dict(model_dict['model_state_dict'])
-    # Move to GPU, if available
-    model.to(device)
-    # Inform neural network layers to be in evaluation mode
-    model = model.eval()
-    return model
+__all__ = ['predict', ]
 
 
 def predict(model, dataset, device='cpu', batch_size=16, num_workers=4,
-            verbose=3):
+            verbose=3) -> (torch.Tensor, torch.Tensor, List[str], List[str]):
     """ Use model to predict zero-indexed labels of dataset.
 
     Also handles communication with ProteinIterators used to load data to
@@ -62,7 +33,7 @@ def predict(model, dataset, device='cpu', batch_size=16, num_workers=4,
     ----------
     model : nn.Module
         Trained neural network model.
-    dataset : ProteinDataset
+    dataset : ProteinIterableDataset
         Data to predict protein families for.
     device : [str, torch.device]
         Device of model.
@@ -86,6 +57,15 @@ def predict(model, dataset, device='cpu', batch_size=16, num_workers=4,
         Stores the unique indices of sequences mapping to their position
         in the file
     """
+    logger = get_logger(__name__, verbose=verbose)
+
+    logger.info(f'Inference device: {device}')
+
+    debug_force_mode = environ.get("DEEPNOG_FORCE_MODE", default=None)
+    if debug_force_mode is not None and debug_force_mode.lower() == 'train':
+        logger.warning('forcing model.train(), with possible effects on dropout and batchnorm')
+        model.train()
+
     pred_l = []
     conf_l = []
     ids = []
@@ -99,33 +79,48 @@ def predict(model, dataset, device='cpu', batch_size=16, num_workers=4,
                              num_workers=num_workers,
                              collate_fn=collate_sequences,
                              )
-    # Disable tracking of gradients to increase performance
+    try:
+        n_sequences = len(dataset)
+    except TypeError:
+        n_sequences = None
+
     with torch.no_grad():
         # Do prediction calculations
         disable_tqdm = verbose < 3
-        for i, batch in enumerate(tqdm(data_loader,
-                                       disable=disable_tqdm,
-                                       desc="Predicting batch")):
-            # Push sequences on correct device
-            sequences = batch.sequences.to(device)
-            # Predict protein families
-            output = model(sequences)
-            conf, pred = torch.max(output, 1)
-            # Store predictions
-            pred_l.append(pred)
-            conf_l.append(conf)
-            ids.extend(batch.ids)
-            indices.extend(batch.indices)
+        with tqdm(desc='deepnog inference',
+                  total=n_sequences,
+                  mininterval=1.,
+                  disable=disable_tqdm,
+                  unit='seq',
+                  unit_scale=True) as pbar:
+            for i, batch in enumerate(data_loader,):
+                # Push sequences on correct device
+                sequences = batch.sequences.to(device)
+                # Predict protein families
+                output = model(sequences)
+                output = model.softmax(output)
 
+                conf, pred = torch.max(output, 1)
+                # Store predictions
+                pred_l.append(pred)
+                conf_l.append(conf)
+                ids.extend(batch.ids)
+                indices.extend(batch.indices)
+                # Update progress bar by batch size
+                pbar.update(n=len(sequences))
+
+    logger.info('Inference complete.')
     # Collect skipped-sequences messages from workers in the case of
     # multi-process data-loading
     n_skipped = dataset.n_skipped
     # Check if sequences were skipped due to empty id
-    if verbose > 0 and n_skipped > 0:
+    if n_skipped > 0:
         warnings.warn(f'Skipped {n_skipped} sequences as no sequence id '
                       f'could be detected.')
     if len(pred_l) == 0:
-        warnings.warn(f'Skipped all sequences. No output will be provided.')
+        logger.error('Skipped all sequences. No output will be provided. '
+                     'Sequences might have had no sequence IDs in the '
+                     'input file.')
         return None, None, None, None
     else:
         # Merge individual output tensors

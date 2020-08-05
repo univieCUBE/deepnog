@@ -1,0 +1,196 @@
+# USED FOR DEVELOPMENT, EVALUATION of deepnog.
+# If you cannot modify this file, copy it to a directory with write permissions,
+# and set the DEEPNOG_CONFIG environment variable to this dir, e.g.
+# $ export DEEPNOG_CONFIG="/home/$USER/deepnog_config"
+
+database:
+  eggNOG5:
+    # taxonomic levels
+    - 1
+    - 2
+    - 1236
+
+architecture:
+  # The default DeepNOG network
+  deepnog:
+    module: deepencoding
+    class: deepencoding
+    encoding_dim: 10
+    kernel_size:
+      - 8
+      - 12
+      - 16
+      - 20
+      - 24
+      - 28
+      - 32
+      - 36
+    n_filters: 150
+    dropout: 0.3
+    pooling_layer_type: 'max'
+
+  # Legacy name of DeepNOG network
+  deepencoding:
+    module: deepencoding
+    class: deepencoding
+    encoding_dim: 10
+    kernel_size:
+      - 8
+      - 12
+      - 16
+      - 20
+      - 24
+      - 28
+      - 32
+      - 36
+    n_filters: 150
+    dropout: 0.3
+    pooling_layer_type: 'max'
+
+  deepfam:
+    module: deepfam
+    class: DeepFam
+    kernel_size:
+      - 8
+      - 12
+      - 16
+      - 20
+      - 24
+      - 28
+      - 32
+      - 36
+    n_filters: 250
+    dropout: 0.3
+    hidden_units: 2000
+
+  deepfam_light:
+    module: deepfam
+    class: DeepFam
+    kernel_size:
+      - 8
+      - 12
+      - 16
+      - 20
+      - 24
+      - 28
+      - 32
+      - 36
+    n_filters: 150
+    dropout: 0.3
+    hidden_units: 1500
+
+  # Networks for ablation study
+  DeepFamAblation1:
+    module: deepfam
+    class: DeepFamAblation1
+    kernel_size:
+      - 8
+      - 12
+      - 16
+      - 20
+      - 24
+      - 28
+      - 32
+      - 36
+    n_filters: 150
+    dropout: 0.3
+    hidden_units: 1500
+
+  DeepFamAblation2:
+    module: deepfam
+    class: DeepFamAblation2
+    kernel_size:
+      - 8
+      - 12
+      - 16
+      - 20
+      - 24
+      - 28
+      - 32
+      - 36
+    n_filters: 150
+    dropout: 0.3
+    hidden_units: 1500
+
+  DeepFamAblation3:
+    module: deepfam
+    class: DeepFamAblation3
+    kernel_size:
+      - 8
+      - 12
+      - 16
+      - 20
+      - 24
+      - 28
+      - 32
+      - 36
+    n_filters: 150
+    dropout: 0.3
+    hidden_units: 1500
+
+  DeepFamAblation12:
+    module: deepfam
+    class: DeepFamAblation12
+    kernel_size:
+      - 8
+      - 12
+      - 16
+      - 20
+      - 24
+      - 28
+      - 32
+      - 36
+    n_filters: 150
+    dropout: 0.3
+    hidden_units: 1500
+
+  DeepFamAblation13:
+    module: deepfam
+    class: DeepFamAblation13
+    kernel_size:
+      - 8
+      - 12
+      - 16
+      - 20
+      - 24
+      - 28
+      - 32
+      - 36
+    n_filters: 150
+    dropout: 0.3
+    hidden_units: 1500
+
+  DeepFamAblation23:
+    module: deepfam
+    class: DeepFamAblation23
+    kernel_size:
+      - 8
+      - 12
+      - 16
+      - 20
+      - 24
+      - 28
+      - 32
+      - 36
+    n_filters: 150
+    dropout: 0.3
+    hidden_units: 1500
+
+  DeepFamAblation123:
+    module: deepfam
+    class: DeepFamAblation123
+    kernel_size:
+      - 8
+      - 12
+      - 16
+      - 20
+      - 24
+      - 28
+      - 32
+      - 36
+    n_filters: 150
+    dropout: 0.3
+    hidden_units: 1500
+
+config:
+  - custom

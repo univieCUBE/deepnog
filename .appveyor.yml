@@ -60,7 +60,6 @@ build_script:
   - "python -m pip install ."
 
 test_script:
-  # Run the project tests
   - "pytest --cov deepnog"
 
 after_test:

@@ -3,6 +3,10 @@ doc/latex
 out.csv
 new_pypi_release.bash
 
+# For certain test scenarios during development only
+deepnog/models/deepencoding_15.py
+dev/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

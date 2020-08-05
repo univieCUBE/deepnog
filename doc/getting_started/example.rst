@@ -68,7 +68,7 @@ API Example Usage
 .. code-block:: python
 
    import torch
-   from deepnog.dataset import ProteinDataset
+   from deepnog.dataset import ProteinIterableDataset
    from deepnog.inference import load_nn, predict
    from deepnog.io import create_df, get_weights_path
    from deepnog.utils import set_device
@@ -80,8 +80,8 @@ API Example Usage
    ARCH = 'deepencoding'
    CONF_THRESH = 0.8
 
-   # load protein sequence file into a ProteinDataset
-   dataset = ProteinDataset(PROTEIN_FILE, f_format='fasta')
+   # load protein sequence file into a ProteinIterableDataset
+   dataset = ProteinIterableDataset(PROTEIN_FILE, f_format='fasta')
 
    # Construct path to saved parameters deepnog model.
    weights_path = get_weights_path(

@@ -1,0 +1,89 @@
+# All models must be added here.
+# If you cannot modify this file, copy it to a directory with write permissions,
+# and set the DEEPNOG_CONFIG environment variable to this dir, e.g.
+# $ export DEEPNOG_CONFIG="/home/$USER/deepnog_config"
+
+database:
+  eggNOG5:
+    # taxonomic levels
+    - 1
+    - 2
+    - 1236
+    #- 1239  # Example 1: Uncomment this line, if you created a Firmicutes model
+  #OMA:      # Example 2: Uncomment this line and the following, if you
+    #- xy    #            created a model for the 'xy' level of OMA.
+             # NOTE: Currently, a level must be provided, even if the database
+             #       does not use levels. Simply use a placeholder 1 or similar.
+             # NOTE 2: Indentation matters
+
+architecture:
+  # The default DeepNOG network
+  deepnog:
+    module: deepnog
+    class: DeepNOG
+    encoding_dim: 10
+    kernel_size:
+      - 8
+      - 12
+      - 16
+      - 20
+      - 24
+      - 28
+      - 32
+      - 36
+    n_filters: 150
+    dropout: 0.3
+    pooling_layer_type: 'max'
+
+  # Legacy name of DeepNOG network
+  deepencoding:
+    module: deepencoding
+    class: deepencoding
+    encoding_dim: 10
+    kernel_size:
+      - 8
+      - 12
+      - 16
+      - 20
+      - 24
+      - 28
+      - 32
+      - 36
+    n_filters: 150
+    dropout: 0.3
+    pooling_layer_type: 'max'
+
+  deepfam:
+    module: deepfam
+    class: DeepFam
+    kernel_size:
+      - 8
+      - 12
+      - 16
+      - 20
+      - 24
+      - 28
+      - 32
+      - 36
+    n_filters: 250
+    dropout: 0.3
+    hidden_units: 2000
+
+  deepfam_light:
+    module: deepfam
+    class: DeepFam
+    kernel_size:
+      - 8
+      - 12
+      - 16
+      - 20
+      - 24
+      - 28
+      - 32
+      - 36
+    n_filters: 150
+    dropout: 0.3
+    hidden_units: 1500
+
+config:
+  - custom

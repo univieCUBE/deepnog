@@ -31,31 +31,32 @@ def find_version(*file_paths):
 
 install_requires = ['numpy',
                     'pandas',
+                    'scikit-learn',
                     'torch >= 1.2',
                     'Biopython',
+                    'pyyml',
                     'tqdm',
+                    'tensorboard',
                     ]
 
 setuptools.setup(
     name='deepnog',
     version=find_version('deepnog', '__init__.py'),
-    author='Lukas Gosch',
-    author_email='gosch.lukas@gmail.com',
+    author='Roman Feldbauer',
+    author_email='roman.feldbauer@univie.ac.at',
     description='Deep learning tool for protein orthologous group predictions',
-    keywords=('deep-learning bioinformatics neural-networks protein-families'
-              'orthologous-groups eggnog'),
+    keywords=('deep-learning neural-networks '
+              'bioinformatics computational-biology '
+              'protein-families orthologous-groups orthology eggnog'),
     long_description=long_description,
     long_description_content_type='text/markdown',
     install_requires=install_requires,
     url='',
     packages=setuptools.find_packages(),
     package_data={
-        'deepnog': ['parameters/*/*.pth',    # Include parameters of NNs
-                                             # trained on a whole database
-                                             # (currently not supported).
-                    'parameters/*/*/*.pth',  # Include parameters of NNs
-                                             # trained on specific levels/
-                                             # parts of a db
+        'deepnog': ['utils/certifi',   # Work-around: include certificate chain
+                                       # for fileshare.csb.univie.ac.at
+                    'config/*.yml',    # DeepNOG configuration
                     ],
         'tests': ['data/*.faa',        # Include data and parameters for tests,
                   'parameters/*.pth',  # edit if necessary!
