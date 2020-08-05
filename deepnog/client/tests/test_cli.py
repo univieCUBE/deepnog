@@ -197,7 +197,7 @@ def test_args_sanity_check():
         architecture='deepencoding', weights=None, batch_size=1, test_labels=None,
         # train only
         training_sequences=None, validation_sequences=None, labels=None, n_epochs=None,
-        shuffle=None, learning_rate=None, random_seed=None, save_each_epoch=None,
+        shuffle=None, learning_rate=None, gamma=None, random_seed=None, save_each_epoch=None,
     )
     args_bs = deepcopy(args)
     args_bs.batch_size = 0

@@ -227,6 +227,12 @@ def _get_parser():
                               default=1e-2,
                               help='Initial learning rate, subject to adaptations by '
                                    'chosen optimizer and scheduler.')
+    parser_train.add_argument("-g", "--gamma",
+                              metavar="LEARNING_RATE_DECAY",
+                              type=float,
+                              default=0.75,
+                              help="Decay for learning rate step scheduler. "
+                                   "(lr_epoch_t2 = gamma * lr_epoch_t1)")
     parser_train.add_argument("-l2", "--l2-coeff",
                               metavar="\u03BB",  # lower-case lambda
                               type=float,
@@ -423,6 +429,10 @@ def _start_training(args, arch_module, arch_cls):
                   data_loader_params={'batch_size': args.batch_size,
                                       'num_workers': args.num_workers},
                   learning_rate=args.learning_rate,
+                  learning_rate_params={'step_size': 1,
+                                        'gamma': args.gamma,
+                                        'last_epoch': -1,
+                                        },
                   l2_coeff=args.l2_coeff,
                   device=args.device,
                   verbose=args.verbose,
