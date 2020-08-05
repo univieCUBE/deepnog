@@ -336,9 +336,9 @@ class DeepFamAblationBase(nn.Module):
                 self.linear1.bias.data.fill_(0.01)
             elif activation == 'selu':
                 self.linear1.weight.data.normal_(
-                    0., np.sqrt(self.linear1.in_features))
+                    0., np.sqrt(1. / self.linear1.in_features))
                 self.classification1.weight.data.normal_(
-                    0., np.sqrt(self.classification1.in_features))
+                    0., np.sqrt(1. / self.classification1.in_features))
         else:
             self.classification1 = nn.Linear(in_features=self.n_filters * len(self.kernel_sizes),
                                              out_features=self.n_classes)
@@ -657,7 +657,6 @@ class DeepFamAblation23(DeepFamAblationBase):
         x = torch.cat(max_pool_layer, dim=1)
         x = x.view(-1, x.shape[1])
         x = self.dropout1(x)
-        x = self.activation1(x)
         x = self.classification1(x)
         return x
 
@@ -710,6 +709,5 @@ class DeepFamAblation123(DeepFamAblationBase):
         x = torch.cat(max_pool_layer, dim=1)
         x = x.view(-1, x.shape[1])
         x = self.dropout1(x)
-        x = self.activation1(x)
         x = self.classification1(x)
         return x
