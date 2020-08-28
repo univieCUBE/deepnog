@@ -17,8 +17,9 @@
 
 # DeepNOG: protein orthologous groups prediction
 
-Predict orthologous groups of proteins on CPUs or GPUs with deep networks.
-DeepNOG is both faster and more accurate than assigning OGs with HMMER.
+Assign proteins to orthologous groups (eggNOG 5) on CPUs or GPUs with deep networks.
+DeepNOG is much faster than alignment-based methods,
+while being as accurate as HMMER.
 
 The `deepnog` command line tool is written in Python 3.7+. 
 
@@ -56,7 +57,7 @@ Example usages:
     * Predict EggNOG5 Gammaproteobacteria (tax 1236) groups
     * discard individual predictions below 99 % confidence
     * Show detailed progress report (-V 3)
-*  `deepnog train train.fa val.fa train.csv val.csv -a deepencoding -e 15 --shuffle
+*  `deepnog train train.fa val.fa train.csv val.csv -a deepnog -e 15 --shuffle
                  -r 123 -db eggNOG5 -t 3 -o /path/to/outdir`
     * Train a model for the (hypothetical) tax level 3 of eggNOG5 with a fixed
       random seed for reproducible results.
@@ -81,17 +82,17 @@ DeepNOG supports protein sequences stored in all file formats listed in
 https://biopython.org/wiki/SeqIO but is tested for the FASTA-file format
 only.
 
-## Databases supported
+## Databases currently supported
 
 - eggNOG 5.0, taxonomic level 1 (root level)
 - eggNOG 5.0, taxonomic level 2 (bacteria level)
 - eggNOG 5.0, taxonomic level 1236 (Gammaproteobacteria)
 - (for additional levels, please create an issue on Github, or train a model yourself---new in v1.2)
 
-## Neural network architectures supported
+## Deep network architectures currently supported
 
-*  DeepEncoding (=DeepNOG in the research article. Sorry for the name confusion,
-   we are currently phasing out the old name)
+* DeepNOG
+* DeepFam (no precomputed model currently available)
 
 
 ## Required packages (and minimum version)
@@ -111,8 +112,8 @@ See also `requirements/*.txt` for platform-specific recommendations
 bugs in the deepnog requirements)
 
 ## Acknowledgements
-This research is supported by the Austrian Science Fund (FWF): P27703, P31988,
+This research is supported by the Austrian Science Fund (FWF): P27703, P31988;
 and by the GPU grant program of Nvidia corporation.
 
 ## Citation
-A research article is currently in preparation.
+A research article is currently under review.
