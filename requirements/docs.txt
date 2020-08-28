@@ -4,9 +4,8 @@
 Sphinx>=2.1
 sphinx-automodapi
 sphinx-pdj-theme
-git+https://github.com/readthedocs/readthedocs-sphinx-search@master  # TODO update to PyPI when it becomes available
+readthedocs-sphinx-search
 recommonmark
-twine
 nose
 mock
 graphviz
