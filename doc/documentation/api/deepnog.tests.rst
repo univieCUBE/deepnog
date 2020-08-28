@@ -1,17 +1,6 @@
 deepnog.tests package
 =====================
 
-Subpackages
------------
-
-.. toctree::
-   :maxdepth: 4
-
-   deepnog.tests.tests
-
-Submodules
-----------
-
 deepnog.tests.utils module
 --------------------------
 

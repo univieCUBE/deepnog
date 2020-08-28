@@ -1,9 +1,9 @@
 """
-Author: Lukas Gosch
-        Roman Feldbauer
+Author: Lukas Gosch, Roman Feldbauer
+
 Date: 2019-10-09
-Description:
-    Convolutional networks for protein orthologous group inference.
+
+Description: Convolutional networks for protein orthologous group assignment.
 """
 # SPDX-License-Identifier: BSD-3-Clause
 

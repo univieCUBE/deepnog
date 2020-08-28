@@ -1,11 +1,12 @@
 """
-Author: Lukas Gosch
-        Roman Feldbauer
+Author: Lukas Gosch, Roman Feldbauer
+
 Date: 2019-10-09
+
 Description:
-    Convolutional networks for protein orthologous group inference.
-    LEGACY MODULE kept just in case renaming to deepnog.py/DeepNOG
-    causes any unforeseen issues.
+Convolutional networks for protein orthologous group inference.
+LEGACY MODULE kept just in case renaming to deepnog.py/DeepNOG
+causes any unforeseen issues.
 """
 # SPDX-License-Identifier: BSD-3-Clause
 

@@ -1,17 +1,6 @@
 deepnog.data package
 ====================
 
-Subpackages
------------
-
-.. toctree::
-   :maxdepth: 4
-
-   deepnog.data.tests
-
-Submodules
-----------
-
 deepnog.data.dataset module
 ---------------------------
 
@@ -24,15 +13,6 @@ deepnog.data.split module
 -------------------------
 
 .. automodule:: deepnog.data.split
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-
-Module contents
----------------
-
-.. automodule:: deepnog.data
    :members:
    :undoc-members:
    :show-inheritance:

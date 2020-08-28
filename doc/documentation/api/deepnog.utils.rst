@@ -1,17 +1,6 @@
 deepnog.utils package
 =====================
 
-Subpackages
------------
-
-.. toctree::
-   :maxdepth: 4
-
-   deepnog.utils.tests
-
-Submodules
-----------
-
 deepnog.utils.bio module
 ------------------------
 
@@ -64,15 +53,6 @@ deepnog.utils.sync module
 -------------------------
 
 .. automodule:: deepnog.utils.sync
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-
-Module contents
----------------
-
-.. automodule:: deepnog.utils
    :members:
    :undoc-members:
    :show-inheritance:

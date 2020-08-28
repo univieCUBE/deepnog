@@ -1,6 +1,5 @@
 """
-Author: Lukas Gosch
-        Roman Feldbauer
+Author: Lukas Gosch, Roman Feldbauer
 """
 # SPDX-License-Identifier: BSD-3-Clause
 from typing import Union
