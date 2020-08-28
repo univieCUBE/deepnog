@@ -16,7 +16,7 @@ Register new network architectures
 ----------------------------------
 
 Create a Python module under ``deepnog/models/<my_network.py>``.
-You can use ``deepencoding.py`` as a template.
+You can use ``deepnog.py`` as a template.
 When the new module is in place, also edit ``deepnog/client.py``
 to expose the new network to the user:
 
@@ -45,9 +45,9 @@ The directory looks like this:
     | deepnog_data
     | ├── eggNOG5
     | │   ├── 1
-    | │   |   └── deepencoding.pth
+    | │   |   └── deepnog.pth
     | │   └── 2
-    | │       └── deepencoding.pth
+    | │       └── deepnog.pth
     | ├── ...
     |
     |
@@ -60,16 +60,16 @@ we place the serialized PyTorch parameters like this:
     | deepnog_data
     | ├── eggNOG5
     | │   ├── 1
-    | │   |   └── deepencoding.pth
+    | │   |   └── deepnog.pth
     | │   └── 2
-    | │       └── deepencoding.pth
+    | │       └── deepnog.pth
     | ├── MyOrthologyDB
     | |   └── 1
-    | |       └── deepencoding.pth
+    | |       └── deepnog.pth
     | ├── ...
     |
 
-Assuming we want to compare ``deepencoding`` to ``my_network``,
+Assuming we want to compare ``deepnog`` to ``my_network``,
 we add the trained network parameters like this:
 
 .. code-block::
@@ -77,14 +77,14 @@ we add the trained network parameters like this:
     | deepnog_data
     | ├── eggNOG5
     | │   ├── 1
-    | │   |   ├── deepencoding.pth
+    | │   |   ├── deepnog.pth
     | │   |   └── my_network.pth
     | │   └── 2
-    | │       ├── deepencoding.pth
+    | │       ├── deepnog.pth
     | │       └── my_network.pth
     | ├── MyOrthologyDB
     | |   └── 1
-    | │       ├── deepencoding.pth
+    | │       ├── deepnog.pth
     | │       └── my_network.pth
     | ├── ...
     |

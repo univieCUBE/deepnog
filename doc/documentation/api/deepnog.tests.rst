@@ -1,8 +1,30 @@
-:mod:`deepnog.tests`
-====================
+deepnog.tests package
+=====================
+
+Subpackages
+-----------
+
+.. toctree::
+   :maxdepth: 4
+
+   deepnog.tests.tests
+
+Submodules
+----------
+
+deepnog.tests.utils module
+--------------------------
+
+.. automodule:: deepnog.tests.utils
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+
+Module contents
+---------------
 
 .. automodule:: deepnog.tests
    :members:
    :undoc-members:
-   :inherited-members:
    :show-inheritance:

@@ -6,12 +6,12 @@ Invocation:
 
 ::
 
-    deepnog SEQUENCE_FILE [options] > predictions.csv
+    deepnog infer SEQUENCE_FILE [options] > assignments.csv
 
 Basic Commands
 ==============
 
-These options may be commonly tuned for a basic invocation for OG prediction.
+These options may be commonly tuned for a basic invocation for orthologous group assignment.
 
 ::
 
@@ -21,8 +21,8 @@ These options may be commonly tuned for a basic invocation for OG prediction.
     optional arguments:
       -h, --help            show this help message and exit
       --version             show program's version number and exit
-      -o FILE, --out FILE   Store orthologous group predictions to outputfile. Per
-                            default, write predictions to stdout. (default: None)
+      -o FILE, --out FILE   Store orthologous group assignments to outputfile.
+                            Per default, write predictions to stdout. (default: None)
       -c FLOAT, --confidence-threshold FLOAT
                             The confidence value below which predictions are
                             masked by deepnog. By default, apply the confidence
@@ -65,20 +65,21 @@ These options are unlikely to require manual tuning for the average user.
                         data loading. Note: Only use multi-process data
                         loading if you are calculating on a gpu (otherwise
                         inefficient)! (default: 0)
-    -a {deepencoding}, --architecture {deepencoding}
+    -a {deepnog}, --architecture {deepnog}
                         Network architecture to use for classification.
-                        (default: deepencoding)
+                        (default: deepnog)
     -w FILE, --weights FILE
                         Custom weights file path (optional) (default: None)
     -bs INT, --batch-size INT
-                        Batch size used for prediction.Defines how many
-                        sequences should be forwarded in the network at once.
-                        With a batch size of one, the protein sequences are
-                        sequentially classified by the network without
-                        leveraging parallelism. Higher batch-sizes than the
-                        default can speed up the prediction significantly if
-                        on a gpu. On a cpu, however, they can be slower than
-                        smaller ones due to the increased average sequence
-                        length in the convolution step due to zero-padding
-                        every sequence in each batch. (default: 1)
+                        The batch size determines how many sequences are
+                        processed by the network at once. If 1, process the
+                        protein sequences sequentially (recommended
+                        on CPUs). Larger batch sizes speed up the inference and
+                        training on GPUs. Batch size can influence the
+                        learning process.
+    --test_labels TEST_LABELS_FILE
+                        Measure model performance on a test set.
+                        If provided, this file must contain the ground-truth
+                        labels for the provided sequences.
+                        Otherwise, only perform inference.
 

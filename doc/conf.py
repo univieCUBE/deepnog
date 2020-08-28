@@ -19,6 +19,9 @@ MOCK_MODULES = ['numpy',
                 'torch',
                 'tqdm',
                 'Biopython',
+                'scikit-learn',
+                'pyyml',
+                'tensorboard',
                 ]
 
 # -- Project information -----------------------------------------------------

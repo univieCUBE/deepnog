@@ -69,7 +69,7 @@ API Example Usage
 
    import torch
    from deepnog.data import ProteinIterableDataset
-   from deepnog.inference import predict
+   from deepnog.learning import predict
    from deepnog.utils import create_df, get_config, get_weights_path, load_nn, set_device
 
 
@@ -102,7 +102,7 @@ API Example Usage
    cls = config['architecture'][ARCH]['class']
 
    # Load neural network model and class names
-   model = load_nn((module, cls), model_dict, device)
+   model = load_nn((module, cls), model_dict, 'infer', device)
    class_labels = model_dict['classes']
 
    # perform prediction
@@ -122,6 +122,6 @@ API Example Usage
        confs=confs,
        ids=ids,
        indices=indices,
-       threshold=threshold,
+       threshold=CONF_THRESH,
        verbose=3
    )

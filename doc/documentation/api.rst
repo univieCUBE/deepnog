@@ -11,14 +11,12 @@ This is the API documentation for ``deepnog``.
    :members:
 
 .. toctree::
-   :maxdepth: 2
-   :caption: Modules and subpackages
+   :maxdepth: 3
+   :caption: Modules in subpackages
 
-   client     <api/deepnog.client>
-   dataset    <api/deepnog.dataset>
-   inference  <api/deepnog.inference>
-   io         <api/deepnog.io>
-   models     <api/deepnog.models>
-   sync       <api/deepnog.sync>
-   tests      <api/deepnog.tests>
-   utils      <api/deepnog.utils>
+   client   <api/deepnog.client>
+   data     <api/deepnog.data>
+   learning <api/deepnog.learning>
+   models   <api/deepnog.models>
+   tests    <api/deepnog.tests>
+   utils    <api/deepnog.utils>

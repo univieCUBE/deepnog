@@ -1,34 +1,40 @@
 #!/usr/bin/env python3
 """
-Author: Lukas Gosch
-        Roman Feldbauer
+Authors
+-------
+- Roman Feldbauer
+- Lukas Gosch
 
-Date: 2019-10-18
+Date
+----
+2019-10-18
 
-Usage: python client.py --help
+Usage
+-----
+`python client.py --help`
 
-Description:
+Description
+-----------
+Provides the ``deepnog`` command line client and entry point for users.
 
-    Provides the ``deepnog`` command line client and entry point for users.
+DeepNOG predicts protein families/orthologous groups of given
+protein sequences with deep learning.
 
-    DeepNOG predicts protein families/orthologous groups of given
-    protein sequences with deep learning.
+Since version 1.2, model training is available as well.
 
-    Since version 1.2, model training is available as well.
+File formats supported:
+Preferred: FASTA
+DeepNOG supports protein sequences stored in all file formats listed in
+https://biopython.org/wiki/SeqIO but is tested for the FASTA-file format
+only.
 
-    File formats supported:
-    Preferred: FASTA
-    DeepNOG supports protein sequences stored in all file formats listed in
-    https://biopython.org/wiki/SeqIO but is tested for the FASTA-file format
-    only.
+Architectures supported:
 
-    Architectures supported:
-
-    Databases supported:
-        - eggNOG 5.0, taxonomic level 1 (root)
-        - eggNOG 5.0, taxonomic level 2 (bacteria)
-        - Additional databases will be trained on demand/users can add custom
-          databases using the training facilities.
+Databases supported:
+    - eggNOG 5.0, taxonomic level 1 (root)
+    - eggNOG 5.0, taxonomic level 2 (bacteria)
+    - Additional databases will be trained on demand/users can add custom
+      databases using the training facilities.
 """
 # SPDX-License-Identifier: BSD-3-Clause
 
