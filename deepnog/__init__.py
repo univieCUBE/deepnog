@@ -25,7 +25,7 @@ and allows to train additional models for eggNOG or other databases.
 # 'X.Y.dev0' is the canonical version of 'X.Y.dev'
 #
 
-__version__ = '1.2.0'
+__version__ = '1.2.1'
 
 __all__ = [
     'client',

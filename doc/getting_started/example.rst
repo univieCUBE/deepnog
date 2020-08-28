@@ -12,33 +12,33 @@ CLI Usage Example
 Using ``deepnog`` from the command line is the simple, and preferred way of interacting with the
 ``deepnog`` package.
 
-Here, we predict orthologous groups (OGs) of proteins using a model trained on the eggNOG 5.0
+Here, we assign orthologous groups (OGs) of proteins using a model trained on the eggNOG 5.0
 database and using only bacterial OGs (default settings),
 and redirect the output from stdout to a file:
 
 .. code-block:: bash
 
-   deepnog input.fa > prediction.csv
+   deepnog infer input.fa > assignments.csv
 
 Alternatively, the output file and other settings can be specified explicitly like so:
 
 .. code-block:: bash
 
-   deepnog input.fa --out prediction.csv --outformat csv -db eggNOG5 --tax 2
+   deepnog infer input.fa --out prediction.csv -db eggNOG5 --tax 2
 
 For a detailed explanation of flags and further settings,
 please consult the `User Guide <../documentation/user_guide.html>`_.
 
-Note that deepnog masks predictions below a certain confidence threshold.
+Note that ``deepnog`` masks predictions below a certain confidence threshold.
 The default confidence threshold baked into the model at 0.99
 can be overridden from the command line interface:
 
 .. code-block:: bash
 
-   deepnog input.fa --confidence-threshold 0.8 > prediction.csv
+   deepnog infer input.fa --confidence-threshold 0.8 > assignments.csv
 
 
-The output comma-separated values (CSV) file `prediction.csv` then looks something like:
+The output comma-separated values (CSV) file `assignments.csv` then looks something like:
 
 ::
 
@@ -59,7 +59,7 @@ and the following fields:
 
 * ``sequence_id``, the name of the input protein sequence.
 * ``prediction``, the name of the predicted protein OG. Empty if masked by confidence threshold.
-* ``confidence``, the confidence value (0-1 inclusive) that ``deepnog`` ascribes to this prediction.
+* ``confidence``, the confidence value (0-1 inclusive) that ``deepnog`` ascribes to this assignment.
   Empty if masked by confidence threshold.
 
 API Example Usage
@@ -68,17 +68,16 @@ API Example Usage
 .. code-block:: python
 
    import torch
-   from deepnog.dataset import ProteinIterableDataset
-   from deepnog.inference import load_nn, predict
-   from deepnog.io import create_df, get_weights_path
-   from deepnog.utils import set_device
+   from deepnog.data import ProteinIterableDataset
+   from deepnog.inference import predict
+   from deepnog.utils import create_df, get_config, get_weights_path, load_nn, set_device
 
 
    PROTEIN_FILE = '/path/to/file.faa'
    DATABASE = 'eggNOG5'
    TAX = 2
-   ARCH = 'deepencoding'
-   CONF_THRESH = 0.8
+   ARCH = 'deepnog'
+   CONF_THRESH = 0.99
 
    # load protein sequence file into a ProteinIterableDataset
    dataset = ProteinIterableDataset(PROTEIN_FILE, f_format='fasta')
@@ -97,8 +96,13 @@ API Example Usage
    # Load neural network parameters
    model_dict = torch.load(weights_path, map_location=device)
 
+   # Lookup where to find the chosen network
+   config = get_config()
+   module = config['architecture'][ARCH]['module']
+   cls = config['architecture'][ARCH]['class']
+
    # Load neural network model and class names
-   model = load_nn(ARCH, model_dict, device)
+   model = load_nn((module, cls), model_dict, device)
    class_labels = model_dict['classes']
 
    # perform prediction

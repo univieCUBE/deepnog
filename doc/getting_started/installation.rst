@@ -12,21 +12,31 @@ The current release of ``deepnog`` can be installed from PyPI:
    pip install deepnog
 
 For typical use cases, and quick start, this is sufficient.
+Note that this guide assumes Linux, and may work under macOS.
+We currently don't provide detailed instructions for Windows.
 
 Dependencies and model files
 ============================
 
 All package dependencies of ``deepnog`` are automatically installed
-by ``pip``. We also require model files (networks parameters/weights),
+by ``pip``. We also require model files (= networks parameters/weights),
 which are too large for GitHub/PyPI. These are hosted on separate servers,
 and downloaded automatically by ``deepnog``, when required. By default,
 models are cached in `$HOME/deepnog_data/`.
 
 You can change this path by setting the DEEPNOG_DATA environment variable.
+Choose among the following options to do so:
 
 .. code-block:: bash
 
-   DEEPNOG_DATA="/custom/path/models" deepnog sequences.fa
+   # Set data path temporarily
+   DEEPNOG_DATA="/custom/path/models" deepnog infer sequences.fa
+
+   # Set data path for the current shell
+   export DEEPNOG_DATA="/custom/path/models"
+
+   # Set data path permanently
+   printf "\n# Set path to DeepNOG models\nexport DEEPNOG_DATA=\"/custom/path/models\"\n" >> ~/.bashrc
 
 
 .. _install-from-source:
