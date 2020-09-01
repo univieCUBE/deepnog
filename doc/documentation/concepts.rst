@@ -63,4 +63,4 @@ set to a strict 99%. This threshold can be adjusted by the user.
 ``deepnog train`` for creating custom models
 ============================================
 
-For details on training new models, see :ref:`New models/architectures <training>`
+For details on training new models, see `New models/architectures <training.html>`_.

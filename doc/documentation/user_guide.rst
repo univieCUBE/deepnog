@@ -10,3 +10,4 @@ User Guide
     CLI Documentation <cli>
     API Documentation <api>
     New models/architectures <training>
+    File formats <fileformats>

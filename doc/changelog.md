@@ -3,6 +3,25 @@
 ## [Next release]
 ...
 
+## [1.2.1] - 2020-08-28
+
+### Added in 1.2.1
+- Training custom models: Users can now train additional models for further
+  tax. levels of eggNOG 5 or even different orthology databases
+- TensorBoard status reports: Follow training/validation loss online
+- Support for configuration file (``deepnog_config.yml``)
+- Model quality assessment
+
+### Changed in 1.2.1
+- The command line invocation now uses two subcommands:
+  * ``deepnog train`` for training new models, and
+  * ``deepnog infer`` for general orthologous group assignment
+    (and model quality assessment)
+
+### Fixed in 1.2.1
+- Fixed packaging issue in 1.2.0 (which was subsequently removed altogether)
+- Several additional bug fixes and smaller changes
+
 
 ## [1.1.0] - 2020-02-28
 
@@ -44,7 +63,8 @@ It already contains the following features:
 - CPU and GPU support
 - Runs on all major platforms (Linux, MacOS, Windows)
 
-[Next release]: https://github.com/univieCUBE/deepnog/compare/v1.1.0...HEAD
+[Next release]: https://github.com/univieCUBE/deepnog/compare/v1.2.1...HEAD
+[1.2.1]: https://github.com/univieCUBE/deepnog/releases/tag/v1.2.1
 [1.1.0]: https://github.com/univieCUBE/deepnog/releases/tag/v1.1.0
 [1.0.0]: https://github.com/univieCUBE/deepnog/releases/tag/v1.0.0final
 
