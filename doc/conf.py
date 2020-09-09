@@ -17,11 +17,11 @@ sys.path.insert(0, os.path.abspath('../'))
 MOCK_MODULES = ['numpy',
                 'scipy',
                 'pandas',
+                'pyyaml',
                 'torch',
                 'tqdm',
                 'Biopython',
                 'sklearn',
-                'pyyml',
                 'tensorboard',
                 ]
 
