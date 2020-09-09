@@ -34,7 +34,6 @@ install_requires = ['numpy',
                     'scikit-learn',
                     'torch >= 1.2',
                     'Biopython',
-                    'pyyml',
                     'tqdm',
                     'tensorboard',
                     ]

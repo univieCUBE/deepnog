@@ -21,7 +21,6 @@ MOCK_MODULES = ['numpy',
                 'tqdm',
                 'Biopython',
                 'sklearn',
-                'pyyml',
                 'tensorboard',
                 ]
 
