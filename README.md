@@ -103,6 +103,7 @@ only.
 *  scikit-learn
 *  tensorboard
 *  Biopython 1.74
+*  PyYAML
 *  tqdm 4.35.0
 *  pytest 5.1.2 (for tests only)
 

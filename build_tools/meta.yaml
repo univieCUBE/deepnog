@@ -24,6 +24,7 @@ requirements:
     - pandas
     - pip
     - python
+    - pyyaml
     - scikit-learn
     - tensorboard
     - torch
@@ -33,6 +34,7 @@ requirements:
     - numpy
     - pandas
     - python
+    - pyyaml
     - scikit-learn
     - tensorboard
     - torch
