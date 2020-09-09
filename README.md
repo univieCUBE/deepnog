@@ -15,7 +15,7 @@
   https://deepnog.readthedocs.io/en/latest/?badge=latest)
 
 
-# DeepNOG: protein orthologous groups prediction
+# DeepNOG: protein orthologous groups assignment
 
 Assign proteins to orthologous groups (eggNOG 5) on CPUs or GPUs with deep networks.
 DeepNOG is much faster than alignment-based methods,

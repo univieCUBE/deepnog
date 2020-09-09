@@ -44,7 +44,7 @@ setuptools.setup(
     version=find_version('deepnog', '__init__.py'),
     author='Roman Feldbauer',
     author_email='roman.feldbauer@univie.ac.at',
-    description='Deep learning tool for protein orthologous group predictions',
+    description='Deep learning tool for protein orthologous group assignment',
     keywords=('deep-learning neural-networks '
               'bioinformatics computational-biology '
               'protein-families orthologous-groups orthology eggnog'),

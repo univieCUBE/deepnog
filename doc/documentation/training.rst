@@ -25,6 +25,7 @@ Consider we are training a DeepNOG model for eggNOG 5, level 1239 (Firmicutes):
         -o /path/to/output/ \
         -db "eggNOG5" \
         -t "1239" \
+        --shuffle \
         train.faa.gz \
         val.faa.gz \
         train.csv.gz \
@@ -97,6 +98,9 @@ would look like so:
 
 .. code-block:: Python
 
+    import torch.nn as nn
+
+    
     class MyNetworkA(nn.Module):
         """ A revolutionary network for orthology prediction. """
         def __init__(self, model_dict):
