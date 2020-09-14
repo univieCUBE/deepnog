@@ -17,13 +17,15 @@ import warnings
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import LabelEncoder
-import torch
-from torch.utils.data import Dataset, IterableDataset
-from torch.utils.data.dataloader import default_collate
 from Bio.SeqRecord import SeqRecord
 
 from ..utils import get_logger, SynchronizedCounter
 from ..utils import EXTENDED_IUPAC_PROTEIN_ALPHABET, parse, SeqIO
+from ..utils import try_import_pytorch
+
+torch = try_import_pytorch()
+from torch.utils.data import Dataset, IterableDataset  # noqa
+from torch.utils.data.dataloader import default_collate  # noqa
 
 __all__ = ['collate_sequences',
            'gen_amino_acid_vocab',

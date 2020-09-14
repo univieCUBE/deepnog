@@ -12,9 +12,10 @@ from importlib import import_module
 from pathlib import Path
 from typing import Sequence, Union
 
-import torch
-
 from . import get_logger
+from . import try_import_pytorch
+
+torch = try_import_pytorch()
 
 __all__ = ['set_device',
            'count_parameters',

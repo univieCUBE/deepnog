@@ -25,14 +25,15 @@ import warnings
 import numpy as np
 from tqdm.auto import tqdm
 
-import torch
-from torch.optim import Adam, lr_scheduler
-from torch.utils.data import DataLoader
-from torch.utils.tensorboard import SummaryWriter
-
 from ..data import ProteinDataset, ProteinIterableDataset, ShuffledProteinIterableDataset
 from ..data import collate_sequences
 from ..utils import count_parameters, get_config, get_logger, load_nn, set_device
+from ..utils import try_import_pytorch
+
+torch = try_import_pytorch()
+from torch.optim import Adam, lr_scheduler  # noqa
+from torch.utils.data import DataLoader  # noqa
+from torch.utils.tensorboard import SummaryWriter  # noqa
 
 __all__ = ['fit',
            ]

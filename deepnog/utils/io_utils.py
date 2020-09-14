@@ -18,9 +18,12 @@ from urllib.parse import urljoin
 import warnings
 
 import pandas as pd
-from torch import Tensor
 
 from deepnog.utils.logger import get_logger
+from .imports import try_import_pytorch
+
+torch = try_import_pytorch()
+from torch import Tensor  # noqa
 
 __all__ = ['create_df',
            'get_data_home',

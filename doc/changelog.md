@@ -1,7 +1,9 @@
 # Changelog
 
 ## [Next release]
-...
+
+### Added in 1.2.2
+- Install from bioconda
 
 ## [1.2.1] - 2020-08-28
 
