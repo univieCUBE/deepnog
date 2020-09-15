@@ -10,7 +10,6 @@ def try_import_pytorch():
     This is primarily useful for the bioconda install option,
     which does not install PyTorch.
     """
-    # Adapted from https://github.com/pandas-dev/pandas with gratitude:
     try:
         import torch
         return torch
