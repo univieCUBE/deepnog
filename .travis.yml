@@ -37,7 +37,6 @@ before_install:
   - export PATH="${MINICONDA_DIR}/bin:$PATH"
   - conda activate test
   - hash -r
-  - bash build_tools/install-requirements.sh
 
 install:
   - pip install -e .
@@ -48,6 +47,7 @@ before_script:
 
 script:
   - pytest --cov=deepnog
+  - pytest deepnog/utils/tests/test_imports.py --hide-torch --cov
 
 after_success:
   - codecov

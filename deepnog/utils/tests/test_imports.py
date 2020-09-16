@@ -36,6 +36,7 @@ def hide_available_torch(monkeypatch):
     ["deepnog.models.deepnog", "DeepNOG"],
     ]
 )
+@pytest.mark.hide_torch
 def test_missing_torch_error_message(hide_available_torch, pkg_module):
 
     expected_msg = "conda install pytorch -c pytorch"
