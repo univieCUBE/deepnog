@@ -1,7 +1,6 @@
 import builtins
 from importlib import import_module
 import pytest
-import sys
 
 
 @pytest.fixture
@@ -36,9 +35,8 @@ def hide_available_torch(monkeypatch):
     ["deepnog.models.deepnog", "DeepNOG"],
     ]
 )
-@pytest.mark.hide_torch
+@pytest.mark.hide_torch  # needs pytest --hide-torch option to run
 def test_missing_torch_error_message(hide_available_torch, pkg_module):
-
     expected_msg = "conda install pytorch -c pytorch"
     pkg, module = pkg_module
     with pytest.raises(ImportError, match=expected_msg):

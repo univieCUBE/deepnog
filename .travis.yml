@@ -48,7 +48,8 @@ before_script:
 
 script:
   - pytest --cov=deepnog
-  - pytest deepnog/utils/tests/test_imports.py --hide-torch --cov
+  - pytest deepnog/utils/tests/test_imports --hide-torch --cov=deepnog/utils/tests/test_imports
+  - pytest --cov-append
 
 after_success:
   - codecov
