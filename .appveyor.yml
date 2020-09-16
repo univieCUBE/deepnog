@@ -60,9 +60,8 @@ build_script:
   - "python -m pip install ."
 
 test_script:
-  - "pytest --cov deepnog"
   - "pytest deepnog/utils/tests/test_imports --hide-torch --cov=deepnog/utils/tests/test_imports"
-  - "pytest --cov-append"
+  - "pytest --cov deepnog --cov-append"
 
 after_test:
   # If tests are successful, create binary packages for the project.
