@@ -37,11 +37,6 @@ def hide_available_torch(monkeypatch):
     ]
 )
 def test_missing_torch_error_message(hide_available_torch, pkg_module):
-    # Collected test may have imported torch somewhere successfully...
-    try:
-        del sys.modules["torch"]
-    except KeyError:
-        pass
 
     expected_msg = "conda install pytorch -c pytorch"
     pkg, module = pkg_module
