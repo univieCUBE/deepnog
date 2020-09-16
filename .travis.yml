@@ -37,6 +37,7 @@ before_install:
   - export PATH="${MINICONDA_DIR}/bin:$PATH"
   - conda activate test
   - hash -r
+  - bash build_tools/install-requirements.sh
 
 install:
   - pip install -e .
