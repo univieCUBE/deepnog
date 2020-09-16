@@ -60,7 +60,7 @@ build_script:
   - "python -m pip install ."
 
 test_script:
-  - "pytest deepnog/utils/tests/test_imports --hide-torch --cov=deepnog/utils/tests/test_imports"
+  - "pytest deepnog/utils/tests/test_imports.py --hide-torch --cov"
   - "pytest --cov deepnog --cov-append"
 
 after_test:
