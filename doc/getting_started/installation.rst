@@ -15,6 +15,19 @@ For typical use cases, and quick start, this is sufficient.
 Note that this guide assumes Linux, and may work under macOS.
 We currently don't provide detailed instructions for Windows.
 
+Alternative: Installation from bioconda
+=======================================
+
+Alternatively, ``deepnog`` can be installed from bioconda like this:
+
+.. code-block:: bash
+
+    # With channel setup as described in the `bioconda docs`_
+    conda config --add channels pytorch
+    conda install pytorch deepnog
+
+.. _`bioconda docs`: https://bioconda.github.io/user/install.html#install-conda>
+
 Dependencies and model files
 ============================
 

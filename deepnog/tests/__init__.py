@@ -10,3 +10,5 @@ Description:
 
     Individual tests are located within the respective deepnog subpackages.
 """
+from ..utils.imports import try_import_pytorch
+try_import_pytorch()

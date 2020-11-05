@@ -12,12 +12,13 @@ from os import environ
 from typing import List
 import warnings
 
-import torch
-from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from ..data.dataset import collate_sequences
-from ..utils import get_logger
+from ..utils import get_logger, try_import_pytorch
+
+torch = try_import_pytorch()
+from torch.utils.data import DataLoader  # noqa
 
 __all__ = ['predict', ]
 

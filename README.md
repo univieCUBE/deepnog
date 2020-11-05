@@ -13,8 +13,12 @@
 [![Documentation Status](
   https://readthedocs.org/projects/deepnog/badge/?version=latest)](
   https://deepnog.readthedocs.io/en/latest/?badge=latest)
-
-
+[![PyPI version](
+  https://badge.fury.io/py/deepnog.svg)](
+  https://badge.fury.io/py/deepnog)
+[![Anaconda-Server Badge](
+  https://anaconda.org/bioconda/deepnog/badges/version.svg)](
+  https://anaconda.org/bioconda/deepnog)
 # DeepNOG: protein orthologous groups assignment
 
 Assign proteins to orthologous groups (eggNOG 5) on CPUs or GPUs with deep networks.
@@ -27,19 +31,28 @@ The `deepnog` command line tool is written in Python 3.7+.
 ## Installation guide
 
 The easiest way to install DeepNOG is to obtain it from PyPI:
-
-```pip install deepnog```
+``` bash
+pip install deepnog
+```
 
 Alternatively, you can clone or download bleeding edge versions
 from GitHub and run
-
-```pip install /path/to/DeepNOG```
+``` bash
+pip install /path/to/DeepNOG
+```
 
 If you plan to extend DeepNOG as a developer, run
-
-```pip install -e /path/to/DeepNOG```
+``` bash
+pip install -e /path/to/DeepNOG
+```
 
 instead.
+
+``deepnog`` can also be installed from bioconda like this:
+``` bash
+conda config --add channels pytorch
+conda install pytorch deepnog
+```
 
 ## Usage
 

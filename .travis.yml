@@ -47,7 +47,8 @@ before_script:
   - flake8 --exit-zero .
 
 script:
-  - pytest --cov=deepnog
+  - pytest deepnog/utils/tests/test_imports.py --hide-torch --cov
+  - pytest --cov=deepnog --cov-append
 
 after_success:
   - codecov
