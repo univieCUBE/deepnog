@@ -56,6 +56,7 @@ def set_device(device: Union[str, torch.device]) -> torch.device:
         Object containing the device type to be used for prediction
         calculations.
     """
+    err_msg = None
     if isinstance(device, torch.device):
         pass
     elif device == 'auto':
@@ -66,14 +67,19 @@ def set_device(device: Union[str, torch.device]) -> torch.device:
         if cuda:
             device = torch.device('cuda')
         else:
-            raise RuntimeError('Device set to "gpu", but could not access '
-                               'any CUDA-enabled GPU. Please make sure that '
-                               'a GPU is available and CUDA is installed'
-                               'on this machine.')
+            err_msg = ('Device set to "gpu", but could not access '
+                       'any CUDA-enabled GPU. Please make sure that '
+                       'a GPU is available and CUDA is installed '
+                       'on this machine.')
     elif device == 'cpu':
         device = torch.device('cpu')
     else:
-        raise ValueError(f'Unknown device "{device}". Try "auto".')
+        err_msg = f'Unknown device "{device}". Try "auto".'
+    if err_msg is not None:
+        logger = get_logger(__name__, verbose=0)
+        logger.error(f'Unknown device "{device}". Try "auto".')
+        import sys
+        sys.exit(1)
     return device
 
 

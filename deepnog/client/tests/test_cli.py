@@ -209,8 +209,7 @@ def test_args_sanity_check():
 
     args_device = deepcopy(args)
     args_device.device = None
-    with pytest.raises(ValueError):
-        _start_prediction_or_training(args_device)
+    _assert_exits(_start_prediction_or_training, args_device)
 
     args_train = deepcopy(args)
     args_train.phase = 'train'

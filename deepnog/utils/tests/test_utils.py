@@ -16,11 +16,20 @@ TESTS = DEEPNOG_ROOT/"tests"
 WEIGHTS_PATH = TESTS/"parameters/test_deepencoding.pthsmall"
 
 
-def test_set_device():
+def _assert_exits(func, arguments):
+    with pytest.raises(SystemExit) as e:
+        func(arguments)
+    assert e.type == SystemExit
+    assert e.value.code == 1
+
+
+def test_set_device(caplog):
     device = 'tpu'
-    msg = f'Unknown device "{device}". Try "auto".'
-    with pytest.raises(ValueError, match=msg):
-        set_device(device)
+    with caplog.at_level(logging.ERROR):
+        _assert_exits(set_device, device)
+    # FIXME. Currently only the exit status is tested, not the message.
+    # msg = f'Unknown device "{device}". Try "auto".'
+    # assert msg in caplog.text
 
 
 def test_auto_device():
@@ -41,11 +50,13 @@ def test_gpu_device_available():
 
 
 @pytest.mark.skipif(GPU_AVAILABLE, reason='GPU is available')
-def test_gpu_device_unavailable():
+def test_gpu_device_unavailable(caplog):
     device = 'gpu'
-    msg = 'could not access any CUDA-enabled GPU'
-    with pytest.raises(RuntimeError, match=msg):
-        set_device(device)
+    with caplog.at_level(logging.ERROR):
+        _assert_exits(set_device, device)
+    # FIXME. Currently only the exit status is tested, not the message.
+    # msg = 'could not access any CUDA-enabled GPU'
+    # assert msg in caplog.text
 
 
 @pytest.mark.xfail(reason=("BUG: pytest logging capture does not work. "
