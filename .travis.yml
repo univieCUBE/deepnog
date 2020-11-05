@@ -12,11 +12,6 @@ jobs:
       dist: bionic
       language: python
       python: '3.8'
-    - name: Python 3.9 on Ubuntu Linux 18.04
-      os: linux
-      dist: bionic
-      language: python
-      python: '3.9'
     # See https://blog.travis-ci.com/2019-08-07-extensive-python-testing-on-travis-ci
     # for macos config peculiarities.
     - name: Python 3.7 on MacOS X (xcode 10.3)
