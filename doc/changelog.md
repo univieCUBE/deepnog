@@ -4,6 +4,14 @@
 
 ### Added in 1.2.2
 - Install from bioconda
+- Support for 109 taxonomic levels in eggNOG 5 (was three before)
+  (e.g. `deepnog infer -db eggnog5 -t 1239` for Firmicutes)
+- Support for COG2020 (use `deepnog infer -db cog2020 -t 1`)
+
+### Fixes/changes in 1.2.2
+- Requirement PyYAML
+- Test class imports
+- Exit on requesting unavailable device (instead of raising an error) 
 
 ## [1.2.1] - 2020-08-28
 
