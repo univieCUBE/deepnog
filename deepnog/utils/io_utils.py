@@ -167,20 +167,23 @@ def get_weights_path(database: str, level: str, architecture: str,
     available = weights_file.exists()
     logger.debug(f'Weights file available: {weights_file}')
 
+    model_name = f"{database} (tax {level}) {architecture} model"
     if not available and download_if_missing:
         weights_dir.mkdir(parents=True, exist_ok=True)
         remote_url = urljoin(
             environ.get('DEEPNOG_REMOTE', DEEPNOG_REMOTE_DEFAULT),
             f"{database}/{level}/{architecture}.pth")
-        logger.info(f"Downloading {remote_url}")
+        logger.info(f"{model_name}: Downloading {remote_url}")
         try:
             with urlopen(remote_url) as response, weights_file.open('wb') as f:
                 logger.info(f'Saving to {weights_file}')
                 shutil.copyfileobj(response, f)
         except URLError as e:
-            logger.error(f'Download failed. Try downloading {remote_url} and '
+            logger.error(f'{model_name}: Download failed. '
+                         f'Try downloading {remote_url} and '
                          f'saving to {weights_file} manually.\nGot error:\n{e}')
     elif not available and not download_if_missing:
-        raise IOError("Data not found and `download_if_missing` is False")
+        raise IOError(f"{model_name}: Data not found and "
+                      f"`download_if_missing` is False")
 
     return weights_file
