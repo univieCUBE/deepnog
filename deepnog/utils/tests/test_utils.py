@@ -1,3 +1,4 @@
+from itertools import product
 import logging
 from pathlib import Path
 import pytest
@@ -14,6 +15,7 @@ TEST_STR = 'krawutzi'
 DEEPNOG_ROOT = Path(__file__).parent.parent.parent.absolute()
 TESTS = DEEPNOG_ROOT/"tests"
 WEIGHTS_PATH = TESTS/"parameters/test_deepencoding.pthsmall"
+CONFIG = yaml.safe_load((DEEPNOG_ROOT/"config/deepnog_config.yml").open())
 
 
 def _assert_exits(func, arguments):
@@ -84,6 +86,29 @@ def test_logger(caplog):
         assert len(caplog.record_tuples), 'No logging output was captured'
         for i, record in enumerate(caplog.record_tuples):
             assert record == (__name__, lvls[i], TEST_STR)
+
+
+@pytest.mark.parametrize(
+    argnames=["database", "level"],
+    argvalues=(*product(["eggNOG5", ], CONFIG["database"]["eggNOG5"]),
+               *product(["cog2020", ], CONFIG["database"]["cog2020"]),
+               # Add additional databases here, e.g. eggNOG6
+               ),
+)
+def test_get_weights_all(database, level, architecture="deepnog"):
+    with TemporaryDirectory(prefix=f"deepnog_test_data_dir_{database}_") as tmp:
+        p = get_weights_path(
+            database=database,
+            level=level,
+            architecture=architecture,
+            data_home=tmp,
+            download_if_missing=True,
+            verbose=3,
+        )
+        p = Path(p)
+        assert p.is_file(), "Could not find file. Possibly, download failed."
+        assert p.suffix == ".pth", f"Wrong file format: {p.suffix}"
+        assert p.stat().st_size, "File is empty"  # File size in bytes
 
 
 def test_get_weights():
