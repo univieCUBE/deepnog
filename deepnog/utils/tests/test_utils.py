@@ -122,7 +122,7 @@ def test_get_weights():
         assert Path(p).is_file()
 
 
-def test_get_weights_impossible():
+def test_get_weights_impossible(capsys):
     with TemporaryDirectory(prefix='deepnog_test_data_dir_') as tmpdir:
         with pytest.raises(IOError, match='Data not found'):
             _ = get_weights_path(database='testdb',
@@ -131,6 +131,12 @@ def test_get_weights_impossible():
                                  data_home=tmpdir,
                                  download_if_missing=False,
                                  verbose=3)
+        _ = get_weights_path(database="unavailable_db",
+                             level='0',
+                             architecture="deepnog",
+                             data_home=tmpdir,
+                             verbose=3)
+        assert "Download failed" in capsys.readouterr().err
 
 
 @pytest.mark.parametrize("architecture", ['deepencoding', ])
