@@ -1,6 +1,9 @@
 # Changelog
 
 ## [Next release]
+...
+
+## [1.2.2] - 2020-12-10
 
 ### Added in 1.2.2
 - Install from bioconda
@@ -73,7 +76,8 @@ It already contains the following features:
 - CPU and GPU support
 - Runs on all major platforms (Linux, MacOS, Windows)
 
-[Next release]: https://github.com/univieCUBE/deepnog/compare/v1.2.1...HEAD
+[Next release]: https://github.com/univieCUBE/deepnog/compare/v1.2.2...HEAD
+[1.2.2]: https://github.com/univieCUBE/deepnog/releases/tag/v1.2.2
 [1.2.1]: https://github.com/univieCUBE/deepnog/releases/tag/v1.2.1
 [1.1.0]: https://github.com/univieCUBE/deepnog/releases/tag/v1.1.0
 [1.0.0]: https://github.com/univieCUBE/deepnog/releases/tag/v1.0.0final
