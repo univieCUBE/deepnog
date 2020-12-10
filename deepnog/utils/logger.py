@@ -31,14 +31,16 @@ def get_logger(initname: str = 'deepnog', verbose: int = 0) -> logging.Logger:
     Shamelessly stolen from phenotrex
     """
     logger = logging.getLogger(initname)
-    ch = logging.StreamHandler(stream=sys.stderr)
     if type(verbose) is bool:
-        ch.setLevel(logging.INFO if verbose else logging.WARNING)
-    elif verbose <= 0:
+        logger.setLevel(logging.INFO if verbose else logging.WARNING)
+    else:
+        logger.setLevel(verbose)
+    ch = logging.StreamHandler(stream=sys.stderr)
+    if verbose <= 0:
         ch.setLevel(logging.ERROR)
     elif verbose == 1:
         ch.setLevel(logging.WARNING)
-    elif verbose == 2:
+    elif verbose <= 3:
         ch.setLevel(logging.INFO)
     else:
         ch.setLevel(logging.DEBUG)
