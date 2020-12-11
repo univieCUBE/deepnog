@@ -7,9 +7,9 @@ database:
     - 1236
 
 architecture:
-  deepencoding:
-    module: deepencoding
-    class: deepencoding
+  deepnog:
+    module: deepnog
+    class: DeepNOG
     encoding_dim: 10
     kernel_size:
       - 8

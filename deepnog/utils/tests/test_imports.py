@@ -27,8 +27,6 @@ def hide_available_torch(monkeypatch):
     ["deepnog.learning", "fit"],
     ["deepnog.learning", "predict"],
     ["deepnog", ".models"],
-    ["deepnog.models", ".deepencoding"],
-    ["deepnog.models.deepencoding", "DeepNOG"],
     ["deepnog.models", ".deepfam"],
     ["deepnog.models.deepfam", "DeepFam"],
     ["deepnog.models", ".deepnog"],
