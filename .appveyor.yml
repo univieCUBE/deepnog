@@ -15,9 +15,9 @@ environment:
     - PYTHON: "C:\\Python38-x64"
       PYTHON_VERSION: "3.8.x"
       PYTHON_ARCH: "64"
-    - PYTHON: "C:\\Python39-x64"
-      PYTHON_VERSION: "3.9.x"
-      PYTHON_ARCH: "64"
+    - PYTHON: C:\Python39
+      ARCHITECTURE: x86
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
 
 install:
   # If there is a newer build queued for the same PR, cancel this one.
