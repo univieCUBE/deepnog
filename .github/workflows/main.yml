@@ -17,26 +17,25 @@ on:
 jobs:
   # This workflow contains a single job called "build"
   build:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         python: [3.7, 3.8, 3.9]
-    # The type of runner that the job will run on
-    runs-on: ubuntu-latest
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
 
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python
         uses: actions/setup-python@v2
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: ${{ matrix.python }}
 
       - name: DEBUG workflow
         run: |
-          echo ${{ env.pythonLocation }}
-          echo ${{ matrix.python-version }}
+          echo ${{ matrix.python }}
 
       - name: Cache pip
         uses: actions/cache@v2
@@ -72,6 +71,7 @@ jobs:
 
       - name: Lint with flake8
         run: |
+          pip install flake8
           # stop the build if there are Python syntax errors or undefined names
           flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
           # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
@@ -79,6 +79,7 @@ jobs:
   
       - name: Test with pytest
         run: |
+          pip install pytest pytest-cov coverage codecov
           pytest deepnog/utils/tests/test_imports.py --hide-torch --cov
           pytest --cov=deepnog --cov-append
   
