@@ -36,12 +36,18 @@ jobs:
       - name: DEBUG workflow
         run: echo ${{ env.pythonLocation }}
 
-      # Cache the complete Python environment (esp. for large pkgs like PyTorch)
-      - name: Cache Python
+      - name: Cache pip
         uses: actions/cache@v2
         with:
-          path: ${{ env.pythonLocation }}
-          key: ${{ env.pythonLocation }}-${{ hashFiles('setup.py') }}-${{ hashFiles('requirements/dev.txt') }}
+          path: ~/.cache/pip
+          key: ${{ hashFiles('setup.py') }}-${{ hashFiles('requirements/dev.txt') }}
+
+      # Cache the complete Python environment (esp. for large pkgs like PyTorch)
+      #- name: Cache Python
+      #  uses: actions/cache@v2
+      #  with:
+      #    path: ${{ env.pythonLocation }}
+      #    key: ${{ env.pythonLocation }}-${{ hashFiles('setup.py') }}-${{ hashFiles('requirements/dev.txt') }}
 
       # Cache the models
       - name: Cache DeepNOG models
