@@ -12,6 +12,12 @@ environment:
     - PYTHON: "C:\\Python37-x64"
       PYTHON_VERSION: "3.7.x" # currently 3.7.?
       PYTHON_ARCH: "64"
+    - PYTHON: "C:\\Python38-x64"
+      PYTHON_VERSION: "3.8.x"
+      PYTHON_ARCH: "64"
+    - PYTHON: "C:\\Python39-x64"
+      PYTHON_VERSION: "3.9.x"
+      PYTHON_ARCH: "64"
 
 install:
   # If there is a newer build queued for the same PR, cancel this one.
@@ -67,7 +73,6 @@ after_test:
   # If tests are successful, create binary packages for the project.
   - "python setup.py bdist_wheel"
   - "python setup.py bdist_wininst"
-  - "python setup.py bdist_msi"
   - ps: "ls dist"
 
 artifacts:

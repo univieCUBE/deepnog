@@ -1,7 +1,9 @@
 # Changelog
 
 ## [Next release]
-...
+
+- CI: Linux/Travis builds with Python 3.9 (on Ubuntu 20.04 LTS/Focal)
+- CI: Windows/AppVeyor builds with Python 3.8, 3.9
 
 ## [1.2.2] - 2020-12-10
 
