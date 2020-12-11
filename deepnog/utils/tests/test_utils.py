@@ -14,7 +14,7 @@ GPU_AVAILABLE = torch.cuda.is_available()
 TEST_STR = 'krawutzi'
 DEEPNOG_ROOT = Path(__file__).parent.parent.parent.absolute()
 TESTS = DEEPNOG_ROOT/"tests"
-WEIGHTS_PATH = TESTS/"parameters/test_deepencoding.pthsmall"
+WEIGHTS_PATH = TESTS/"parameters/test_deepnog.pthsmall"
 CONFIG = yaml.safe_load((DEEPNOG_ROOT/"config/deepnog_config.yml").open())
 
 
@@ -139,7 +139,7 @@ def test_get_weights_impossible(capsys):
         assert "Download failed" in capsys.readouterr().err
 
 
-@pytest.mark.parametrize("architecture", ['deepencoding', ])
+@pytest.mark.parametrize("architecture", [('deepnog', 'DeepNOG'), ])
 @pytest.mark.parametrize("weights", [WEIGHTS_PATH, ])
 def test_count_params(architecture, weights):
     """ Test loading of neural network model. """
@@ -159,9 +159,9 @@ def test_load_config():
     assert 'eggNOG5' in config['database'], 'eggNOG5 models missing in config'
     for i in [1, 2]:
         assert i in config['database']['eggNOG5']
-    assert 'deepencoding' in config['architecture'], 'Standard arch deepencoding missing in config'
+    assert 'deepnog' in config['architecture'], 'Standard arch deepnog missing in config'
     for key in ['encoding_dim', 'kernel_size', 'n_filters', 'dropout', 'pooling_layer_type']:
-        assert key in config['architecture']['deepencoding']
+        assert key in config['architecture']['deepnog']
 
     # Check that default config is loaded when faulty yaml is provided
     broken_config = [TESTS / 'data/broken_config_indent.yml', ]

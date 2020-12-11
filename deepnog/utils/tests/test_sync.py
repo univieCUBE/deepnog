@@ -8,7 +8,7 @@ from deepnog.tests.utils import get_deepnog_root
 from deepnog.utils import load_nn, SynchronizedCounter
 
 TESTS = get_deepnog_root()/"tests"
-WEIGHTS_PATH = TESTS/"parameters/test_deepencoding.pthsmall"
+WEIGHTS_PATH = TESTS/"parameters/test_deepnog.pthsmall"
 DATA_SKIP_PATH = TESTS/"data/test_sync_skip_many.faa.gz"
 
 
@@ -20,7 +20,7 @@ def test_sync_counter_of_many_empty_sequences():
     device = torch.device('cuda' if cuda else 'cpu')
     # Start test
     model_dict = torch.load(WEIGHTS_PATH, map_location=device)
-    model = load_nn('deepencoding', model_dict, phase='infer', device=device)
+    model = load_nn(['deepnog', 'DeepNOG'], model_dict, phase='infer', device=device)
     dataset = ProteinIterableDataset(DATA_SKIP_PATH, f_format='fasta')
     with pytest.warns(UserWarning, match='no sequence id could be detected'):
         _ = predict(model, dataset, device)
