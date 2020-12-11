@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python: [3.7, 3.8, 3.9]
+        python: [3.7, 3.8]
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -35,13 +35,14 @@ jobs:
 
       - name: DEBUG workflow
         run: |
+          echo ${{ runner.os }}
           echo ${{ matrix.python }}
 
       - name: Cache pip
         uses: actions/cache@v2
         with:
           path: ~/.cache/pip
-          key: ${{ hashFiles('setup.py') }}-${{ hashFiles('requirements/dev.txt') }}
+          key: ${{ runner.os }}-${{ matrix.python }}-${{ hashFiles('setup.py') }}-${{ hashFiles('requirements/dev.txt') }}
 
       # Cache the complete Python environment (esp. for large pkgs like PyTorch)
       #- name: Cache Python
@@ -56,9 +57,6 @@ jobs:
         with:
           path: $HOME/deepnog_data
           key: ${{ hashFiles('deepnog/config/deepnog_config.yml') }}
-
-      - name: DEBUG workflow
-        run: pwd
 
       - name: Install dependencies
         run: |
