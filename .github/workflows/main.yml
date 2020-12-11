@@ -63,6 +63,7 @@ jobs:
 
       - name: Install dependencies
         run: |
+          export PATH=${PATH}:"/home/runner/.local/bin"
           python3 -m pip install --upgrade pip setuptools
           python3 -m pip install --upgrade --upgrade-strategy eager -r requirements/dev.txt
   
