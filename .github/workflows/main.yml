@@ -63,11 +63,11 @@ jobs:
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install --upgrade --upgrade-strategy eager -r requirements/dev.txt
+          python3 -m pip install --upgrade pip
+          python3 -m pip install --upgrade --upgrade-strategy eager -r requirements/dev.txt
   
       - name: Install deepnog
-        run: python -m pip install -e .
+        run: python3 -m pip install -e .
 
       - name: Lint with flake8
         run: |
