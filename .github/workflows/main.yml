@@ -41,7 +41,7 @@ jobs:
       - uses: actions/cache@v2
         with:
           path: ${{ env.pythonLocation }}
-          key: ${{ env.pythonLocation }}-${{ hashFiles('setup.py') }}-${{ hashFiles('requirements/dev.txt}}
+          key: ${{ env.pythonLocation }}-${{ hashFiles('setup.py') }}-${{ hashFiles('requirements/dev.txt') }}
 
       # Cache the models
       - uses: actions/cache@v2
@@ -74,7 +74,3 @@ jobs:
   
       - name: Coverage report
         run: codecov
-
-
-
-
