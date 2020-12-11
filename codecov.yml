@@ -1,0 +1,9 @@
+coverage:
+  status:
+    default:
+      threshold: 3%  # More slack for the global coverage.
+                     # This allows coverage to decrease, when the patch is
+                     # reasonably covered (e.g. if many lines are removed
+                     # by a PR).
+    patch:
+      threshold: 1%  # Essentially, all new lines should be covered.
