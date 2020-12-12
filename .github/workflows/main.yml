@@ -1,0 +1,85 @@
+# This is a basic workflow to help you get started with Actions
+
+name: deepnog CI
+
+# Controls when the action will run. 
+on:
+  # Triggers the workflow on push or pull request events but only for the master branch
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]  # instead of runs-on
+        python: [3.7, 3.8]
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: DEBUG workflow
+        run: |
+          echo ${{ runner.os }}
+          echo ${{ matrix.python }}
+
+      - name: Cache pip
+        uses: actions/cache@v2
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-${{ matrix.python }}-${{ hashFiles('setup.py') }}-${{ hashFiles('requirements/dev.txt') }}
+
+      # Cache the complete Python environment (esp. for large pkgs like PyTorch)
+      #- name: Cache Python
+      #  uses: actions/cache@v2
+      #  with:
+      #    path: ${{ env.pythonLocation }}
+      #    key: ${{ env.pythonLocation }}-${{ hashFiles('setup.py') }}-${{ hashFiles('requirements/dev.txt') }}
+
+      # Cache the models
+      - name: Cache DeepNOG models
+        uses: actions/cache@v2
+        with:
+          path: $HOME/deepnog_data
+          key: ${{ hashFiles('deepnog/config/deepnog_config.yml') }}
+
+      - name: Install dependencies
+        run: |
+          export PATH=${PATH}:"/home/runner/.local/bin"
+          python3 -m pip install --upgrade pip setuptools
+          python3 -m pip install --upgrade --upgrade-strategy eager -r requirements/dev.txt
+  
+      - name: Install deepnog
+        run: python3 -m pip install -e .
+
+      - name: Lint with flake8
+        run: |
+          pip install flake8
+          # stop the build if there are Python syntax errors or undefined names
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=100 --statistics
+  
+      - name: Test with pytest
+        run: |
+          pip install pytest pytest-cov coverage codecov
+          pytest deepnog/utils/tests/test_imports.py --hide-torch --cov
+          pytest --cov=deepnog --cov-append
+  
+      - name: Coverage report
+        run: codecov
