@@ -71,7 +71,7 @@ you can - of course - directly submit a pull request (PR).
 
 #. Wait...
     Several devops checks will be performed automatically
-    (e.g. continuous integration (CI) with Travis, AppVeyor).
+    (e.g. continuous integration (CI) with Github Actions, AppVeyor).
 
     The authors will get in contact with you,
     and may ask for changes.
