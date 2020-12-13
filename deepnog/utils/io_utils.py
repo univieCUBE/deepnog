@@ -145,7 +145,7 @@ def get_weights_path(database: str, level: str, architecture: str,
     level: str
         The taxonomic level within the database. Example: 2 (for bacteria)
     architecture: str
-        Network architecture. Example: deepencoding
+        Network architecture. Example: deepnog
     data_home : str, optional
         Specify another download and cache folder for the weights.
         By default all deepnog data is stored in '$HOME/deepnog_data' subfolders.

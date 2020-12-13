@@ -17,8 +17,8 @@ from deepnog.utils import create_df, load_nn, get_config
 
 
 TESTS = get_deepnog_root()/"tests"
-weights_path = TESTS/"parameters/test_deepencoding.pthsmall"
-data_path = TESTS/"data/test_deepencoding.faa"
+weights_path = TESTS/"parameters/test_deepnog.pthsmall"
+data_path = TESTS/"data/test_deepnog.faa"
 data_skip_path = TESTS/"data/test_skip_empty_sequences.faa"
 
 
@@ -29,7 +29,7 @@ def _get_module_cls_from_arch(arch):
     return module, cls
 
 
-@pytest.mark.parametrize("architecture", ['deepencoding', 'deepnog', ])
+@pytest.mark.parametrize("architecture", ['deepnog', ])
 @pytest.mark.parametrize("weights", [weights_path, ])
 def test_load_nn(architecture, weights):
     """ Test loading of neural network model. """
@@ -45,7 +45,7 @@ def test_load_nn(architecture, weights):
     assert(isinstance(model, nn.Module))
 
 
-@pytest.mark.parametrize("architecture", ['deepencoding', 'deepnog'])
+@pytest.mark.parametrize("architecture", ['deepnog', ])
 @pytest.mark.parametrize("weights", [weights_path, ])
 @pytest.mark.parametrize("data", [data_path, ])
 @pytest.mark.parametrize("fformat", ['fasta'])
@@ -79,7 +79,7 @@ def test_predict(architecture, weights, data, fformat, tolerance):
     assert(sum((ids == preds.cpu()).long()) >= n - tolerance)
 
 
-@pytest.mark.parametrize("architecture", ['deepencoding', 'deepnog'])
+@pytest.mark.parametrize("architecture", ['deepnog', ])
 @pytest.mark.parametrize("weights", [weights_path, ])
 @pytest.mark.parametrize("data", [data_skip_path, ])
 @pytest.mark.parametrize("fformat", ['fasta'])

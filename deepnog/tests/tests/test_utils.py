@@ -14,7 +14,7 @@ def test_get_deepnog_root():
 
     # Also check presence of some files
     some_files = ["tests/data/test_inference_short.csv",
-                  "tests/parameters/test_deepencoding.pthsmall",
+                  "tests/parameters/test_deepnog.pthsmall",
                   "config/deepnog_config.yml",
                   ]
     for file_ in some_files:

@@ -14,7 +14,7 @@ TRAINING_CSV = DEEPNOG_ROOT/"tests/data/test_training_dummy.faa.csv"
 DEEPNOG_CONFIG = DEEPNOG_ROOT/"config/deepnog_custom_config.yml"
 
 
-@pytest.mark.parametrize('architecture', ['deepnog', 'deepencoding', ])
+@pytest.mark.parametrize('architecture', ['deepnog', ])
 def test_fit_model_and_predict(architecture):
     """ Fit each DeepNOG model on the dummy data, and assert inference
         on the same training data gives perfect predictions.

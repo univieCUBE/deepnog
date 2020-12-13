@@ -69,10 +69,6 @@ class DeepNOG(nn.Module):
         - sequence length independence
         - stream-lined output layer
 
-    Note on class name: using function naming style to match file name to
-        dynamically load different architectures. Furthermore, NN-model
-        is primarily used as a callable.
-
     This networks consists of an embedding layer which learns a D-dimensional
     embedding for each amino acid. For a sequence of length L, the embedding
     has dimension DxL. A 1-D convolution with C filters of F different kernel-
@@ -89,6 +85,11 @@ class DeepNOG(nn.Module):
     model_dict : dict
         Dictionary storing the hyperparameters and learned parameters of
         the model.
+
+    Notes
+    -----
+    This architecture's working title was `DeepEncoding`. The old name was
+    last available in  `deepnog 1.2.2`.
     """
 
     def __init__(self, model_dict):

@@ -116,7 +116,7 @@ def _get_parser():
                              'you are calculating on a gpu '
                              '(otherwise inefficient)!'))
         p.add_argument("-a", "--architecture",
-                       default='deepencoding',
+                       default="deepnog",
                        choices=available_architectures,
                        help="Network architecture to use for classification.")
         p.add_argument("-w", "--weights",
