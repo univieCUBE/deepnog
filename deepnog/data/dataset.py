@@ -70,7 +70,7 @@ def collate_sequences(batch: Union[List[sequence_tuple], sequence_tuple],
     min_length : int, optional
         Zero-pad sequences to at least ``min_length``.
         By default, this is set to 36, which is the largest kernel size in the
-        default DeepNOG/DeepEncoding architecture.
+        default DeepNOG architecture.
     random_padding : bool, optional
         Zero pad sequences by prepending and appending zeros. The fraction
         is determined randomly. This may counter detrimental effects, when

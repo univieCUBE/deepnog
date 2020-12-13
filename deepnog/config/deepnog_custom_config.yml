@@ -13,26 +13,8 @@ database:
 architecture:
   # The default DeepNOG network
   deepnog:
-    module: deepencoding
-    class: deepencoding
-    encoding_dim: 10
-    kernel_size:
-      - 8
-      - 12
-      - 16
-      - 20
-      - 24
-      - 28
-      - 32
-      - 36
-    n_filters: 150
-    dropout: 0.3
-    pooling_layer_type: 'max'
-
-  # Legacy name of DeepNOG network
-  deepencoding:
-    module: deepencoding
-    class: deepencoding
+    module: deepnog
+    class: DeepNOG
     encoding_dim: 10
     kernel_size:
       - 8

@@ -92,7 +92,7 @@ def load_nn(architecture: Union[str, Sequence[str]], model_dict: dict = None, ph
     ----------
     architecture : str or list-like of two str
         If single string: name of neural network module and class to import.
-        E.g. 'deepencoding' will load deepnog.models.deepencoding.deepencoding.
+        E.g. 'deepnog' will load deepnog.models.deepnog.deepnog.
         Otherwise, separate module and class name of deep network to import.
         E.g. ('deepthought', 'DeepNettigkeit') will load deepnog.models.deepthought.DeepNettigkeit.
     model_dict : dict, optional

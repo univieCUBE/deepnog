@@ -26,7 +26,7 @@ from deepnog import __version__
 
 DEEPNOG_ROOT = Path(__file__).parent.parent.parent.absolute()
 DEEPNOG_TEST = DEEPNOG_ROOT/"tests"
-TEST_FILE = DEEPNOG_TEST/"data/test_deepencoding.faa"
+TEST_FILE = DEEPNOG_TEST/"data/test_deepnog.faa"
 TEST_FILE_SHORT = DEEPNOG_TEST/"data/test_inference_short.faa"
 TEST_LABELS_SHORT = TEST_FILE_SHORT.with_suffix('.csv')
 TEST_LABELS_SHORT_COL_RENAME = DEEPNOG_TEST/"data/test_inference_short_wrong_column_names.csv"
@@ -36,7 +36,7 @@ Y_TRUE = np.array([[0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 
                     1, 1, 1, 1, 1, 1, 1, 1],
                    [0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2,
                     1, 1, 1, 1, 1, 1, 1, 1]])
-EGGNOG5_BACT_WEIGHTS = get_data_home()/'eggNOG5/2/deepencoding.pth'
+EGGNOG5_BACT_WEIGHTS = get_data_home()/'eggNOG5/2/deepnog.pth'
 
 
 def try_to_unlink(f: Path):
@@ -75,7 +75,7 @@ def test_run_inference(config):
                                   device='auto',
                                   num_workers=0,
                                   confidence_threshold=config.get('confidence_threshold', None),
-                                  architecture='deepencoding',
+                                  architecture='deepnog',
                                   weights=config.get('weights', None),
                                   batch_size=1,
                                   )
@@ -173,7 +173,7 @@ def test_inference_cmd_line_invocation(tax):
                                             device='auto',
                                             num_workers=0,
                                             confidence_threshold=None,
-                                            architecture='deepencoding',
+                                            architecture='deepnog',
                                             weights=None,
                                             batch_size=1,
                                             # Not necessary to have train args here
@@ -194,7 +194,7 @@ def test_args_sanity_check():
     args = argparse.Namespace(
         phase='infer', tax='2', out='out.mock.2', file=TEST_FILE, fformat='fasta', outformat='csv',
         database='eggNOG5', verbose=0, device='auto', num_workers=0, confidence_threshold=0.5,
-        architecture='deepencoding', weights=None, batch_size=1, test_labels=None,
+        architecture='deepnog', weights=None, batch_size=1, test_labels=None,
         # train only
         training_sequences=None, validation_sequences=None, labels=None, n_epochs=None,
         shuffle=None, learning_rate=None, gamma=None, random_seed=None, save_each_epoch=None,
