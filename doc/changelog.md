@@ -3,9 +3,9 @@
 ## [Next release]
 ...
 
-### Changed in 1.2.3
+### New changes
 - CI with Github Actions (Linux, macOS)
-
+- CI: Python 3.9 on Linux, macOS
 
 ## [1.2.2] - 2020-12-10
 
