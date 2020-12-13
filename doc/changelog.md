@@ -3,6 +3,10 @@
 ## [Next release]
 ...
 
+### Changed in 1.2.3
+- CI with Github Actions (Linux, macOS)
+
+
 ## [1.2.2] - 2020-12-10
 
 ### Added in 1.2.2
