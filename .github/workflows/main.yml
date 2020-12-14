@@ -62,7 +62,7 @@ jobs:
       # Install pre release, instead of compiling from source.
       # TODO delete when 0.24 with Python 3.9 support comes out.
       - name: Install scikit-learn pre 0.24 for Python 3.9
-        if: ${{ matrix.python == "3.9" }}
+        if: ${{ matrix.python == '3.9' }}
         run: |
           export PATH=${PATH}:"/home/runner/.local/bin"
           python3 -m pip install --upgrade pip
