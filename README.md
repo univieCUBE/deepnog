@@ -1,6 +1,5 @@
-[![Linux/MacOS builds on Travis](
-  https://travis-ci.com/univieCUBE/deepnog.svg?branch=master)](
-  https://travis-ci.com/univieCUBE/deepnog)
+![Linux/macOS builds on Actions](
+  https://github.com/univieCUBE/deepnog/workflows/deepnog%20CI/badge.svg)
 [![Windows builds on AppVeyor](
   https://ci.appveyor.com/api/projects/status/ccdysyv0o2gey6iu/branch/master?svg=true)](
   https://ci.appveyor.com/project/VarIr/deepnog/branch/master)
@@ -19,13 +18,15 @@
 [![Anaconda-Server Badge](
   https://anaconda.org/bioconda/deepnog/badges/version.svg)](
   https://anaconda.org/bioconda/deepnog)
+![PyPI - Python Version](
+  https://img.shields.io/pypi/pyversions/deepnog?style=flat-square)
+
+
 # DeepNOG: protein orthologous groups assignment
 
 Assign proteins to orthologous groups (eggNOG 5) on CPUs or GPUs with deep networks.
 DeepNOG is much faster than alignment-based methods,
-while being as accurate as HMMER.
-
-The `deepnog` command line tool is written in Python 3.7+. 
+providing accuracy similar to HMMER.
 
 
 ## Installation guide
@@ -56,9 +57,8 @@ conda install pytorch deepnog
 
 ## Usage
 
-DeepNOG can be used through calling the above installed `deepnog`
-command with a protein sequence file (FASTA). 
-
+Call the `deepnog` command line tool with a
+protein sequence file in FASTA format.
 Example usages: 
 
 *  `deepnog infer proteins.faa`
@@ -89,18 +89,23 @@ See also the [user & developer guide](doc/guide.pdf).
 
 ## File formats supported
 
-Preferred: FASTA (raw or gzipped)
+Preferred: FASTA (raw, .gz, or .xz)
 
 DeepNOG supports protein sequences stored in all file formats listed in
-https://biopython.org/wiki/SeqIO but is tested for the FASTA-file format
+[https://biopython.org/wiki/SeqIO](https://biopython.org/wiki/SeqIO),
+but is tested for the FASTA-file format
 only.
 
 ## Databases currently supported
 
-- eggNOG 5.0, taxonomic level 1 (root level)
-- eggNOG 5.0, taxonomic level 2 (bacteria level)
-- eggNOG 5.0, taxonomic level 1236 (Gammaproteobacteria)
-- (for additional levels, please create an issue on Github, or train a model yourself---new in v1.2)
+- eggNOG 5.0
+  * taxonomic level 1 (root level)
+  * taxonomic level 2 (bacteria level)
+  * For >100 additional eggNOG 5.0 levels, consult the
+  [docs](https://deepnog.readthedocs.io/en/latest/documentation/models.html).
+- COG 2020
+- (for additional databases/levels, please create an issue on Github,
+   or train a model yourself---new in v1.2)
 
 ## Deep network architectures currently supported
 
@@ -108,17 +113,18 @@ only.
 * DeepFam (no precomputed model currently available)
 
 
-## Required packages (and minimum version)
+## Required packages
 
-*  PyTorch 1.2.0
-*  NumPy 1.16.4
-*  pandas 0.25.1
+``deepnog`` builds upon the following packages:
+*  PyTorch
+*  NumPy
+*  pandas
 *  scikit-learn
 *  tensorboard
-*  Biopython 1.74
+*  Biopython
 *  PyYAML
-*  tqdm 4.35.0
-*  pytest 5.1.2 (for tests only)
+*  tqdm
+*  pytest (for tests only)
 
 See also `requirements/*.txt` for platform-specific recommendations
 (sometimes, specific versions might be required due to platform-specific
@@ -129,4 +135,11 @@ This research is supported by the Austrian Science Fund (FWF): P27703, P31988;
 and by the GPU grant program of Nvidia corporation.
 
 ## Citation
-A research article is currently under review.
+A research article has been accepted in *Bioinformatics*
+and will be available online late 2020 or early 2021.
+
+Roman Feldbauer, Lukas Gosch, Lukas Lüftinger, Patrick Hyden,
+Arthur Flexer, Thomas Rattei,
+DeepNOG: Fast and accurate protein orthologous group assignment,
+*Bioinformatics*, Volume aa, Issue bb, dd.mm.yyyy, Pages p-pp, DOI,
+(to be updated asap).

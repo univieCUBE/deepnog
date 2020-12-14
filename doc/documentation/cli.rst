@@ -21,7 +21,13 @@ These options may be commonly tuned for a basic invocation for orthologous group
     optional arguments:
       -h, --help            show this help message and exit
       --version             show program's version number and exit
-      -o FILE, --out FILE   Store orthologous group assignments to outputfile.
+      -db {eggNOG5, cog2020}, --database {eggNOG5, cog2020}
+                            Orthologous group/family database to use. (default:
+                            eggNOG5)
+      -t {1,2,[]}, --tax {1,2}
+                            Taxonomic level to use in specified database
+                            (1 = root, 2 = bacteria) (default: 2)
+      -o FILE, --out FILE   Store orthologous group assignments to output file.
                             Per default, write predictions to stdout. (default: None)
       -c FLOAT, --confidence-threshold FLOAT
                             The confidence value below which predictions are
@@ -53,12 +59,6 @@ These options are unlikely to require manual tuning for the average user.
                         Define device for calculating protein sequence
                         classification. Auto chooses GPU if available,
                         otherwise CPU. (default: auto)
-    -db {eggNOG5}, --database {eggNOG5}
-                        Orthologous group/family database to use. (default:
-                        eggNOG5)
-    -t {1,2}, --tax {1,2}
-                        Taxonomic level to use in specified database
-                        (1 = root, 2 = bacteria) (default: 2)
     -nw INT, --num-workers INT
                         Number of subprocesses (workers) to use for data
                         loading. Set to a value <= 0 to use single-process

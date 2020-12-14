@@ -16,6 +16,7 @@ DeepNOG: fast and accurate protein orthologous group assignment
 
    Installation <getting_started/installation>
    Quick Start Example <getting_started/example>
+   Citation <getting_started/citation>
 
 .. toctree::
    :maxdepth: 2
