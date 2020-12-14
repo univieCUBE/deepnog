@@ -58,6 +58,16 @@ jobs:
           path: $HOME/deepnog_data
           key: ${{ hashFiles('deepnog/config/deepnog_config.yml') }}
 
+      # No standard scikit-learn wheels are currently available for Python 3.9
+      # Install pre release, instead of compiling from source.
+      # TODO delete when 0.24 with Python 3.9 support comes out.
+      - name: Install scikit-learn pre 0.24 for Python 3.9
+        if: ${{ matrix.python }} == "3.9"
+        run: |
+          export PATH=${PATH}:"/home/runner/.local/bin"
+          python3 -m pip install --upgrade pip
+          python3 -m pip install --pre -U scikit-learn
+
       - name: Install dependencies
         run: |
           export PATH=${PATH}:"/home/runner/.local/bin"
