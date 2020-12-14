@@ -162,7 +162,7 @@ def get_weights_path(database: str, level: str, architecture: str,
     """
     logger = get_logger(__name__, verbose=verbose)
     data_home = get_data_home(data_home=data_home)
-    weights_dir = data_home/f'{database}/{level}/'
+    weights_dir = data_home/f'{database}'/f'{level}'
     weights_file = weights_dir/f'{architecture}.pth'
     available = weights_file.exists()
     logger.debug(f'Weights file available: {weights_file}')
