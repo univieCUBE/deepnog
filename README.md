@@ -135,11 +135,9 @@ This research is supported by the Austrian Science Fund (FWF): P27703, P31988;
 and by the GPU grant program of Nvidia corporation.
 
 ## Citation
-A research article has been accepted in *Bioinformatics*
-and will be available online late 2020 or early 2021.
+If you use DeepNOG, please consider citing our research article ([click here for bibtex](https://academic.oup.com/Citation/Download?resourceId=6050698&resourceType=3&citationFormat=2)):
 
 Roman Feldbauer, Lukas Gosch, Lukas Lüftinger, Patrick Hyden,
 Arthur Flexer, Thomas Rattei,
 DeepNOG: Fast and accurate protein orthologous group assignment,
-*Bioinformatics*, Volume aa, Issue bb, dd.mm.yyyy, Pages p-pp, DOI,
-(to be updated asap).
+*Bioinformatics*, 2020, btaa1051, https://doi.org/10.1093/bioinformatics/btaa1051
