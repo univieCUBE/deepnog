@@ -531,7 +531,7 @@ class ProteinDataset(Dataset):
                                           compression='infer',
                                           dtype=str,
                                           )
-            except ValueError:
+            except (ValueError, TypeError):
                 pass
             if not isinstance(self.labels, pd.DataFrame):
                 raise ValueError('Invalid labels, must be .csv file or DataFrame')
