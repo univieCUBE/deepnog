@@ -3,9 +3,23 @@
 ## [Next release]
 ...
 
-### New changes
+
+## [1.2.3] - 2021-02-09
+
+### Added in 1.2.3
+- Add citation for paper published in *Bioinformatics* ([doi](https://doi.org/10.1093/bioinformatics/btaa1051))
+### Changes in 1.2.3
 - CI with Github Actions (Linux, macOS)
-- CI: Python 3.9 on Linux, macOS
+
+### Fixes in 1.2.3
+- Fixes a bug where custom trained models would not use dropout correctly
+  [see #44](https://github.com/univieCUBE/deepnog/issues/44)
+- Fixes data usage in training with an iterable dataset without shuffling
+  [see #43](https://github.com/univieCUBE/deepnog/pull/43)
+- Fixes several non-critical warnings
+  [see #50](https://github.com/univieCUBE/deepnog/pull/50)
+- Several small fixes regarding updated libraries etc.
+
 
 ## [1.2.2] - 2020-12-10
 
@@ -80,7 +94,8 @@ It already contains the following features:
 - CPU and GPU support
 - Runs on all major platforms (Linux, MacOS, Windows)
 
-[Next release]: https://github.com/univieCUBE/deepnog/compare/v1.2.2...HEAD
+[Next release]: https://github.com/univieCUBE/deepnog/compare/v1.2.3...HEAD
+[1.2.3]: https://github.com/univieCUBE/deepnog/releases/tag/v1.2.3
 [1.2.2]: https://github.com/univieCUBE/deepnog/releases/tag/v1.2.2
 [1.2.1]: https://github.com/univieCUBE/deepnog/releases/tag/v1.2.1
 [1.1.0]: https://github.com/univieCUBE/deepnog/releases/tag/v1.1.0
