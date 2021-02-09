@@ -182,7 +182,8 @@ class DeepNOG(nn.Module):
         x = torch.cat(max_pool_layer, dim=1)
         x = x.view(-1, x.shape[1])
 
-        # Classification layer
+        # Regularization and classification
+        x = self.dropout1(x)
         x = self.classification1(x)
 
         # NOTE: v1.2.0 removed the softmax here. Must now be performed in
