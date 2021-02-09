@@ -32,10 +32,9 @@ TEST_LABELS_SHORT = TEST_FILE_SHORT.with_suffix('.csv')
 TEST_LABELS_SHORT_COL_RENAME = DEEPNOG_TEST/"data/test_inference_short_wrong_column_names.csv"
 TRAINING_FASTA = DEEPNOG_TEST/"data/test_training_dummy.faa"
 TRAINING_CSV = DEEPNOG_TEST/"data/test_training_dummy.faa.csv"
-Y_TRUE = np.array([[0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2,
-                    1, 1, 1, 1, 1, 1, 1, 1],
-                   [0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2,
-                    1, 1, 1, 1, 1, 1, 1, 1]])
+Y_TRUE = np.array(
+    [0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 0, 2, 1, 1, 1, 1, 1, 1, 1, 1],
+)
 EGGNOG5_BACT_WEIGHTS = get_data_home()/'eggNOG5/2/deepnog.pth'
 
 
@@ -231,12 +230,13 @@ def test_args_sanity_check():
 
 def test_training_cmd_line_invocation():
     outdir = tempfile.mkdtemp(prefix='deepnog_test_')
-    tax = 2
+    tax: int = 2
+    n_epochs: int = 3
     proc = subprocess.run(['deepnog', 'train',
                            f'{TRAINING_FASTA}', f'{TRAINING_FASTA}',
                            f'{TRAINING_CSV}', f'{TRAINING_CSV}',
                            '--tax', f'{tax}', '--out', outdir, '--database', 'dummy_db',
-                           '--n-epochs', '2', '--verbose', '0', '--random-seed', '42',
+                           '--n-epochs', f'{n_epochs}', '--verbose', '0', '--random-seed', '42',
                            ],
                           capture_output=True,
                           )
@@ -253,20 +253,22 @@ def test_training_cmd_line_invocation():
             for k in ['phase', 'epoch', 'accuracy', 'loss']:
                 assert k in df.columns, f'Column {k} missing in output csv file'
             np.testing.assert_almost_equal(df.accuracy.iloc[-1], 1.0, decimal=3)
-            np.testing.assert_almost_equal(df.loss.iloc[-1], 0.0, decimal=3)
+            np.testing.assert_almost_equal(df.loss.iloc[-1], 0.07, decimal=3)
             assert df.phase.iloc[-2] == 'train', 'Second last phase was not "train".'
             assert df.phase.iloc[-1] == 'val', 'Last phase was not "val".'
-            np.testing.assert_equal(df.epoch, np.array([0, 0, 1, 1])),\
+            # Repeat twice: training & validation data
+            np.testing.assert_equal(df.epoch, np.repeat(np.arange(n_epochs), repeats=2)),\
                 'Wrong number of epochs in csv file'
             try_to_unlink(f)
         elif str(f).endswith('npz'):
             c = np.load(str(f))
             # Here we use the same data for training and validation
-            np.testing.assert_equal(c['y_train_true'], Y_TRUE)
-            np.testing.assert_equal(c['y_val_true'], Y_TRUE)
-            np.testing.assert_equal(c['y_val_pred'], Y_TRUE)
-            # Predictions during training epoch 0 may be anything
-            np.testing.assert_equal(c['y_train_pred'][1], Y_TRUE[1])
+            np.testing.assert_equal(c['y_train_true'], np.tile(Y_TRUE, (n_epochs, 1)))
+            np.testing.assert_equal(c['y_val_true'], np.tile(Y_TRUE, (n_epochs, 1)))
+            # Predictions during training epoch 0 may be anything,
+            # especially with regularization.
+            np.testing.assert_equal(c['y_train_pred'][-1], Y_TRUE)
+            np.testing.assert_equal(c['y_val_pred'][-1], Y_TRUE)
             try_to_unlink(f)
         elif str(f).endswith('pt') or str(f).endswith('pth'):
             model = torch.load(str(f))
