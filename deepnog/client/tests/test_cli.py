@@ -253,7 +253,7 @@ def test_training_cmd_line_invocation():
             for k in ['phase', 'epoch', 'accuracy', 'loss']:
                 assert k in df.columns, f'Column {k} missing in output csv file'
             np.testing.assert_almost_equal(df.accuracy.iloc[-1], 1.0, decimal=3)
-            np.testing.assert_almost_equal(df.loss.iloc[-1], 0.07, decimal=3)
+            assert df.loss.iloc[-1] < 0.1, "Surprisingly high loss"
             assert df.phase.iloc[-2] == 'train', 'Second last phase was not "train".'
             assert df.phase.iloc[-1] == 'val', 'Last phase was not "val".'
             # Repeat twice: training & validation data
