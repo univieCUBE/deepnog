@@ -462,7 +462,7 @@ def fit(architecture, module, cls,
             logger.info(f'Using iterable dataset with shuffle buffer, '
                         f'and buffer size = {buffer_size}.')
         else:
-            dataset['train'] = ProteinIterableDataset(file=validation_sequences,
+            dataset['train'] = ProteinIterableDataset(file=training_sequences,
                                                       labels_file=training_labels)
             logger.info('Using iterable dataset without shuffling.')
         dataset['val'] = ProteinIterableDataset(file=validation_sequences,
