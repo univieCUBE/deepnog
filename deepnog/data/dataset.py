@@ -99,7 +99,7 @@ def collate_sequences(batch: Union[List[sequence_tuple], sequence_tuple],
             max_len = sequence_len
 
     # Collate the sequences
-    sequences = np.zeros((n_data, max_len,), dtype=np.int)
+    sequences = np.zeros((n_data, max_len,), dtype=np.int32)
     for i, seq in enumerate(batch):
         sequence = np.array(seq.encoded)
         # If selected, choose randomly, where to insert zeros
@@ -123,7 +123,7 @@ def collate_sequences(batch: Union[List[sequence_tuple], sequence_tuple],
 
     # Collate the labels
     try:
-        labels = np.array([b.label for b in batch], dtype=np.int)
+        labels = np.array([b.label for b in batch], dtype=np.int32)
         labels = default_collate(labels)
     except (AttributeError, TypeError):
         labels = None
