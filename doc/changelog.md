@@ -4,7 +4,8 @@
 ...
 
 ### Fixes in 1.2.4
-- Bioconda automatically installs PyTorch ([see deepnog/#XX](TODO add link) and
+- Bioconda automatically installs PyTorch
+  ([see deepnog/#52](https://github.com/univieCUBE/deepnog/pull/52) and
   [bioconda/#27112](https://github.com/bioconda/bioconda-recipes/pull/27112))
 
 
