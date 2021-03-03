@@ -51,8 +51,7 @@ instead.
 
 ``deepnog`` can also be installed from bioconda like this:
 ``` bash
-conda config --add channels pytorch
-conda install pytorch deepnog
+conda install deepnog
 ```
 
 ## Usage
