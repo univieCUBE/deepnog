@@ -18,13 +18,16 @@ We currently don't provide detailed instructions for Windows.
 Alternative: Installation from bioconda
 =======================================
 
-Alternatively, ``deepnog`` can be installed from bioconda like this:
+Alternatively, ``deepnog`` can be installed from bioconda
+with channel setup as described in the `bioconda docs`_ like this:
 
 .. code-block:: bash
 
-    # With channel setup as described in the `bioconda docs`_
-    conda config --add channels pytorch
-    conda install pytorch deepnog
+    conda install deepnog
+
+Note: Previously, bioconda required installing PyTorch from Facebook's pytorch
+channel manually.
+Since PyTorch is now available on conda-forge, this is not necessary anymore.
 
 .. _`bioconda docs`: https://bioconda.github.io/user/install.html#install-conda>
 
@@ -32,8 +35,10 @@ Dependencies and model files
 ============================
 
 All package dependencies of ``deepnog`` are automatically installed
-by ``pip``. We also require model files (= networks parameters/weights),
-which are too large for GitHub/PyPI. These are hosted on separate servers,
+by ``pip`` or ``conda``.
+We also require model files (= networks parameters/weights),
+which are too large for GitHub/PyPI/bioconda.
+Models are hosted on separate servers,
 and downloaded automatically by ``deepnog``, when required. By default,
 models are cached in `$HOME/deepnog_data/`.
 

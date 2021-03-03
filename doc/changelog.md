@@ -3,6 +3,10 @@
 ## [Next release]
 ...
 
+### Fixes in 1.2.4
+- Bioconda automatically installs PyTorch ([see deepnog/#XX](TODO add link) and
+  [bioconda/#27112](https://github.com/bioconda/bioconda-recipes/pull/27112))
+
 
 ## [1.2.3] - 2021-02-09
 
