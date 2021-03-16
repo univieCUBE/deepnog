@@ -122,6 +122,5 @@ API Example Usage
        confs=confs,
        ids=ids,
        indices=indices,
-       threshold=CONF_THRESH,
-       verbose=3
+       threshold=CONF_THRESH
    )
