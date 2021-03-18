@@ -15,7 +15,7 @@ DATA_SKIP_PATH = TESTS/"data/test_sync_skip_many.faa.gz"
 def test_sync_counter_of_many_empty_sequences():
     """ Test if many sequences with empty ids are counted correctly. """
     # Set up device
-    torch.set_num_threads(16)
+    torch.set_num_threads(2)
     cuda = torch.cuda.is_available()
     device = torch.device('cuda' if cuda else 'cpu')
     # Start test
