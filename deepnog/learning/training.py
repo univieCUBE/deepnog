@@ -495,7 +495,7 @@ def fit(architecture, module, cls,
     if tensorboard_dir is None:
         experiment = None  # do not use tensorboard
     elif tensorboard_dir == 'auto':
-        now = datetime.now().strftime("%Y-%m-%d_%H-%m-%S_%f")
+        now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S_%f")
         random_letters = ''.join(random.sample(string.ascii_letters, 4))
         tmp_dir = Path(tempfile.gettempdir())/'tensorboard'
         tmp_dir.mkdir(parents=True, exist_ok=True)
