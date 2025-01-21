@@ -1,8 +1,5 @@
-![Linux/macOS builds on Actions](
+![Linux builds on Actions](
   https://github.com/univieCUBE/deepnog/workflows/deepnog%20CI/badge.svg)
-[![Windows builds on AppVeyor](
-  https://ci.appveyor.com/api/projects/status/ccdysyv0o2gey6iu/branch/master?svg=true)](
-  https://ci.appveyor.com/project/VarIr/deepnog/branch/master)
 [![codecov](
   https://codecov.io/gh/univieCUBE/deepnog/branch/master/graph/badge.svg)](
   https://codecov.io/gh/univieCUBE/deepnog)
