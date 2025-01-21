@@ -1,0 +1,75 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "deepnog"
+version = "1.2.3"
+description = "Deep learning tool for protein orthologous group assignment"
+readme = "README.md"
+authors = [
+    { name = "Roman Feldbauer", email = "sci@feldbauer.org" }
+]
+keywords = [
+    "deep-learning", "neural-networks",
+    "bioinformatics", "computational-biology",
+    "protein-families", "orthologous-groups", "orthology", "eggnog"
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS :: MacOS X",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence"
+]
+requires-python = ">=3.7"
+dependencies = [
+    "numpy",
+    "pandas",
+    "scikit-learn",
+    "torch>=1.2",
+    "Biopython",
+    "PyYAML",
+    "tqdm",
+    "tensorboard",
+]
+
+[project.urls]
+homepage = "https://github.com/univieCUBE/deepnog"
+documentation = "https://deepnog.readthedocs.io/en/latest/?badge=latest"
+source = "https://github.com/univieCUBE/deepnog"
+tracker = "https://github.com/univieCUBE/deepnog/issues"
+
+[project.optional-dependencies]
+test = ["pytest"]
+
+[tool.setuptools]
+packages = [
+    "deepnog",
+    "deepnog.client",
+    "deepnog.config",
+    "deepnog.data",
+    "deepnog.learning",
+    "deepnog.models",
+    "deepnog.utils",
+    "deepnog.tests",
+]
+
+[tool.setuptools.package-data]
+"deepnog" = ["utils/certifi", "config/*.yml"]
+"tests" = ["data/*.faa", "parameters/*.pth"]
+
+[project.scripts]
+deepnog = "deepnog.client:main"

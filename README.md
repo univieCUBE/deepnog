@@ -6,9 +6,6 @@
 [![codecov](
   https://codecov.io/gh/univieCUBE/deepnog/branch/master/graph/badge.svg)](
   https://codecov.io/gh/univieCUBE/deepnog)
-[![Language grade: Python](
-  https://img.shields.io/lgtm/grade/python/g/univieCUBE/deepnog.svg?logo=lgtm&logoWidth=18)](
-  https://lgtm.com/projects/g/univieCUBE/deepnog/context:python)
 [![Documentation Status](
   https://readthedocs.org/projects/deepnog/badge/?version=latest)](
   https://deepnog.readthedocs.io/en/latest/?badge=latest)
