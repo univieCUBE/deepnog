@@ -3,6 +3,9 @@
 ## [Next release]
 ...
 
+### Changes in 1.2.4
+- Use `pyproject.toml` instead of `setup.py`
+
 ### Fixes in 1.2.4
 - Bioconda automatically installs PyTorch
   ([see deepnog/#52](https://github.com/univieCUBE/deepnog/pull/52) and
