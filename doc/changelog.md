@@ -4,6 +4,7 @@
 ...
 
 ### Changes in 1.2.4
+- Add support for Python 3.10, 3.11, 3.12, 3.13
 - Use `pyproject.toml` instead of `setup.py`
 
 ### Fixes in 1.2.4
