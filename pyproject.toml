@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "deepnog"
-version = "1.2.3"
+version = "1.2.4"
 description = "Deep learning tool for protein orthologous group assignment"
 readme = "README.md"
 authors = [
