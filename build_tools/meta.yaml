@@ -20,7 +20,7 @@ build:
   # We pin to the major.minor level, b/c we do no strictly follow SemVer,
   # but patch level is likely too strict.
   run_exports:
-    - { { pin_subpackage(name, max_pin="x.x") } }
+    - {{ pin_subpackage(name, max_pin="x.x") }}
 
 requirements:
   host:
