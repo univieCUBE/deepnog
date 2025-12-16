@@ -145,7 +145,7 @@ def test_count_params(architecture, weights):
     """ Test loading of neural network model. """
     cuda = torch.cuda.is_available()
     device = torch.device('cuda' if cuda else 'cpu')
-    model_dict = torch.load(weights, map_location=device)
+    model_dict = torch.load(weights, map_location=device, weights_only=False)
     model = load_nn(architecture, model_dict, phase='infer', device=device)
     n_params_tuned = count_parameters(model, tunable_only=True)
     n_params_total = count_parameters(model, tunable_only=False)

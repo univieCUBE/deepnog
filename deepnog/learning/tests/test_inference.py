@@ -39,7 +39,7 @@ def test_load_nn(architecture, weights):
     cuda = torch.cuda.is_available()
     device = torch.device('cuda' if cuda else 'cpu')
     # Start test
-    model_dict = torch.load(weights, map_location=device)
+    model_dict = torch.load(weights, map_location=device, weights_only=False)
     model = load_nn((module, cls), model_dict, phase='infer', device=device)
     assert(issubclass(type(model), nn.Module))
     assert(isinstance(model, nn.Module))
@@ -65,7 +65,7 @@ def test_predict(architecture, weights, data, fformat, tolerance):
     cuda = torch.cuda.is_available()
     device = torch.device('cuda' if cuda else 'cpu')
     # Start test
-    model_dict = torch.load(weights, map_location=device)
+    model_dict = torch.load(weights, map_location=device, weights_only=False)
     model = load_nn((module, cls), model_dict, phase='infer', device=device)
     dataset = ProteinIterableDataset(data, f_format=fformat)
     preds, confs, ids, indices = predict(model, dataset, device)
@@ -92,7 +92,7 @@ def test_skip_empty_sequences(architecture, weights, data, fformat):
     cuda = torch.cuda.is_available()
     device = torch.device('cuda' if cuda else 'cpu')
     # Start test
-    model_dict = torch.load(weights, map_location=device)
+    model_dict = torch.load(weights, map_location=device, weights_only=False)
     model = load_nn((module, cls), model_dict, phase='infer', device=device)
     dataset = ProteinIterableDataset(data, f_format=fformat)
     with pytest.warns(UserWarning, match='no sequence id could be detected'):
