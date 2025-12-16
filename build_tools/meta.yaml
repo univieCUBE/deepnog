@@ -17,7 +17,7 @@ build:
     - deepnog = deepnog.client:main
   script: "{{ PYTHON }} -m pip install . -vv"
   # Bioconda requires pinning this in downstream packages via run_exports:
-  # We pin to the major.minor level, b/c we do no strictly follow SemVer,
+  # We pin to the major.minor level, b/c we do not strictly follow SemVer,
   # but patch level is likely too strict.
   run_exports:
     - {{ pin_subpackage(name, max_pin="x.x") }}
