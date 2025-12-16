@@ -19,7 +19,7 @@ def test_sync_counter_of_many_empty_sequences():
     cuda = torch.cuda.is_available()
     device = torch.device('cuda' if cuda else 'cpu')
     # Start test
-    model_dict = torch.load(WEIGHTS_PATH, map_location=device)
+    model_dict = torch.load(WEIGHTS_PATH, map_location=device, weights_only=False)
     model = load_nn(['deepnog', 'DeepNOG'], model_dict, phase='infer', device=device)
     dataset = ProteinIterableDataset(DATA_SKIP_PATH, f_format='fasta')
     with pytest.warns(UserWarning, match='no sequence id could be detected'):

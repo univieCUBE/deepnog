@@ -321,7 +321,9 @@ def _start_inference(args, arch_module, arch_cls):
                                         )
     # Load neural network parameters
     logger.info(f'Loading NN-parameters from {weights_path} ...')
-    model_dict = torch.load(weights_path, map_location=args.device)
+    model_dict = torch.load(weights_path,
+                            map_location=args.device,
+                            weights_only=False)
 
     # Load dataset
     logger.info(f'Accessing dataset from {args.file} ...')

@@ -271,7 +271,7 @@ def test_training_cmd_line_invocation():
             np.testing.assert_equal(c['y_val_pred'][-1], Y_TRUE)
             try_to_unlink(f)
         elif str(f).endswith('pt') or str(f).endswith('pth'):
-            model = torch.load(str(f))
+            model = torch.load(str(f), weights_only=False)
             for k in ['classes', 'model_state_dict', ]:
                 assert k in model
             np.testing.assert_equal(model['classes'], np.array(['28H52', '99A99', 'ZYX12']))
